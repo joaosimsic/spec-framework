@@ -1,0 +1,7 @@
+.env
+.direnv/
+result
+node_modules/
+dist/
+spec/evidence/
+spec/**/*.gen.*

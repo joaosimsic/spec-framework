@@ -1,5 +1,7 @@
 # Bootstrap
 
+> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. Automatic provisioning and native adapters are the next Phase 1 milestones.
+
 ## Default
 
 `spec-framework` is full-stack by default. The default profile expects:

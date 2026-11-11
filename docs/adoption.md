@@ -1,5 +1,7 @@
 # Adoption
 
+> Implementation status: `spec init`, `spec doctor`, and structural checks are available. Mapping, native adapters, and automatic provisioning are in progress.
+
 ## Goal
 
 Adopting the framework must not require rewriting the project, freezing development, or installing a bespoke platform. Adoption is incremental, but the default profile is full-stack and approval requires the full verification path.

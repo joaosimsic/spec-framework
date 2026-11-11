@@ -2,7 +2,7 @@
 
 ## Phase 0 — Design and repository
 
-Status: in progress.
+Status: complete.
 
 - public repository with extensive design docs;
 - decision records;
@@ -13,6 +13,8 @@ Status: in progress.
 Exit criteria: docs complete, repository public, decisions recorded.
 
 ## Phase 1 — Full-stack vertical slice
+
+Status: in progress. Core CLI, `spec init`, `spec doctor`, and structural checks are implemented.
 
 Build one end-to-end path:
 

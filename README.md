@@ -1,6 +1,6 @@
 # spec-framework
 
-**Status: design phase.** No implementation yet. These documents define the problem, the model, and the tool composition before code is written.
+**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, and `spec check --structural` are implemented. Native adapters, approval lock, mapping, and the audit bundle are next.
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -62,9 +62,24 @@ spec bundle
 spec approve REQ-AUTH-001 AC-AUTH-001 CMP-AUTH PROP-AUTH-EXPIRY
 ```
 
-`spec init` writes the full-stack profile. `spec doctor --fix` provisions pinned tools. `spec check` runs structural checks first, then native validators, formal verification, and contract checks. Approval is human-only and hash-locked.
+`spec init` writes the full-stack profile. `spec doctor --fix` reports the provisioning plan for pinned tools. `spec check` runs structural checks first, then native validators, formal verification, and contract checks. Approval is human-only and hash-locked.
 
-No implementation exists yet; the commands describe the intended interface.
+Current skeleton:
+
+- `spec init [--existing] [--force]` creates the scaffold.
+- `spec doctor [--json]` reports required and optional tools.
+- `spec doctor --fix` prints the provisioning plan; automatic provisioning is next.
+- `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
+- `spec check` additionally fails on missing native tools.
+
+Run locally:
+
+```bash
+bun install
+bun run bin/spec.ts check --structural
+bun test
+bun run typecheck
+```
 
 ## What this is not
 
@@ -97,16 +112,21 @@ Full index: [docs/index.md](docs/index.md).
 ## Repository layout
 
 ```
+bin/         CLI entry point
+src/core/    config, SDoc parsing, structural lint, doctor, init, check
+tests/       unit and integration tests
 docs/        design documents, decisions, and open questions
 examples/    illustrative non-web specification examples
+spec/        self-hosted specification scaffold
 ```
 
-Implementation will add:
+Next:
 
 ```
-core/        IDs, lint, bundle, change reports, approval lock
-adapters/    LikeC4, StrictDoc, Quint, contract and conformance adapters
-templates/   repo bootstrap, agent config, CI, pinned toolchain
+src/adapters/   LikeC4, StrictDoc, Quint, contract and conformance adapters
+src/bundle/     audit PDF/HTML assembly, manifest, hashes
+src/approval/   spec.lock, human-only approval
+templates/      repo bootstrap, agent config, CI, pinned toolchain
 ```
 
 ## License

@@ -1,0 +1,25 @@
+specification {
+  element actor
+  element system
+  element component
+  relationship depends_on
+}
+
+model {
+  user = actor 'Developer'
+  framework = system 'spec-framework'
+  cli = component 'spec CLI'
+  core = component 'core'
+  adapters = component 'adapters'
+
+  user -> framework 'uses'
+  framework -> cli 'contains'
+  cli -> core 'uses'
+  core -> adapters 'dispatches'
+}
+
+views {
+  view index {
+    include *
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@spec-framework/cli",
+  "version": "0.1.0",
+  "description": "Auditable, agent-driven spec framework CLI",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "spec": "./bin/spec.ts"
+  },
+  "scripts": {
+    "spec": "bun run bin/spec.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "bun": ">=1.4.0"
+  }
+}

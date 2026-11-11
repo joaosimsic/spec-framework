@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "profile": "full",
+  "project": {
+    "name": "spec-framework",
+    "adoption": "existing"
+  },
+  "adapters": {
+    "architecture": "likec4",
+    "requirements": "strictdoc",
+    "formal": "quint",
+    "contracts": ["json-schema", "cli"]
+  },
+  "approval": {
+    "mode": "hash-lock",
+    "humanOnly": true
+  }
+}

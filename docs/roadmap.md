@@ -14,7 +14,7 @@ Exit criteria: docs complete, repository public, decisions recorded.
 
 ## Phase 1 — Full-stack vertical slice
 
-Status: in progress. Core CLI, `spec init`, `spec doctor`, structural checks, generic and Rust draft discovery via `spec map --draft`, the LikeC4 validation adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate automatically from detected sources or language markers, or explicitly from config.
+Status: in progress. Core CLI, `spec init`, `spec doctor`, structural checks, generic and Rust draft discovery via `spec map --draft`, human approval with a hash lock for SDoc requirements and acceptance criteria, the LikeC4 validation adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate automatically from detected sources or language markers, or explicitly from config.
 
 Build one end-to-end path:
 
@@ -22,6 +22,7 @@ Build one end-to-end path:
 - `spec init`, `spec init --existing`;
 - `spec doctor`, `spec doctor --fix`;
 - structural checks over SDoc;
+- human approval: `spec approve` hash-locks proposed SDoc requirement and acceptance records; evidence hashes pending;
 - LikeC4 adapter: validation; views and MCP pending;
 - StrictDoc adapter: validation done; traceability, HTML/PDF pending;
 - Quint adapter: typecheck plus Apalache verify wired into `spec check`; evidence bundle pending;

@@ -1,5 +1,3 @@
-import { readdir } from "node:fs/promises"
-import { join } from "node:path"
 import { LikeC4Adapter } from "../adapters/likec4"
 import { CliAdapter } from "../adapters/cli"
 import { CompilerAdapter } from "../adapters/compiler"
@@ -8,6 +6,7 @@ import { QuintAdapter } from "../adapters/quint"
 import { RustAdapter } from "../adapters/rust"
 import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
+import { verifySpecLock } from "../approval/verify"
 import { requiredToolsFor, selectAdapter, selectAdapters } from "./adapter-selection"
 import { SpecConfigLoader } from "./config"
 import {
@@ -16,31 +15,15 @@ import {
   type ProcessRunner,
   type ToolLocator,
 } from "./runner"
-import { attemptAsync } from "./result"
 import { lintBlocks } from "./lint"
-import { parseSdoc, requirementBlocks } from "./sdoc"
+import { loadRequirementSources } from "./requirements"
 import { getToolStatuses, missingRequiredDiagnostics } from "./doctor"
 import type { CheckResult, Diagnostic } from "./types"
-
-async function collectFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
-  const files: string[] = []
-
-  for (const entry of entries) {
-    const path = join(dir, entry.name)
-    if (entry.isDirectory()) {
-      files.push(...(await collectFiles(path)))
-    } else if (entry.isFile() && /\.(sdoc|md)$/.test(entry.name)) {
-      files.push(path)
-    }
-  }
-
-  return files
-}
 
 export interface CheckOptions {
   structural?: boolean
   json?: boolean
+  verifyApprovals?: boolean
   implementationAdapter?: NativeAdapter
   architectureAdapter?: NativeAdapter
   requirementsAdapter?: NativeAdapter
@@ -158,45 +141,16 @@ async function runNativeChecks(
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {
-  const requirementsDir = join(target, "spec", "requirements")
-  const files = await collectFiles(requirementsDir)
-  const diagnostics: Diagnostic[] = []
-
-  if (files.length === 0) {
-    diagnostics.push({
-      level: "error",
-      code: "SPEC-NO-REQUIREMENTS",
-      message: "no .sdoc or .md requirement files found under spec/requirements",
-    })
-  }
-
-  const blocks = []
-  for (const file of files) {
-    const [text, readError] = await attemptAsync(() => Bun.file(file).text())
-    if (readError) {
-      diagnostics.push({
-        level: "error",
-        code: "SPEC-READ-FAILED",
-        message: `cannot read ${file}: ${readError}`,
-        file,
-      })
-      continue
-    }
-    if (text === null) {
-      diagnostics.push({
-        level: "error",
-        code: "SPEC-READ-FAILED",
-        message: `cannot read ${file}`,
-        file,
-      })
-      continue
-    }
-
-    blocks.push(...requirementBlocks(parseSdoc(file, text)))
-  }
+  const sources = await loadRequirementSources(target)
+  const diagnostics: Diagnostic[] = [...sources.diagnostics]
+  const blocks = sources.blocks
 
   const structural = lintBlocks(blocks)
   diagnostics.push(...structural.diagnostics)
+
+  if (options.verifyApprovals !== false) {
+    diagnostics.push(...(await verifySpecLock(target, blocks)))
+  }
 
   if (!options.structural) {
     await runNativeChecks(target, options, diagnostics)

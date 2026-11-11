@@ -1,6 +1,6 @@
 # spec-framework
 
-**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Approval lock and the audit bundle are next.
+**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, human approval with a hash lock, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Evidence hashing and the audit bundle are next.
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, query/MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
@@ -70,7 +70,7 @@ spec check
 spec map --draft
 spec change "add session expiry handling"
 spec bundle
-spec approve REQ-AUTH-001 AC-AUTH-001 CMP-AUTH PROP-AUTH-EXPIRY
+spec approve REQ-AUTH-001 AC-AUTH-001
 ```
 
 `spec init` writes the full-stack profile. `spec doctor --fix` reports the provisioning plan for pinned tools. `spec check` runs structural checks first, then native validators, formal verification, and contract checks. Approval is human-only and hash-locked.
@@ -83,6 +83,8 @@ Current skeleton:
 - `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
 - `spec check` runs every active architecture, requirements, formal, contract, and implementation compiler adapter. An architecture, requirements, formal, or contract adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. The compiler adapter activates when `spec/implementation/compile.json` exists or `adapters.implementation` is set. Active adapters fail on missing native tools.
 - `spec map --draft` discovers generic package and Rust workspace boundaries, writes `spec/architecture/draft.gen.c4`, and reports missing owners, low-confidence elements, external dependencies, and unresolved requirement links. It never modifies `spec/architecture/model.c4`.
+- `spec approve <ids...>` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records into `spec/spec.lock`, and sets their status to `Approved`.
+- `spec check` also rejects a stale lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked.
 
 Run locally:
 
@@ -134,6 +136,7 @@ Full index: [docs/index.md](docs/index.md).
 ```
 bin/         CLI entry point
 src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
+src/approval/ spec.lock hashing, human approval, and lock verification
 src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
 tests/       unit and integration tests
 docs/        design documents, decisions, and open questions
@@ -147,7 +150,7 @@ Next:
 
 ```
 src/bundle/     audit PDF/HTML assembly, manifest, hashes
-src/approval/   spec.lock, human-only approval
+src/evidence/   evidence artifact hashing and regeneration
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
 src/query/      read-only graph query and MCP interface
 src/explorer/   read-only local review surface

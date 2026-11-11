@@ -1,4 +1,7 @@
 import pkg from "../package.json"
+import { runApproval } from "./approval/approve"
+import { TerminalApprovalConfirmation } from "./approval/confirmation"
+import { GitApproverResolver, GitCleanlinessReader } from "./approval/git"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
@@ -11,6 +14,7 @@ Usage:
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
   spec map [--draft] [--json]
+  spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
 
@@ -19,6 +23,7 @@ Commands:
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
   map       Discover draft architecture from the repository
+  approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
 `
@@ -93,6 +98,81 @@ async function commandMap(args: string[]): Promise<number> {
   return run.code
 }
 
+interface ApproveArguments {
+  ids: string[]
+  approver?: string
+  allowDirty: boolean
+  error?: string
+}
+
+function parseApproveArguments(args: string[]): ApproveArguments {
+  const ids: string[] = []
+  let approver: string | undefined
+  let allowDirty = false
+  let index = args[0] === "approve" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--approver") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { ids, allowDirty, error: "--approver requires a name" }
+      }
+      approver = value
+      index += 2
+      continue
+    }
+    if (argument === "--allow-dirty") {
+      allowDirty = true
+      index += 1
+      continue
+    }
+    if (argument.startsWith("-")) {
+      index += 1
+      continue
+    }
+
+    ids.push(argument)
+    index += 1
+  }
+
+  return { ids, approver, allowDirty }
+}
+
+async function commandApprove(args: string[]): Promise<number> {
+  const parsed = parseApproveArguments(args)
+  if (parsed.error) {
+    console.error(parsed.error)
+    return 2
+  }
+  if (parsed.ids.length === 0) {
+    console.error("usage: spec approve <ids...> [--approver <name>] [--allow-dirty]")
+    return 2
+  }
+
+  const target = process.cwd()
+  const check = await runCheck(target, { verifyApprovals: false })
+  if (check.result.errors > 0) {
+    console.log(check.output)
+    return 1
+  }
+
+  const [approver, identityError] = await new GitApproverResolver().resolve(parsed.approver)
+  if (identityError !== null || approver === null) {
+    console.error(identityError ?? "approver identity unavailable")
+    return 1
+  }
+
+  const run = await runApproval(target, parsed.ids, {
+    approver,
+    allowDirty: parsed.allowDirty,
+    confirmation: new TerminalApprovalConfirmation(),
+    gitStatus: new GitCleanlinessReader(),
+  })
+  console.log(run.output)
+  return run.code
+}
+
 export async function main(args: string[]): Promise<number> {
   const [command = "help", ...rest] = withoutFlags(args)
 
@@ -105,6 +185,8 @@ export async function main(args: string[]): Promise<number> {
       return commandCheck(args)
     case "map":
       return commandMap(args)
+    case "approve":
+      return commandApprove(args)
     case "version":
       console.log(pkg.version)
       return 0

@@ -1,5 +1,8 @@
 # Approval
 
+> Status: implemented for SDoc requirement and acceptance records, stored at
+> `spec/spec.lock`. Evidence hashing and the approval audit trail are pending.
+
 ## Principle
 
 Approval is a human action over a specific, hashed state of the specification and its evidence. It is not a status an agent can set.
@@ -17,13 +20,14 @@ Only `approved` elements may be implemented or counted as verified.
 
 ## Spec lock
 
-`spec.lock` is a deterministic record of approved content and evidence:
+`spec/spec.lock` is a deterministic record of approved content and evidence:
 
 ```json
 {
   "version": 1,
   "approved_at": "2026-11-10T12:00:00Z",
   "approver": "joao",
+  "dirty": false,
   "elements": {
     "REQ-AUTH-001": {
       "content_hash": "sha256:...",
@@ -44,13 +48,19 @@ Only `approved` elements may be implemented or counted as verified.
 }
 ```
 
-The lock contains no secrets. It may be committed.
+The lock contains no secrets. It may be committed. The content hash covers the
+canonical record fields except `STATUS`, so recording approval does not
+invalidate the approved content.
 
 ## Approval command
 
 ```bash
-spec approve CAP-SESSION-MANAGEMENT REQ-AUTH-001 AC-AUTH-001 CMP-AUTH VER-AUTH-EXPIRY SCON-AUTH-TOKEN
+spec approve REQ-AUTH-001 AC-AUTH-001
 ```
+
+The current slice resolves `REQ-*` and `AC-*` records from SDoc requirement
+sources. Other element kinds are rejected until their adapters expose an
+approval catalog.
 
 Requirements:
 
@@ -64,7 +74,7 @@ Requirements:
 
 On success:
 
-- hashes are written to `spec.lock`;
+- hashes are written to `spec/spec.lock`;
 - status becomes `approved`;
 - an approval record is appended to the audit trail;
 - the bundle approval page is updated.
@@ -72,7 +82,7 @@ On success:
 ## Human-only enforcement
 
 - `spec approve` requires an interactive human confirmation or a signed approval token.
-- Agent permissions deny writing `spec.lock` and deny running `spec approve`.
+- Agent permissions deny writing `spec/spec.lock` and deny running `spec approve`.
 - CI rejects approval commits that cannot be tied to a human identity.
 - The approval record includes the method used.
 

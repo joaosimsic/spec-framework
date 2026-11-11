@@ -19,6 +19,16 @@ It does not verify:
 - security against all adversaries;
 - product intent.
 
+## One method, not the whole plan
+
+Formal checking is one verification method. The verification layer also plans
+tests, analysis, inspection, and demonstration. Those methods produce separate
+evidence and do not borrow the authority of a passing model check.
+
+The audit bundle shows the method for every verification case. A requirement can
+have a formal property and a test case; neither result substitutes for the
+other. See [verification layer](architecture/verification-layer.md).
+
 ## Model versus code
 
 ```mermaid
@@ -105,13 +115,13 @@ Preflight evidence and formal evidence stay separate in the audit bundle.
 
 ## Tool selection
 
-| Problem | Default | Alternative |
-|---|---|---|
-| Temporal behavior | Quint | TLA+ |
-| Relational invariants | Quint or Alloy | Alloy |
-| Rust code proofs | none by default | Verus, Kani, Prusti |
-| Dafny code | none by default | Dafny |
-| Protocol state machines | Quint | TLA+ |
+| Problem                 | Default         | Alternative         |
+| ----------------------- | --------------- | ------------------- |
+| Temporal behavior       | Quint           | TLA+                |
+| Relational invariants   | Quint or Alloy  | Alloy               |
+| Rust code proofs        | none by default | Verus, Kani, Prusti |
+| Dafny code              | none by default | Dafny               |
+| Protocol state machines | Quint           | TLA+                |
 
 ## Scope limits
 

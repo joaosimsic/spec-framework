@@ -32,7 +32,7 @@ It does not model rendering, subjective quality, or product taste.
 
 In this framework, "full formal verification" means:
 
-1. Every approved behavioral requirement links to a Quint property or action.
+1. Every approved behavioral requirement links to a Quint property or action and a verification case.
 2. The linked Quint module passes type checking and model checking.
 3. Conformance traces are replayed against the implementation where an adapter exists.
 4. Evidence is stored, hashed, and included in the audit bundle.
@@ -74,17 +74,21 @@ The real module must define initialization, environment assumptions, and the pro
 ```mermaid
 flowchart LR
     REQ[REQ-AUTH-001] --> PROP[PROP-AUTH-EXPIRY]
+    REQ --> VER[VER-AUTH-EXPIRY]
+    VER --> PROP
     PROP --> MOD[MOD-AUTH]
     MOD --> CHECK[quint verify]
     CHECK --> EVD[EVD-AUTH-EXPIRY-001]
+    EVD --> VER
     EVD --> REQ
 ```
 
 - `REQ-*` carries the readable requirement.
+- `VER-*` names the formal verification case and its method.
 - `PROP-*` names the checked property.
 - `MOD-*` names the Quint module.
 - `EVD-*` records the checker run and hashes.
-- The audit bundle shows pass/fail and the property text.
+- The audit bundle shows pass/fail, the method, and the property text.
 
 ## Properties
 
@@ -162,13 +166,13 @@ The checker is the gate. The LLM never certifies its own model.
 
 ## When to use other formal tools
 
-| Need | Tool |
-|---|---|
-| Temporal behavior and concurrency | Quint, TLA+ |
-| Relational structure, access rules, data invariants | Alloy |
-| Code contracts and proofs in Rust | Verus, Kani, Prusti |
-| Code contracts in Dafny | Dafny |
-| Protocol state machines | Quint or TLA+ |
+| Need                                                | Tool                |
+| --------------------------------------------------- | ------------------- |
+| Temporal behavior and concurrency                   | Quint, TLA+         |
+| Relational structure, access rules, data invariants | Alloy               |
+| Code contracts and proofs in Rust                   | Verus, Kani, Prusti |
+| Code contracts in Dafny                             | Dafny               |
+| Protocol state machines                             | Quint or TLA+       |
 
 The framework keeps Quint as the default behavior layer. Other tools can be linked as additional evidence.
 

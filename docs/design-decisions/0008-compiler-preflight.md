@@ -1,6 +1,6 @@
 # 0008 — Compiler preflight adapter
 
-**Status:** proposed
+**Status:** accepted
 **Date:** 2026-11-11
 
 ## Context
@@ -61,4 +61,4 @@ Neutral:
 
 ## Follow-up
 
-Implementation details are specified in [Implementation layer](../architecture/implementation-layer.md). This decision moves to `accepted` only after the adapter, configuration validation, integration tests, and documentation land.
+Implementation landed in `src/adapters/compiler.ts`; configuration lives at `spec/implementation/compile.json`. See the [implementation layer](../architecture/implementation-layer.md) docs.

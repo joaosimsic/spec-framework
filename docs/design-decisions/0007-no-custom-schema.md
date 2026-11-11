@@ -24,6 +24,7 @@ Do not define a new specification language. Use the native formats of LikeC4, St
 - Each layer benefits from its tool's ecosystem and validators.
 - Cross-layer checks must parse or import native formats.
 - The framework's value is the glue and the audit model, not a new syntax.
+- The optional semantic layer uses RDF, OWL, SKOS, and SHACL, not a custom schema. See decision 0010.
 
 ## Alternatives
 

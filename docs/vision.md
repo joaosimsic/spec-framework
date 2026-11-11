@@ -10,7 +10,7 @@ The final artifact is a generated audit bundle:
 - HTML for navigation;
 - machine-readable evidence for CI and downstream tooling.
 
-The bundle contains architecture, requirements, behavior models, contracts, traceability, verification results, unknowns, waivers, and approvals. It is assembled deterministically from source artifacts.
+The bundle contains capabilities, architecture, requirements, shared vocabulary and semantic constraints, behavior models, contracts, verification plans and results, traceability, unknowns, waivers, and approvals. It is assembled deterministically from source artifacts.
 
 ## Roles
 
@@ -45,10 +45,12 @@ Validators, model checkers, traceability checks, and the bundle renderer are the
 ## What success looks like
 
 - A reviewer can answer "what does this system do, what are its parts, and how do we know?" from one bundle.
-- Every approved requirement has a formalization or a human-approved waiver.
+- Every capability has requirements and verification coverage or an explicit unknown.
+- Every approved requirement has a verification case, a formalization, or a human-approved waiver.
 - Every architecture element has an owner, a responsibility, and at least one relation or an explicit boundary marker.
 - Every interface has a typed contract and a compatibility policy.
-- Every behavioral claim is either model-checked, conformance-tested, or waived.
+- Every normative term resolves to a glossary entry or a pinned concept.
+- Every behavioral claim is either model-checked, conformance-tested, inspected, demonstrated, or waived.
 - A change produces a readable impact report before it produces code.
 - Removing the LLM from the process does not make the specification unauditable.
 

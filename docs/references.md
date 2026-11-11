@@ -11,6 +11,18 @@
 - SysML v2: [release repository](https://github.com/Systems-Modeling/SysML-v2-Release)
 - GitHub Spec Kit: [github/spec-kit](https://github.com/github/spec-kit)
 - SpecD: [specd-sdd/SpecD](https://github.com/specd-sdd/SpecD)
+- Reqvire: [reqvire-org/reqvire](https://github.com/reqvire-org/reqvire), [documentation](https://www.reqvire.org)
+
+## Semantic standards and tooling
+
+- RDF 1.1: [W3C recommendation](https://www.w3.org/TR/rdf11-concepts/)
+- OWL 2: [W3C recommendation](https://www.w3.org/TR/owl2-overview/)
+- SKOS: [W3C recommendation](https://www.w3.org/TR/skos-reference/)
+- SHACL: [W3C recommendation](https://www.w3.org/TR/shacl/)
+- SPARQL 1.1: [W3C recommendation](https://www.w3.org/TR/sparql11-overview/)
+- Oxigraph: [oxigraph.org](https://oxigraph.org/)
+- Apache Jena: [jena.apache.org](https://jena.apache.org/)
+- Model Context Protocol: [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 
 ## Formal methods
 

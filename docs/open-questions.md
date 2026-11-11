@@ -31,6 +31,37 @@
 - Which contract format should be the default for configuration files: JSON Schema or CUE?
 - How should CLI contracts represent streaming and interactive behavior?
 - How should hardware contracts be represented before a SystemRDL adapter exists?
+- When should a requirement-owned contract become a shared contract binding?
+
+## Semantic layer
+
+- Which RDF/SHACL toolchain best balances determinism, performance, and Bun/TypeScript integration?
+- How much OWL reasoning is safe and useful by default?
+- How should external vocabularies be vendored and updated without breaking determinism?
+- How should concept schemes and structural ontologies stay separate without duplicating glossary terms?
+- Which semantic constraints should be mandatory for certain requirement classes?
+
+## Capabilities and verification
+
+- Should capabilities be derived from product features, operational abilities, or system boundaries?
+- Which verification methods should be mandatory for each requirement class?
+- How should coverage roll up across capability, requirement, and verification layers without hiding gaps?
+- When is inspection or demonstration sufficient evidence instead of a waiver?
+
+## Query, MCP, and Explorer
+
+- What is the stable JSON schema for the unified graph query?
+- Should MCP expose prompts, tools, or both for each workflow?
+- Which authentication model is appropriate for local-only MCP and Explorer access?
+- What must a separate decision require before mutation-enabled MCP or Explorer is allowed?
+- Should the Explorer export static HTML first or start directly as a local server?
+
+## Workspace and lifecycle
+
+- Should multi-repo support use a native manifest, Git submodules, or both?
+- How should branch contexts be named and selected when several models are loaded?
+- What is the minimum migration fixture set for a stable model version?
+- How should approval hashes survive a pin update with unchanged component content?
 
 ## Implementation preflight
 
@@ -43,7 +74,7 @@
 
 ## Agent workflow
 
-- Should a unified spec MCP server replace separate LikeC4/StrictDoc/Quint access?
+- How should the read-only unified MCP server relate to the native LikeC4, StrictDoc, and Quint tools?
 - How should the agent query evidence without reading large logs?
 - What is the minimum permission model that remains portable across agent tools?
 

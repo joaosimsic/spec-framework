@@ -18,7 +18,7 @@ The agent must not fill gaps with plausible text. It files an unknown with a que
 
 ## 5. Relations are typed and checked
 
-Components, interfaces, data, requirements, and verification are connected by named relations. The linter checks that endpoints exist, cardinalities are legal, and required relations are present.
+Components, interfaces, data, capabilities, requirements, semantic constraints, and verification are connected by named relations. The linter checks that endpoints exist, cardinalities are legal, and required relations are present.
 
 ## 6. Completeness is relative to a question matrix
 
@@ -26,7 +26,7 @@ There is no absolute proof that a spec is complete. Completeness means every man
 
 ## 7. Deterministic tools decide mechanical correctness
 
-LikeC4 validation, StrictDoc traceability, Quint model checking, and contract checks are the authority. An LLM's statement that something is correct has no evidentiary value.
+LikeC4 validation, capability and verification coverage checks, StrictDoc traceability, semantic validation and SHACL checks, Quint model checking, and contract checks are the authority. An LLM's statement that something is correct has no evidentiary value.
 
 ## 8. Human approval is hash-locked
 
@@ -58,7 +58,7 @@ If the agent disappears, the sources remain readable, the validators still run, 
 
 ## 15. Full-stack by default, one-command setup
 
-The default profile includes architecture, requirements, formal behavior, and contracts. Setup is automated through `spec doctor --fix`, not a manual checklist. A missing tool blocks the affected check; it does not silently reduce verification.
+The default profile includes capabilities, architecture, requirements, verification planning, formal behavior, and contracts. The semantic layer is optional but must be provisioned when active. Setup is automated through `spec doctor --fix`, not a manual checklist. A missing tool blocks the affected check; it does not silently reduce verification.
 
 ## 16. Time to first value is a requirement
 

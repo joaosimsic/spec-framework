@@ -22,6 +22,7 @@ Compose existing tools and build only the cross-layer glue:
 ## Consequences
 
 - Each layer can be replaced without rewriting the others.
+- The optional semantic layer composes standard RDF/OWL/SKOS/SHACL tooling rather than a custom engine.
 - The framework must maintain adapters and cross-layer checks.
 - Tool versions must be pinned and provisioned reproducibly.
 - The readable artifact is generated from multiple sources, so bundle assembly is a core capability.

@@ -37,12 +37,15 @@ flowchart LR
     Component --> External[external_system]
     Component --> Interface[interface]
     Interface --> Protocol[protocol]
+    Capability[capability] -.-> Component
+    Capability -.-> Requirement[requirement]
 ```
 
 Element kinds:
 
 - `actor`: human or external initiator;
 - `system`: top-level product or service boundary;
+- `capability`: a system ability anchored to requirements and verification; optional as a view element;
 - `subsystem`: major division inside a system;
 - `component`: independently responsible unit;
 - `module`: code-level unit when the project needs that level;
@@ -93,6 +96,8 @@ Native LikeC4 validation plus `spec-lint`:
 10. Layering rules are configurable per project.
 11. Every approved requirement references an existing component.
 12. Every component satisfies at least one requirement or has a rationale waiver.
+13. Every capability reference resolves to an existing `CAP-*` element.
+14. Every capability has at least one requirement, verification objective, or explicit unknown.
 
 ## Entry points and reachability
 
@@ -129,7 +134,7 @@ Agents query the graph; they do not infer architecture from code or prose. Archi
 1. Human states a direction.
 2. Agent drafts a LikeC4 change in a proposal branch.
 3. `likec4 validate` and `spec-lint` run.
-4. The change report shows affected components, relations, requirements, and views.
+4. The change report shows affected capabilities, components, relations, requirements, verification, and views.
 5. Human reviews rendered before/after views.
 6. Approval updates `spec.lock`.
 

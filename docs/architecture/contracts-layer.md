@@ -19,12 +19,12 @@ Every adapter implements:
 
 ```ts
 interface ContractAdapter {
-  id: string
-  discover(): Promise<ContractCandidate[]>
-  validate(contract: Contract): Promise<ValidationResult>
-  exportDocs(contract: Contract): Promise<DocFragment[]>
-  compare?(before: Contract, after: Contract): Promise<CompatibilityResult>
-  evidence(): Promise<Evidence>
+  id: string;
+  discover(): Promise<ContractCandidate[]>;
+  validate(contract: Contract): Promise<ValidationResult>;
+  exportDocs(contract: Contract): Promise<DocFragment[]>;
+  compare?(before: Contract, after: Contract): Promise<CompatibilityResult>;
+  evidence(): Promise<Evidence>;
 }
 ```
 
@@ -40,20 +40,61 @@ Rules:
 
 ## Boundary kinds
 
-| Boundary | Default source | Compatibility check |
-|---|---|---|
-| Rust public API | rustdoc JSON, `cargo public-api` | `cargo-semver-checks` |
-| TypeScript public API | `api-extractor` | API report diff |
-| PHP public API | PHPStan, Roave backward-compatibility check | tool report |
-| JSON data | JSON Schema | schema diff |
-| CUE data | CUE definitions | `cue vet` and diff |
-| CBOR/binary data | CDDL | schema diff |
-| Protobuf | `.proto` | `buf breaking` |
-| CLI | help/exit/stream snapshots | snapshot diff |
-| Events | AsyncAPI or schema adapter | schema diff |
-| Hardware | manual or SystemRDL/IP-XACT adapter | manual review |
+| Boundary              | Default source                              | Compatibility check   |
+| --------------------- | ------------------------------------------- | --------------------- |
+| Rust public API       | rustdoc JSON, `cargo public-api`            | `cargo-semver-checks` |
+| TypeScript public API | `api-extractor`                             | API report diff       |
+| PHP public API        | PHPStan, Roave backward-compatibility check | tool report           |
+| JSON data             | JSON Schema                                 | schema diff           |
+| CUE data              | CUE definitions                             | `cue vet` and diff    |
+| CBOR/binary data      | CDDL                                        | schema diff           |
+| Protobuf              | `.proto`                                    | `buf breaking`        |
+| CLI                   | help/exit/stream snapshots                  | snapshot diff         |
+| Events                | AsyncAPI or schema adapter                  | schema diff           |
+| Hardware              | manual or SystemRDL/IP-XACT adapter         | manual review         |
 
 The Phase 1 adapters are JSON Schema, CLI, and Rust public API. Other adapters follow.
+
+## Requirement-owned contracts
+
+A requirement can own structured contract sections:
+
+- source contracts;
+- specifications;
+- behavioral contracts;
+- state models;
+- input/output contracts;
+- constraints.
+
+These sections make the obligation precise while remaining in the requirement's
+native source. The defining requirement owns the contract. Another requirement
+can reuse it through a `Contract Bindings` section; binding adds obligation
+context but does not transfer ownership.
+
+The framework checks:
+
+- every binding resolves to a contract owned by an existing requirement;
+- the bound contract is compatible with the consuming requirement;
+- a bound contract's change invalidates the consumer's compatibility evidence;
+- a requirement-owned contract without an owner or compatibility policy cannot
+  be approved.
+
+## Semantic contracts
+
+A semantic contract (`SCON-*`) is an ontology-plane SHACL profile. It is
+different from a requirement-owned contract:
+
+- `CON-*` describes an implementation-facing boundary;
+- `SCON-*` constrains vocabulary, shape, or data through ontology terms;
+- `CON-*` can be constrained by `SCON-*`;
+- `SCON-*` does not replace a contract adapter or compatibility evidence.
+
+A semantic contract declares the terms it uses, the obligations it constrains,
+its severity, and its owner. SHACL validation produces semantic evidence. A
+blocking violation blocks approval of linked requirements or contracts.
+
+See [semantic layer](semantic-layer.md) and
+[decision 0010](../design-decisions/0010-optional-semantic-layer.md).
 
 ## Language APIs
 
@@ -136,6 +177,20 @@ Each contract declares:
 
 A contract without a compatibility policy cannot be approved.
 
+## Evidence and invalidation
+
+Contract evidence records:
+
+- contract ID and adapter;
+- input and baseline hashes;
+- tool versions;
+- compatibility verdict;
+- semantic validation result when `SCON-*` applies.
+
+Changing the contract, its consumers, its baseline, or a linked semantic
+contract invalidates compatibility evidence. An incompatible contract blocks
+approval of every requirement that uses or binds it.
+
 ## Example evidence
 
 ```json
@@ -159,3 +214,5 @@ A contract without a compatibility policy cannot be approved.
 - Replacing language type systems with an IDL.
 - Generating implementations from contracts.
 - Guaranteeing semantic compatibility from syntax alone.
+- Treating a SHACL profile as a full implementation contract.
+- Letting a contract binding transfer ownership away from the defining requirement.

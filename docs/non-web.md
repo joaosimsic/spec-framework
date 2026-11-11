@@ -6,15 +6,15 @@ The framework assumes boundaries are not HTTP endpoints. A project may have no n
 
 ## Boundary types
 
-| Type | Examples | Contract |
-|---|---|---|
-| Language API | Rust crate, TypeScript package, PHP library | public API surface |
-| CLI | developer tool, batch processor | commands, flags, exit codes, streams |
-| File format | config, archive, database file | JSON Schema, CUE, CDDL |
-| IPC | Unix socket, message queue, shared memory | message schema and protocol |
-| Wire | TCP/UDP protocol, RPC | Protobuf, CDDL, custom schema |
-| Hardware | device register map, bus protocol | manual or SystemRDL/IP-XACT |
-| Event | domain event, telemetry | schema and delivery semantics |
+| Type         | Examples                                    | Contract                             |
+| ------------ | ------------------------------------------- | ------------------------------------ |
+| Language API | Rust crate, TypeScript package, PHP library | public API surface                   |
+| CLI          | developer tool, batch processor             | commands, flags, exit codes, streams |
+| File format  | config, archive, database file              | JSON Schema, CUE, CDDL               |
+| IPC          | Unix socket, message queue, shared memory   | message schema and protocol          |
+| Wire         | TCP/UDP protocol, RPC                       | Protobuf, CDDL, custom schema        |
+| Hardware     | device register map, bus protocol           | manual or SystemRDL/IP-XACT          |
+| Event        | domain event, telemetry                     | schema and delivery semantics        |
 
 ## Example: library + CLI + file format
 
@@ -29,6 +29,12 @@ flowchart LR
     CLI --> Exit[exit codes and streams]
 ```
 
+Capabilities cover:
+
+- library, CLI, file-format, and protocol abilities;
+- operational context and stakeholder needs;
+- decomposition into narrower abilities.
+
 Requirements cover:
 
 - library API behavior;
@@ -36,6 +42,18 @@ Requirements cover:
 - file parsing and validation;
 - error classes;
 - compatibility promises.
+
+Semantic constraints cover:
+
+- shared vocabulary for file formats and error classes;
+- SHACL shapes over configuration and data records;
+- term mappings across components and formats.
+
+Verification planning covers:
+
+- formal, test, analysis, inspection, and demonstration methods;
+- manual inspection for hardware and device behavior;
+- explicit unverified scope.
 
 Formal models cover:
 

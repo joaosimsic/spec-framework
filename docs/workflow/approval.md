@@ -6,12 +6,12 @@ Approval is a human action over a specific, hashed state of the specification an
 
 ## Statuses
 
-| Status | Meaning |
-|---|---|
-| `draft` | Incomplete; not reviewed |
-| `proposed` | Complete enough for review; not approved |
-| `approved` | Human-approved and hash-locked |
-| `deprecated` | Retired; retained for audit |
+| Status       | Meaning                                  |
+| ------------ | ---------------------------------------- |
+| `draft`      | Incomplete; not reviewed                 |
+| `proposed`   | Complete enough for review; not approved |
+| `approved`   | Human-approved and hash-locked           |
+| `deprecated` | Retired; retained for audit              |
 
 Only `approved` elements may be implemented or counted as verified.
 
@@ -49,7 +49,7 @@ The lock contains no secrets. It may be committed.
 ## Approval command
 
 ```bash
-spec approve REQ-AUTH-001 AC-AUTH-001 CMP-AUTH PROP-AUTH-EXPIRY
+spec approve CAP-SESSION-MANAGEMENT REQ-AUTH-001 AC-AUTH-001 CMP-AUTH VER-AUTH-EXPIRY SCON-AUTH-TOKEN
 ```
 
 Requirements:
@@ -89,13 +89,18 @@ A feature slice approval does not approve unrelated elements. The audit bundle s
 
 ## Evidence requirements
 
-| Element | Required evidence |
-|---|---|
-| Requirement | Acceptance criteria and formalization or waiver |
-| Acceptance criterion | Evidence ID or explicit unknown |
-| Formal property | Model-checking result |
-| Contract | Adapter validation and compatibility result |
-| Component | Architecture validation and owner review |
+| Element                | Required evidence                                                     |
+| ---------------------- | --------------------------------------------------------------------- |
+| Requirement            | Acceptance criteria and formalization, verification case, or waiver   |
+| Acceptance criterion   | Evidence ID or explicit unknown                                       |
+| Capability             | Requirement derivation and verification objective or explicit unknown |
+| Ontology               | Semantic validation, pinned external sources, and owner review        |
+| Semantic contract      | SHACL validation report and linked obligations                        |
+| Verification objective | At least one verification case or waiver                              |
+| Verification case      | Method, target, and evidence                                          |
+| Formal property        | Model-checking result                                                 |
+| Contract               | Adapter validation and compatibility result                           |
+| Component              | Architecture validation and owner review                              |
 
 Missing evidence blocks approval. A waiver is the only exception.
 
@@ -105,6 +110,9 @@ Approval is invalid when:
 
 - content hash changes;
 - evidence hash changes;
+- linked capability or requirement derivation changes;
+- linked semantic constraint fails or its ontology changes;
+- linked verification case loses evidence;
 - linked formal property fails;
 - linked contract becomes incompatible;
 - waiver expires;

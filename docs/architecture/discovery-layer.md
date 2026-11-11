@@ -6,13 +6,13 @@ The discovery layer turns an existing repository into a draft specification inpu
 
 ## Commands
 
-| Command | Effect |
-|---|---|
-| `spec init --existing` | Detect project structure, write config, scaffold empty spec |
-| `spec map --draft` | Extract draft architecture and report confidence |
-| `spec map --check` | Compare approved architecture with current code graph |
-| `spec import-contracts` | Extract draft contract definitions |
-| `spec gap` | Report missing links, owners, contracts, and evidence |
+| Command                 | Effect                                                      |
+| ----------------------- | ----------------------------------------------------------- |
+| `spec init --existing`  | Detect project structure, write config, scaffold empty spec |
+| `spec map --draft`      | Extract draft architecture and report confidence            |
+| `spec map --check`      | Compare approved architecture with current code graph       |
+| `spec import-contracts` | Extract draft contract definitions                          |
+| `spec gap`              | Report missing links, owners, contracts, and evidence       |
 
 ## Generic discovery
 
@@ -40,14 +40,14 @@ Generic discovery does not parse arbitrary source code into a call graph. That w
 
 Native adapters activate automatically from source markers:
 
-| Adapter | Marker |
-|---|---|
-| LikeC4 | `.c4` or `.likec4` files under `spec/architecture` |
-| StrictDoc | `.sdoc` or `.md` files under `spec/requirements` |
-| Quint | `.qnt` files under `spec/formal` |
-| JSON Schema | `.schema.json` files under `spec/contracts` |
-| CLI | `.snapshot.json` files under `spec/contracts/cli` |
-| Rust public API | `Cargo.toml` or Rust contract sidecars |
+| Adapter         | Marker                                             |
+| --------------- | -------------------------------------------------- |
+| LikeC4          | `.c4` or `.likec4` files under `spec/architecture` |
+| StrictDoc       | `.sdoc` or `.md` files under `spec/requirements`   |
+| Quint           | `.qnt` files under `spec/formal`                   |
+| JSON Schema     | `.schema.json` files under `spec/contracts`        |
+| CLI             | `.snapshot.json` files under `spec/contracts/cli`  |
+| Rust public API | `Cargo.toml` or Rust contract sidecars             |
 
 An adapter can also be required explicitly in `spec/config.json` even when its sources are absent, in which case missing sources fail closed.
 
@@ -62,15 +62,15 @@ Phase 1 adapter:
 
 Mapping:
 
-| Rust concept | Draft spec element |
-|---|---|
-| workspace | `SYS-` or `SYS-` subsystem |
-| package/crate | `CMP-` |
-| binary target | entry point |
-| library public type/trait | `CON-` language API |
-| workspace dependency | `depends_on` relation |
-| feature flag | optional capability, draft |
-| rustdoc documentation | rationale with `code:` provenance |
+| Rust concept              | Draft spec element                |
+| ------------------------- | --------------------------------- |
+| workspace                 | `SYS-` or `SYS-` subsystem        |
+| package/crate             | `CMP-`                            |
+| binary target             | entry point                       |
+| library public type/trait | `CON-` language API               |
+| workspace dependency      | `depends_on` relation             |
+| feature flag              | optional capability, draft        |
+| rustdoc documentation     | rationale with `code:` provenance |
 
 The adapter does not infer runtime topology, ownership, or requirements.
 
@@ -93,9 +93,7 @@ Example fragment:
   "status": "draft",
   "provenance": "code:cargo metadata#spec-core",
   "confidence": "observed",
-  "links": [
-    { "type": "part_of", "to": "SYS-SPEC-FRAMEWORK" }
-  ]
+  "links": [{ "type": "part_of", "to": "SYS-SPEC-FRAMEWORK" }]
 }
 ```
 
@@ -149,5 +147,6 @@ Drift does not modify the approved model.
 - Full semantic call graphs for every language.
 - Runtime topology discovery.
 - Automatic requirement extraction.
+- Automatic capability, ontology, or verification-plan inference.
 - Automatic approval.
 - Replacing language compilers or build systems.

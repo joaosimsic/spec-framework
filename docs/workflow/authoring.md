@@ -6,13 +6,13 @@ The agent drafts. Deterministic tools validate. The human approves. Code follows
 
 ## Roles
 
-| Role | Responsibility |
-|---|---|
-| Human | Direction, answers, architecture review, approval |
+| Role                 | Responsibility                                             |
+| -------------------- | ---------------------------------------------------------- |
+| Human                | Direction, answers, architecture review, approval          |
 | spec-architect agent | Draft architecture, requirements, contracts, formal models |
-| spec-critic agent | Read-only review; files defects and unknowns |
-| Native tools | Validate architecture, traceability, behavior, contracts |
-| spec CLI | Link, gate, hash, bundle, report |
+| spec-critic agent    | Read-only review; files defects and unknowns               |
+| Native tools         | Validate architecture, traceability, behavior, contracts   |
+| spec CLI             | Link, gate, hash, bundle, report                           |
 
 ## End-to-end flow
 
@@ -57,9 +57,12 @@ The agent records the direction as a `DEC-*` draft and asks only questions that 
 `spec change <direction>` creates a proposal branch and a change report. The agent updates:
 
 - LikeC4 model for new or changed components;
+- capability model for new or changed abilities;
 - StrictDoc records for requirements and acceptance criteria;
+- semantic sources for vocabulary and constraints when the layer is active;
+- verification plan for objectives and cases;
 - Quint modules and properties for behavior;
-- contract definitions for boundaries;
+- contract definitions and bindings for boundaries;
 - unknowns for missing information.
 
 No approved element is edited in place. An approved element that changes becomes `proposed` and loses its approval hash.
@@ -76,10 +79,13 @@ This executes:
 
 - structural checks;
 - LikeC4 validation;
+- capability coverage and hierarchy checks;
 - StrictDoc validation and traceability;
+- semantic validation and SHACL checks when active;
+- verification plan coverage;
 - Quint type checking and model checking;
-- contract adapter checks;
-- cross-layer lint.
+- contract adapter and binding checks;
+- cross-layer impact and coverage lint.
 
 The agent repairs failures until the checks pass or a real unknown remains.
 
@@ -88,10 +94,12 @@ The agent repairs failures until the checks pass or a real unknown remains.
 The human reviews:
 
 - the change report;
-- affected architecture views;
+- affected architecture and capability views;
 - changed requirements and acceptance criteria;
+- ontology, concept, and semantic-contract changes;
+- verification objectives, methods, and coverage;
 - formal properties and counterexamples;
-- contract compatibility;
+- contract compatibility and bindings;
 - unknowns and waivers.
 
 The agent may summarize, but the human reviews the generated bundle and diff, not an LLM narrative.
@@ -131,12 +139,14 @@ The agent runs conformance tests and stores evidence. The human does not accept 
 A typical first slice contains:
 
 - one system boundary;
+- one capability;
 - one or two components;
 - one interface or contract;
 - two or three requirements;
 - one acceptance criterion per requirement;
-- one Quint property;
-- one evidence item.
+- one verification objective and case per method used;
+- one Quint property when behavior is formalized;
+- one evidence item per verification case.
 
 Small slices expose friction early. Large slices hide gaps.
 

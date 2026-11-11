@@ -4,15 +4,19 @@
 
 The framework treats the specification as executable input to agents and CI. That makes spec integrity a security concern.
 
-| Boundary | Trusted | Untrusted |
-|---|---|---|
-| Human direction | Human decisions | Pasted external text |
-| Spec sources | Approved, hash-locked content | Draft proposals |
-| Build commands | Reviewed `compile.json` | Unreviewed commands from drafts |
-| Agent | Draft generation | Approval, verification verdicts |
-| Validators | Deterministic tools | LLM self-report |
-| CI | Pinned toolchain and evidence | Network-fetched mutable dependencies |
-| Audit bundle | Generated, hashed artifact | Hand-edited generated files |
+| Boundary         | Trusted                       | Untrusted                             |
+| ---------------- | ----------------------------- | ------------------------------------- |
+| Human direction  | Human decisions               | Pasted external text                  |
+| Spec sources     | Approved, hash-locked content | Draft proposals                       |
+| Build commands   | Reviewed `compile.json`       | Unreviewed commands from drafts       |
+| Agent            | Draft generation              | Approval, verification verdicts       |
+| Validators       | Deterministic tools           | LLM self-report                       |
+| CI               | Pinned toolchain and evidence | Network-fetched mutable dependencies  |
+| Semantic sources | Pinned local vocabularies     | Unpinned external RDF/OWL sources     |
+| Query and MCP    | Read-only validated model     | Mutating or unauthenticated clients   |
+| Explorer         | Local read-only review        | Remote exposure or editing            |
+| Workspace        | Pinned composition            | Mutable or unverified repository pins |
+| Audit bundle     | Generated, hashed artifact    | Hand-edited generated files           |
 
 ## Threats
 
@@ -76,6 +80,56 @@ Mitigations:
 - review changes to `compile.json` with the same scrutiny as build scripts;
 - leave host-level sandboxing to the execution environment.
 
+### Malicious external vocabularies
+
+An ontology imports an unpinned or compromised RDF/OWL source.
+
+Mitigations:
+
+- external sources are local files with recorded hashes;
+- no mutable remote fetch at verification time;
+- only the used external subset appears in exports;
+- external terms are marked as external and cannot replace authored elements;
+- source changes invalidate semantic evidence and approvals.
+
+### Query and renderer abuse
+
+SPARQL, MCP, or Explorer queries consume unbounded resources or expose files
+outside the workspace.
+
+Mitigations:
+
+- local bind by default;
+- explicit host and origin configuration for non-local access;
+- query timeouts and result limits;
+- workspace-relative path resolution only;
+- no secrets or approval tokens in responses;
+- query and rendering are read-only.
+
+### Mutating agent interfaces
+
+An MCP or Explorer client edits approved content or approves a change.
+
+Mitigations:
+
+- read-only default for both interfaces;
+- mutation disabled until a separate decision accepts it;
+- any future mutation requires branch isolation, validation, and human approval;
+- approval remains a CLI-only human action;
+- all mutation attempts are logged and rejected by default.
+
+### Workspace composition tampering
+
+A repository pin or manifest changes without review.
+
+Mitigations:
+
+- manifest and pins are committed and reviewed;
+- verification uses recorded commits and never fetches;
+- missing or mismatched pins fail admission;
+- cross-repo impact requires an explicit baseline;
+- publication order is component first, root composition second.
+
 ### Secrets in specs
 
 Specs may reference credentials, internal hosts, or customer data.
@@ -89,7 +143,8 @@ Mitigations:
 
 ### Supply chain
 
-LikeC4, StrictDoc, Quint, Apalache, and the PDF toolchain are dependencies.
+LikeC4, StrictDoc, Quint, Apalache, the semantic RDF/SHACL toolchain, the query
+and MCP server, the Explorer renderer, and the PDF toolchain are dependencies.
 
 Mitigations:
 
@@ -100,14 +155,14 @@ Mitigations:
 
 ## Agent permissions
 
-| Agent | Read approved spec | Write approved spec | Write proposals | Run validators | Approve |
-|---|---:|---:|---:|---:|---:|
-| default build | yes | no | no | yes | no |
-| spec-architect | yes | no | yes | yes | no |
-| spec-critic | yes | no | no | yes | no |
-| human | yes | yes | yes | yes | yes |
+| Agent          | Read approved spec | Write approved spec | Write proposals | Run validators | Approve |
+| -------------- | -----------------: | ------------------: | --------------: | -------------: | ------: |
+| default build  |                yes |                  no |              no |            yes |      no |
+| spec-architect |                yes |                  no |             yes |            yes |      no |
+| spec-critic    |                yes |                  no |              no |            yes |      no |
+| human          |                yes |                 yes |             yes |            yes |     yes |
 
-The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow.
+The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow. Query, MCP, and Explorer access is read-only and never substitutes for approval.
 
 ## Non-goals
 

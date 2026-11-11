@@ -23,10 +23,12 @@ stateDiagram-v2
 
 - changed element IDs and titles;
 - added, modified, removed, deprecated elements;
-- affected requirements and components;
+- affected capabilities, requirements, and components;
 - architecture diagram diffs;
+- ontology, concept, and semantic-contract changes;
+- verification objectives and cases added or changed;
 - formal properties added or changed;
-- contract compatibility changes;
+- contract bindings and compatibility changes;
 - invalidated evidence;
 - approvals that must be renewed;
 - new unknowns and waivers;
@@ -36,33 +38,50 @@ Example:
 
 ```text
 CHANGE auth-expiry
+  MODIFIED  CAP-SESSION-MANAGEMENT  add refresh failure behavior
   MODIFIED  REQ-AUTH-004   add refresh failure behavior
+  ADDED     VOBJ-AUTH-REFRESH   refresh verification objective
+  ADDED     VER-AUTH-REFRESH    formal and test cases
   ADDED     PROP-AUTH-REFRESH   new liveness property
   MODIFIED  CMP-AUTH       add token-store dependency
   ADDED     CON-AUTH-REFRESH    refresh API
+  MODIFIED  SCON-AUTH-TOKEN     add refresh shape
   INVALID   EVD-AUTH-004-001    requirement hash changed
-  BLOCKED   1 missing formalization
+  BLOCKED   1 missing verification case
 ```
 
 ## Impact analysis
 
 The CLI walks links in both directions:
 
-- requirement to component;
+- capability to requirement and verification objective;
+- requirement to component, contract, and verification case;
 - component to interfaces and contracts;
-- requirement to formal property;
-- property to evidence;
+- ontology to concept, semantic contract, requirement, and contract;
+- requirement to formal property and verification case;
+- property or case to evidence;
 - evidence to code and tests.
 
-Any changed input invalidates downstream evidence. The report lists the affected chain.
+Any changed input invalidates downstream evidence. The report lists the affected
+chain.
+
+The baseline is explicit: a PR merge-base, a named approved baseline, or `HEAD`
+for pending local work. Without an explicit baseline, the impact report is
+incomplete. Multi-repository impact analysis uses the recorded composition and
+pins; it never fetches repositories during analysis. See
+[workspace and branches](../architecture/workspace-and-branches.md).
 
 ## Approval invalidation
 
 - Editing an approved element removes its approval hash.
 - Editing evidence removes the evidence hash.
+- Changing a capability invalidates derived requirement and coverage approval.
+- Changing an ontology or concept invalidates linked semantic evidence.
+- Changing a semantic contract invalidates SHACL evidence and dependent approvals.
+- Changing a verification objective or case invalidates its execution evidence.
 - Changing a contract invalidates compatibility evidence.
 - Changing a formal property invalidates model-checking evidence.
-- Changing a requirement invalidates acceptance evidence.
+- Changing a requirement invalidates acceptance and verification evidence.
 
 A human must re-approve the changed scope. Unchanged elements keep their approval.
 
@@ -89,6 +108,9 @@ A waiver is a change like any other:
 
 - code elements not in the approved architecture;
 - approved elements missing from code;
+- capabilities with no derived requirement;
+- semantic terms with no usage or pinned source;
+- verification cases with no evidence;
 - contract surface changes;
 - stale evidence;
 - code annotations referencing unapproved or missing IDs.

@@ -6,12 +6,12 @@ Agents accelerate authoring and implementation. They do not own approval, archit
 
 ## Agent roles
 
-| Agent | Read approved spec | Write approved spec | Write proposals | Run checks | Approve |
-|---|---:|---:|---:|---:|---:|
-| default build | yes | no | no | yes | no |
-| spec-architect | yes | no | yes | yes | no |
-| spec-critic | yes | no | no | yes | no |
-| human | yes | yes | yes | yes | yes |
+| Agent          | Read approved spec | Write approved spec | Write proposals | Run checks | Approve |
+| -------------- | -----------------: | ------------------: | --------------: | ---------: | ------: |
+| default build  |                yes |                  no |              no |        yes |      no |
+| spec-architect |                yes |                  no |             yes |        yes |      no |
+| spec-critic    |                yes |                  no |              no |        yes |      no |
+| human          |                yes |                 yes |             yes |        yes |     yes |
 
 ### Default build agent
 
@@ -27,17 +27,36 @@ Read-only. It runs validators, inspects diffs, and files defects and unknowns. I
 
 ## Commands
 
-| Command | Agent | Effect |
-|---|---|---|
-| `spec init` | human or agent | Scaffold full profile |
-| `spec doctor --fix` | human or agent | Provision pinned tools |
-| `spec check` | agent | Run all checks; report blocked scope |
-| `spec change` | spec-architect | Create proposal and change report |
-| `spec review` | spec-critic | Read-only critique and defect filing |
-| `spec bundle` | agent | Generate audit bundle |
-| `spec approve` | human only | Hash-lock approved elements |
-| `spec query --json` | agent | Query graph, IDs, status, links |
-| `spec map` | agent | Draft architecture from code |
+| Command               | Agent          | Effect                                            |
+| --------------------- | -------------- | ------------------------------------------------- |
+| `spec init`           | human or agent | Scaffold full profile                             |
+| `spec doctor --fix`   | human or agent | Provision pinned tools                            |
+| `spec check`          | agent          | Run all checks; report blocked scope              |
+| `spec change`         | spec-architect | Create proposal and change report                 |
+| `spec review`         | spec-critic    | Read-only critique and defect filing              |
+| `spec bundle`         | agent          | Generate audit bundle                             |
+| `spec approve`        | human only     | Hash-lock approved elements                       |
+| `spec query --json`   | agent          | Query graph, IDs, status, links, impact, coverage |
+| `spec semantic query` | agent          | Read-only SPARQL or semantic graph query          |
+| `spec serve`          | human or agent | Start read-only local Explorer                    |
+| `spec mcp`            | human or agent | Start read-only MCP interface                     |
+| `spec map`            | agent          | Draft architecture from code                      |
+
+## Query and MCP access
+
+The agent may query the spec graph through the CLI, the read-only MCP server, or
+the Explorer's data API. All three expose the same model and the same read-only
+rules.
+
+- Query results are scoped to the selected baseline or branch context.
+- The agent must cite element IDs and evidence hashes in change reports.
+- The agent may summarize query output but not present it as approval.
+- The default interface cannot edit sources, evidence, statuses, or
+  `spec.lock`.
+- Mutation over MCP or Explorer is disabled until a separate decision enables
+  it, with branch isolation, validation, and human approval.
+- Skills package query and authoring workflows; installing a skill does not
+  grant approval or mutation rights.
 
 ## Context rules
 
@@ -66,6 +85,8 @@ Read-only. It runs validators, inspects diffs, and files defects and unknowns. I
 - Editing `spec.lock`.
 - Running `spec approve`.
 - Marking an element `approved`.
+- Using an MCP or Explorer mutation path to edit approved content.
+- Treating a query result or Explorer view as an approval verdict.
 - Deleting an approved element instead of deprecating it.
 - Suppressing a failing formal property.
 - Replacing a checker with a prose argument.
@@ -97,6 +118,7 @@ The workflow must remain usable if the agent is replaced or removed:
 
 - sources stay readable;
 - validators run from the CLI;
+- the graph is queryable without the agent;
 - the audit bundle renders;
 - approval remains human-only.
 

@@ -7,7 +7,10 @@
 `spec-framework` is full-stack by default. The default profile expects:
 
 - LikeC4 for architecture;
+- a capability model linked to architecture and requirements;
 - StrictDoc for requirements and audit output;
+- a verification plan for objectives, methods, and cases;
+- optional RDF/OWL/SKOS/SHACL sources when the semantic layer is active;
 - Quint and Apalache for formal behavior;
 - at least one contract adapter;
 - a PDF-capable renderer for the audit bundle.
@@ -30,14 +33,14 @@ If provisioning is not possible, `spec doctor` prints exact commands per missing
 
 ## Provisioning matrix
 
-| Environment | Runner | Behavior |
-|---|---|---|
-| Nix available | pinned flake | Preferred; reproducible, no global mutation |
-| Container runtime available | pinned image | Reproducible; mounts the project read/write |
-| Bun available | project-local `bun add` | LikeC4 and Quint tooling |
-| Python `uv` available | `uvx` | StrictDoc |
-| Java available | cached Apalache distribution | Quint model checking |
-| None of the above | instructions | `spec doctor` prints exact commands and exits non-zero |
+| Environment                 | Runner                       | Behavior                                               |
+| --------------------------- | ---------------------------- | ------------------------------------------------------ |
+| Nix available               | pinned flake                 | Preferred; reproducible, no global mutation            |
+| Container runtime available | pinned image                 | Reproducible; mounts the project read/write            |
+| Bun available               | project-local `bun add`      | LikeC4 and Quint tooling                               |
+| Python `uv` available       | `uvx`                        | StrictDoc                                              |
+| Java available              | cached Apalache distribution | Quint model checking                                   |
+| None of the above           | instructions                 | `spec doctor` prints exact commands and exits non-zero |
 
 Pinned versions live in `spec/toolchain.lock.json`. The lockfile is committed. `spec doctor --fix` does not resolve floating versions.
 
@@ -67,14 +70,19 @@ This is not a reduced product mode. It is a preflight that gives immediate feedb
 
 ## Missing tools
 
-| Missing | Effect |
-|---|---|
-| LikeC4 | architecture validation, views, and MCP unavailable; affected approval blocked |
-| StrictDoc | traceability and PDF/HTML audit export unavailable; approval blocked |
-| Quint | formal properties unverified; affected approval blocked |
-| Apalache | model checking unavailable; formal approval blocked |
-| Contract adapter | boundary evidence missing; affected approval blocked |
-| PDF renderer | bundle HTML available; formal PDF approval blocked |
+| Missing           | Effect                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| LikeC4            | architecture validation, views, and MCP unavailable; affected approval blocked            |
+| Capability lint   | capability coverage and hierarchy unavailable; affected approval blocked                  |
+| StrictDoc         | traceability and PDF/HTML audit export unavailable; approval blocked                      |
+| Semantic adapter  | semantic validation and SHACL evidence unavailable when active; affected approval blocked |
+| Verification plan | verification coverage and method tracking unavailable; affected approval blocked          |
+| Query/MCP         | read-only graph access unavailable; validation and approval still work                    |
+| Explorer          | local review surface unavailable; validation and approval still work                      |
+| Quint             | formal properties unverified; affected approval blocked                                   |
+| Apalache          | model checking unavailable; formal approval blocked                                       |
+| Contract adapter  | boundary evidence missing; affected approval blocked                                      |
+| PDF renderer      | bundle HTML available; formal PDF approval blocked                                        |
 
 `spec check` reports the exact blocked scope. It does not silently downgrade an approved claim.
 

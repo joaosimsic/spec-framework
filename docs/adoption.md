@@ -18,7 +18,10 @@ The scaffold includes:
 
 - `spec/config.json`;
 - `spec/architecture/` with a LikeC4 starter model;
+- `spec/capabilities/` with one example capability;
 - `spec/requirements/` with a StrictDoc grammar and one example requirement;
+- `spec/semantic/` when the optional semantic layer is enabled;
+- `spec/verification/` with one example verification objective and case;
 - `spec/formal/` with a Quint module skeleton;
 - `spec/contracts/` with the selected adapters;
 - `spec/toolchain.lock.json`;
@@ -83,17 +86,23 @@ Mapping is not approval. Extracted structure describes what the code does, not w
 
 ## Support matrix
 
-| Capability | Supported in Phase 1 | Fallback |
-|---|---|---|
-| Generic discovery | yes | manual model |
-| Rust discovery | yes | generic discovery |
-| Rust API contracts | yes | rustdoc/rustdoc JSON |
-| JSON Schema contracts | yes | manual table |
-| CLI contracts | yes | help snapshots |
-| TypeScript discovery | later | generic discovery |
-| PHP discovery | later | generic discovery |
-| Protobuf/wire contracts | later | manual schema |
-| Hardware contracts | later | manual schema |
+| Capability              | Supported in Phase 1 | Fallback                    |
+| ----------------------- | -------------------- | --------------------------- |
+| Generic discovery       | yes                  | manual model                |
+| Capabilities            | Phase 2              | manual capability records   |
+| Verification planning   | Phase 2              | manual verification records |
+| Semantic layer          | Phase 2, optional    | glossary terms and prose    |
+| Read-only query/MCP     | Phase 2              | CLI queries and bundle      |
+| Explorer                | Phase 2              | audit bundle                |
+| Multi-repo workspace    | Phase 3              | separate repositories       |
+| Rust discovery          | yes                  | generic discovery           |
+| Rust API contracts      | yes                  | rustdoc/rustdoc JSON        |
+| JSON Schema contracts   | yes                  | manual table                |
+| CLI contracts           | yes                  | help snapshots              |
+| TypeScript discovery    | later                | generic discovery           |
+| PHP discovery           | later                | generic discovery           |
+| Protobuf/wire contracts | later                | manual schema               |
+| Hardware contracts      | later                | manual schema               |
 
 The support matrix is explicit. The framework does not claim automatic support for a stack it cannot inspect.
 
@@ -103,7 +112,9 @@ The support matrix is explicit. The framework does not claim automatic support f
 - [ ] `spec doctor --fix` resolved or reported every missing tool.
 - [ ] `spec check --structural` produces a gap report.
 - [ ] One feature is modeled end to end.
-- [ ] Every approved requirement has formalization or a waiver.
+- [ ] Every applied capability has requirements and verification coverage.
+- [ ] Every approved requirement has formalization, a verification case, or a waiver.
+- [ ] Semantic sources are pinned when the layer is active.
 - [ ] Every mapped element has provenance and human review.
 - [ ] The audit bundle states the covered scope.
 - [ ] The default agent cannot edit approved specs.

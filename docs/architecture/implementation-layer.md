@@ -1,6 +1,6 @@
 # Implementation layer
 
-**Status:** planned. This document specifies the compiler preflight adapter. The adapter is not implemented yet.
+**Status:** implemented. This document specifies the compiler preflight adapter, implemented in `src/adapters/compiler.ts`.
 
 ## Purpose
 

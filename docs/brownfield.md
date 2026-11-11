@@ -6,20 +6,21 @@ Code describes implemented behavior. It does not describe intent, scope, priorit
 
 ## What mapping extracts
 
-| Source | Extracted | Provenance |
-|---|---|---|
-| Build metadata | workspaces, crates, packages, binaries | `code:cargo metadata` |
-| Module tree | modules, directories, namespaces | `code:<manifest>` |
-| Public API | functions, traits, types, signatures | `code:rustdoc JSON` |
-| Import graph | dependencies between modules | `code:<manifest>` |
-| CLI definitions | commands, flags, exit behavior | `code:<source>` |
-| Existing docs | requirements, decisions, rationale | `doc:<path>` |
-| Tests | checks and examples, not intent | `code:<test path>` |
+| Source          | Extracted                              | Provenance            |
+| --------------- | -------------------------------------- | --------------------- |
+| Build metadata  | workspaces, crates, packages, binaries | `code:cargo metadata` |
+| Module tree     | modules, directories, namespaces       | `code:<manifest>`     |
+| Public API      | functions, traits, types, signatures   | `code:rustdoc JSON`   |
+| Import graph    | dependencies between modules           | `code:<manifest>`     |
+| CLI definitions | commands, flags, exit behavior         | `code:<source>`       |
+| Existing docs   | requirements, decisions, rationale     | `doc:<path>`          |
+| Tests           | checks and examples, not intent        | `code:<test path>`    |
 
 ## What mapping must not claim
 
 - It must not mark extracted elements `approved`.
 - It must not infer requirements from implementation details.
+- It must not infer capabilities, ontologies, or verification plans from code structure.
 - It must not invent ownership or responsibility.
 - It must not treat tests as complete acceptance criteria.
 - It must not claim a boundary it cannot observe.
@@ -52,12 +53,12 @@ sequenceDiagram
 
 ## Confidence levels
 
-| Level | Meaning | Action |
-|---|---|---|
-| `observed` | Directly present in build metadata or public API | Review and keep or merge |
-| `inferred` | Derived from imports or naming | Verify manually |
-| `ambiguous` | Multiple plausible boundaries | Human decision required |
-| `unknown` | Not observable from code | Unknown or manual model |
+| Level       | Meaning                                          | Action                   |
+| ----------- | ------------------------------------------------ | ------------------------ |
+| `observed`  | Directly present in build metadata or public API | Review and keep or merge |
+| `inferred`  | Derived from imports or naming                   | Verify manually          |
+| `ambiguous` | Multiple plausible boundaries                    | Human decision required  |
+| `unknown`   | Not observable from code                         | Unknown or manual model  |
 
 Ambiguous and inferred elements cannot be approved without review. Unknown boundaries become `UNK-*` entries.
 

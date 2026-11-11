@@ -3,8 +3,8 @@
 > Status: partially implemented. `spec change` creates same-worktree proposal
 > branches, applies typed SDoc operations `rename`, `deprecate`, `replace`,
 > `split`, and `merge`, and reports impact over the current SDoc graph.
-> `extract`, `move`, `change-contract`, `spec refactor`, and the workbench
-> remain design.
+> `spec refactor` is a thin alias that warns without an approved baseline.
+> `extract`, `move`, `change-contract`, and the workbench remain design.
 
 ## Principle
 

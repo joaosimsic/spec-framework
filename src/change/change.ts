@@ -40,6 +40,7 @@ export interface ChangeOptions {
 export interface ChangeRun {
   report: ChangeReport | null
   output: string
+  warnings: string[]
   code: number
 }
 
@@ -161,7 +162,7 @@ export async function runChange(
       ? ChangeReportRenderer.technical(report)
       : ChangeReportRenderer.human(report)
 
-  return { report, output, code: 0 }
+  return { report, output, warnings: refactorWarnings(completed), code: 0 }
 }
 
 export async function runProposalOperations(
@@ -222,7 +223,7 @@ export async function runProposalOperations(
       ? ChangeReportRenderer.technical(report)
       : ChangeReportRenderer.human(report)
 
-  return { report, output, code: 0 }
+  return { report, output, warnings: refactorWarnings(completed), code: 0 }
 }
 
 export async function runChangeStatus(
@@ -282,7 +283,13 @@ async function loadApprovalLock(target: string): Promise<Result<SpecLock | null,
 }
 
 function changeFailure(message: string): ChangeRun {
-  return { report: null, output: `change failed: ${message}`, code: 1 }
+  return { report: null, output: `change failed: ${message}`, warnings: [], code: 1 }
+}
+
+function refactorWarnings(proposal: Proposal): string[] {
+  if (proposal.mode !== "refactor" || proposal.baseline.lock_hash !== null) return []
+
+  return ["no approved baseline; this is a draft-only refactor"]
 }
 
 function statusFailure(message: string): ChangeStatusRun {

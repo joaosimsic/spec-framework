@@ -176,7 +176,7 @@ describe("runChange", () => {
         )}\n`,
       )
 
-      await runChange(target, "Locked change", {
+      const run = await runChange(target, "Locked change", {
         author: "tester",
         gitRepository: new FakeProposalGit(),
         now: fixedNow,
@@ -185,6 +185,29 @@ describe("runChange", () => {
       const proposal = await readProposal(target, "locked-change")
       expect(proposal.mode).toBe("refactor")
       expect(proposal.baseline.lock_hash).toStartWith("sha256:")
+      expect(run.warnings).toEqual([])
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("warns when a refactor has no approved baseline", async () => {
+    const target = await createTarget()
+    try {
+      const run = await runChange(target, "Draft refactor", {
+        mode: "refactor",
+        author: "tester",
+        gitRepository: new FakeProposalGit(),
+        now: fixedNow,
+      })
+
+      expect(run.code).toBe(0)
+      expect(run.warnings).toEqual(["no approved baseline; this is a draft-only refactor"])
+
+      const proposal = await readProposal(target, "draft-refactor")
+      expect(proposal.mode).toBe("refactor")
+      expect(proposal.baseline.lock_hash).toBeNull()
+      expect(await Bun.file(join(target, "spec", "spec.lock")).exists()).toBe(false)
     } finally {
       await rm(target, { recursive: true, force: true })
     }

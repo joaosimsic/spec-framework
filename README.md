@@ -4,7 +4,7 @@
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
-The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc requirement and acceptance records, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed SDoc operations (`rename`, `deprecate`, `replace`, `split`, `merge`), and its change report includes a deterministic impact analysis over the spec graph. `extract`, `move`, `change-contract`, `spec refactor`, scratch and mapping modes, the React/Vite workbench, and the opencode plugin remain documented design. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
+The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc requirement and acceptance records, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed SDoc operations (`rename`, `deprecate`, `replace`, `split`, `merge`), and its change report includes a deterministic impact analysis over the spec graph. `spec refactor` is a thin alias that defaults to refactor mode and warns when no approved baseline exists. `extract`, `move`, `change-contract`, scratch and mapping modes, the React/Vite workbench, and the opencode plugin remain documented design. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -88,6 +88,7 @@ Current skeleton:
 - `spec map --draft` discovers generic package and Rust workspace boundaries, writes `spec/architecture/draft.gen.c4`, and reports missing owners, low-confidence elements, external dependencies, and unresolved requirement links. It never modifies `spec/architecture/model.c4`.
 - `spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]` emits the read-only unified graph over SDoc requirement and acceptance records. JSON is the identity contract; `--view experience --json` is the display model with opaque refs; default output uses titles and plain-language state; `--technical` reveals identity, provenance, links, and diagnostics. It refuses a dirty tree unless `--allow-dirty` is passed and never writes sources or `spec/spec.lock`.
 - `spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]` requires a clean tree, creates a same-worktree branch `spec/<slug>`, records the base commit, baseline lock hash, author, and typed SDoc operations, and reports the change. The report traces changed links in both directions, lists affected elements, invalidated evidence, approvals to renew, and open questions. `spec change --op <json|file>` adds operations to the active proposal. `spec change --status [--json]` inspects it. It never writes `spec/spec.lock` or approves anything.
+- `spec refactor "<direction>" [--op <json|file>]... [--technical] [--json]` is a thin alias for `spec change --mode refactor`. It warns when no approved baseline exists and never writes `spec/spec.lock` or approves anything.
 - `spec approve <ids...>` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records into `spec/spec.lock`, and sets their status to `Approved`.
 - `spec check` also rejects a stale lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked.
 
@@ -161,7 +162,7 @@ spec/        self-hosted specification scaffold
 Next:
 
 ```
-src/change/     remaining typed operations and refactor alias
+src/change/     remaining typed operations
 src/bundle/     audit PDF/HTML assembly, manifest, hashes
 src/evidence/   evidence artifact hashing and regeneration
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter

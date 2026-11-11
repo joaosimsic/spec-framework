@@ -2,9 +2,10 @@
 
 > Status: partially implemented. `spec change` provides the shared proposal
 > engine with same-worktree branches, typed SDoc operations, and impact reports.
-> `spec start`, `spec map --review`, `spec refactor`, the workbench, and the
-> opencode plugin are not implemented. The mode model is accepted in decision
-> record [0011](../design-decisions/0011-interactive-use-case-modes.md).
+> `spec refactor` is a thin alias that defaults to refactor mode and warns when
+> no approved baseline exists. `spec start`, `spec map --review`, the workbench,
+> and the opencode plugin are not implemented. The mode model is accepted in
+> decision record [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
 
@@ -125,6 +126,8 @@ must run first. A draft-only refactor is allowed only with an explicit warning.
 ### Flow
 
 1. `spec refactor "<direction>"` is a thin alias over the shared change engine.
+   Without an approved baseline it warns that the result is a draft-only
+   refactor.
 2. The engine creates a same-worktree proposal branch and records the baseline.
 3. The human chooses a typed operation: rename, split, merge, extract, move,
    deprecate, replace, or change contract.

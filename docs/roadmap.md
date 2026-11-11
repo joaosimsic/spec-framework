@@ -52,8 +52,9 @@ refs is implemented. The proposal engine core, same-worktree proposal branches,
 and typed SDoc operations `rename`, `deprecate`, `replace`, `split`, and
 `merge` are implemented. Change reports include deterministic impact analysis
 over the graph, invalidated evidence, approvals to renew, and open questions.
-Other source collectors, `extract`, `move`, `change-contract`, interactive
-modes, workbench, and plugin remain. Decision record
+The `spec refactor` alias is implemented and warns when no approved baseline
+exists. Other source collectors, `extract`, `move`, `change-contract`,
+interactive modes, workbench, and plugin remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (initial SDoc collector
@@ -64,7 +65,7 @@ modes, workbench, and plugin remain. Decision record
   (core and SDoc operations implemented);
 - typed change impact over the current SDoc graph (implemented);
 - the remaining typed operations;
-- `spec start`, `spec map --review`, and the `spec refactor` alias;
+- `spec start` and `spec map --review`;
 - React/Vite workbench for scratch, mapping, and refactor;
 - terminal interactive paths for the same modes;
 - opencode plugin as both a standalone package and a local self-hosting loader;

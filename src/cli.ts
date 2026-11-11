@@ -28,6 +28,7 @@ Usage:
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
   spec change --op <json|file> [--op <json|file>]... [--technical] [--json]
   spec change --status [--technical] [--json]
+  spec refactor "<direction>" [--op <json|file>]... [--technical] [--json]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
@@ -39,6 +40,7 @@ Commands:
   map       Discover draft architecture from the repository
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
+  refactor  Alias for spec change in refactor mode
   approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
@@ -354,6 +356,7 @@ async function commandChange(args: string[]): Promise<number> {
       technical: parsed.technical,
       json: parsed.json,
     })
+    printWarnings(run.warnings)
     console.log(run.output)
     return run.code
   }
@@ -371,8 +374,23 @@ async function commandChange(args: string[]): Promise<number> {
     technical: parsed.technical,
     json: parsed.json,
   })
+  printWarnings(run.warnings)
   console.log(run.output)
   return run.code
+}
+
+async function commandRefactor(args: string[]): Promise<number> {
+  const rest = args[0] === "refactor" ? args.slice(1) : args
+  if (rest.includes("--mode")) {
+    console.error("refactor does not accept --mode")
+    return 2
+  }
+
+  return commandChange(["change", "--mode", "refactor", ...rest])
+}
+
+function printWarnings(warnings: string[]): void {
+  for (const warning of warnings) console.error(`warning: ${warning}`)
 }
 
 interface ApproveArguments {
@@ -466,6 +484,8 @@ export async function main(args: string[]): Promise<number> {
       return commandQuery(args)
     case "change":
       return commandChange(args)
+    case "refactor":
+      return commandRefactor(args)
     case "approve":
       return commandApprove(args)
     case "version":

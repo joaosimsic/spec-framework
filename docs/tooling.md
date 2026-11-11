@@ -46,6 +46,7 @@ spec map [--draft|--check]
 spec change "<direction>" [--op <json|file>]
 spec change --op <json|file>
 spec change --status
+spec refactor "<direction>" [--op <json|file>]
 spec review
 spec bundle
 spec approve <ids...>

@@ -3,8 +3,9 @@
 > Status: partially implemented. `spec change` creates proposal branches,
 > applies typed SDoc, architecture, and contract operations, and reports impact
 > across requirements, architecture, formal sources, contracts, evidence, and
-> approvals. `spec start` opens the scratch-mode entry. The workbench, plugin,
-> and named-scope approval remain design.
+> approvals. `spec start` opens the scratch-mode entry. `spec approve --scope`
+> resolves visible requirement titles to identity. The workbench and plugin
+> remain design.
 
 ## Principle
 
@@ -50,7 +51,7 @@ sequenceDiagram
     A->>C: request review
     C-->>H: defects, unknowns, questions
     H->>CLI: review change report and bundle
-    H->>CLI: spec approve IDs
+    H->>CLI: spec approve named scope
     CLI-->>H: updated spec.lock
     H->>A: implement approved IDs
 ```
@@ -131,7 +132,8 @@ spec approve --scope "Session expiry"
 spec approve REQ-AUTH-001 AC-AUTH-001
 ```
 
-Named-scope approval is planned. The current CLI accepts element IDs directly.
+Named scopes resolve exact titles case-insensitively and expand a requirement
+to its acceptance criteria. Ambiguous titles require a contextual choice.
 Approval records content hashes and evidence hashes. Any later content change
 invalidates the approval. The workbench and the agent cannot approve.
 

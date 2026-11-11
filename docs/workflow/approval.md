@@ -2,7 +2,9 @@
 
 > Status: implemented for SDoc requirement and acceptance records, stored at
 > `spec/spec.lock`. Native adapter evidence is hashed into the lock and written
-> under `spec/evidence/`. The approval audit trail is pending.
+> under `spec/evidence/`. Named-scope selection resolves visible titles and
+> expands a requirement to its acceptance criteria. The approval audit trail is
+> pending.
 
 ## Principle
 
@@ -59,8 +61,11 @@ Approval is selected by named scope in interactive use. The tool resolves the
 scope to internal identity, shows what is included, and records the hashes.
 Internal IDs remain available for scripted approval and in the audit bundle.
 
-Named-scope selection is part of the Phase 1.5 design. The current CLI accepts
-element IDs directly.
+Named scopes resolve exact titles case-insensitively. Ambiguous titles fail
+with contextual choices that show the kind, state, and owner. A requirement
+scope includes its acceptance criteria; an acceptance criterion that is already
+approved and hash-locked is not selected again. Exact IDs remain available for
+scripted approval.
 
 The workbench and the opencode plugin cannot approve. A query result or chat
 summary is not an approval verdict. Change impact reports list approvals to
@@ -76,7 +81,8 @@ spec approve REQ-AUTH-001 AC-AUTH-001
 
 The current slice resolves `REQ-*` and `AC-*` records from SDoc requirement
 sources. Other element kinds are rejected until their adapters expose an
-approval catalog.
+approval catalog. `--technical` shows IDs in the confirmation and result;
+default output uses names.
 
 Requirements:
 

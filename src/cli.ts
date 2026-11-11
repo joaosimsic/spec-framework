@@ -2,6 +2,7 @@ import pkg from "../package.json"
 import { runApproval } from "./approval/approve"
 import { TerminalApprovalConfirmation } from "./approval/confirmation"
 import { GitApproverResolver, GitCleanlinessReader } from "./approval/git"
+import { ApprovalScopeLoader } from "./approval/scope"
 import {
   ProposalOperationParser,
   runChange,
@@ -36,7 +37,7 @@ Usage:
   spec change --status [--technical] [--json]
   spec refactor "<direction>" [--op <json|file>]... [--simulate] [--technical] [--json]
   spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
-  spec approve <ids...> [--approver <name>] [--allow-dirty]
+  spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]
   spec version
   spec help
 
@@ -693,14 +694,18 @@ function printWarnings(warnings: string[]): void {
 
 interface ApproveArguments {
   ids: string[]
+  scopes: string[]
   approver?: string
+  technical: boolean
   allowDirty: boolean
   error?: string
 }
 
 function parseApproveArguments(args: string[]): ApproveArguments {
   const ids: string[] = []
+  const scopes: string[] = []
   let approver: string | undefined
+  let technical = false
   let allowDirty = false
   let index = args[0] === "approve" ? 1 : 0
 
@@ -709,10 +714,24 @@ function parseApproveArguments(args: string[]): ApproveArguments {
     if (argument === "--approver") {
       const value = args[index + 1]
       if (value === undefined || value.startsWith("-")) {
-        return { ids, allowDirty, error: "--approver requires a name" }
+        return { ids, scopes, technical, allowDirty, error: "--approver requires a name" }
       }
       approver = value
       index += 2
+      continue
+    }
+    if (argument === "--scope") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { ids, scopes, technical, allowDirty, error: "--scope requires a name" }
+      }
+      scopes.push(value)
+      index += 2
+      continue
+    }
+    if (argument === "--technical") {
+      technical = true
+      index += 1
       continue
     }
     if (argument === "--allow-dirty") {
@@ -729,7 +748,7 @@ function parseApproveArguments(args: string[]): ApproveArguments {
     index += 1
   }
 
-  return { ids, approver, allowDirty }
+  return { ids, scopes, approver, technical, allowDirty }
 }
 
 async function commandApprove(args: string[]): Promise<number> {
@@ -738,8 +757,10 @@ async function commandApprove(args: string[]): Promise<number> {
     console.error(parsed.error)
     return 2
   }
-  if (parsed.ids.length === 0) {
-    console.error("usage: spec approve <ids...> [--approver <name>] [--allow-dirty]")
+  if (parsed.ids.length === 0 && parsed.scopes.length === 0) {
+    console.error(
+      "usage: spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]",
+    )
     return 2
   }
 
@@ -750,18 +771,32 @@ async function commandApprove(args: string[]): Promise<number> {
     return 1
   }
 
+  const [scope, scopeError] =
+    parsed.scopes.length === 0
+      ? [{ ids: [], labels: {} }, null]
+      : await new ApprovalScopeLoader(target).resolve(parsed.scopes)
+  if (scopeError !== null || scope === null) {
+    console.error(scopeError ?? "approval scope resolution failed")
+    return 1
+  }
+
+  const resolvedIds = scope.ids.filter((id) => !parsed.ids.includes(id))
+  const requestedIds = [...parsed.ids, ...resolvedIds]
+
   const [approver, identityError] = await new GitApproverResolver().resolve(parsed.approver)
   if (identityError !== null || approver === null) {
     console.error(identityError ?? "approver identity unavailable")
     return 1
   }
 
-  const run = await runApproval(target, parsed.ids, {
+  const run = await runApproval(target, requestedIds, {
     approver,
     allowDirty: parsed.allowDirty,
     confirmation: new TerminalApprovalConfirmation(),
     gitStatus: new GitCleanlinessReader(),
     evidence: check.evidence,
+    labels: scope.labels,
+    technical: parsed.technical,
   })
   console.log(run.output)
   return run.code

@@ -266,6 +266,51 @@ describe("runApproval", () => {
     }
   })
 
+  test("shows named scope by default and IDs only with technical output", async () => {
+    const target = await createTarget()
+    try {
+      const labels = {
+        "REQ-SAMPLE-001": "Sample behavior",
+        "AC-SAMPLE-001": "Sample criterion",
+      }
+      const confirmation = new FakeConfirmation(true)
+      const run = await runApproval(target, ["REQ-SAMPLE-001", "AC-SAMPLE-001"], {
+        ...approvalOptions(confirmation, new FakeGitStatus(true)),
+        labels,
+      })
+
+      expect(run.code).toBe(0)
+      expect(run.output).toContain("approved Sample behavior")
+      expect(run.output).not.toContain("REQ-SAMPLE-001")
+      expect(run.output).not.toContain("AC-SAMPLE-001")
+      expect(confirmation.messages[0]).toContain("Sample behavior")
+      expect(confirmation.messages[0]).toContain("Sample criterion")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("prints IDs with technical approval output", async () => {
+    const target = await createTarget()
+    try {
+      const labels = {
+        "REQ-SAMPLE-001": "Sample behavior",
+        "AC-SAMPLE-001": "Sample criterion",
+      }
+      const run = await runApproval(target, ["REQ-SAMPLE-001", "AC-SAMPLE-001"], {
+        ...approvalOptions(new FakeConfirmation(true), new FakeGitStatus(true)),
+        labels,
+        technical: true,
+      })
+
+      expect(run.code).toBe(0)
+      expect(run.output).toContain("approved REQ-SAMPLE-001")
+      expect(run.output).toContain("approved AC-SAMPLE-001")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
   test("preserves unrelated lock entries", async () => {
     const target = await createTarget()
     try {

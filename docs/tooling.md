@@ -49,7 +49,7 @@ spec change --status
 spec refactor "<direction>" [--op <json|file>]
 spec review
 spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
-spec approve <ids...>
+spec approve [--scope <name>]... [ids...] [--technical]
 spec query --json
 spec semantic validate|graph|query|export
 spec serve

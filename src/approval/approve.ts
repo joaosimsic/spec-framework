@@ -14,6 +14,8 @@ export interface ApprovalOptions {
   allowDirty?: boolean
   gitStatus?: GitStatusReader
   evidence?: EvidenceRecord[]
+  labels?: Record<string, string>
+  technical?: boolean
   now?: () => Date
 }
 
@@ -65,7 +67,7 @@ export async function runApproval(
   }
 
   const confirmed = await options.confirmation.confirm(
-    `Approve ${requested.length} element(s) as ${options.approver}? [y/N] `,
+    approvalPrompt(requested, options.labels, options.approver),
   )
   if (!confirmed) return failure("approval cancelled")
 
@@ -97,7 +99,7 @@ export async function runApproval(
     return failure(writeError ?? `cannot write ${specLockPath(target)}`)
   }
 
-  const lines = requested.map((id) => `approved ${id}`)
+  const lines = requested.map((id) => `approved ${approvalLabel(id, options)}`)
   lines.push(`lock: ${lockPath}`)
   if (evidencePaths.length > 0) lines.push(`evidence: ${evidencePaths.length} artifact(s)`)
   if (writtenFiles !== null && writtenFiles.length > 0) {
@@ -245,6 +247,23 @@ function splitList(value: string): string[] {
     .split(/[,\s]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function approvalPrompt(
+  ids: string[],
+  labels: Record<string, string> | undefined,
+  approver: string,
+): string {
+  const items = ids.map((id) => `- ${labels?.[id] ?? id}`)
+  const lines = [`Approve ${ids.length} element(s) as ${approver}?`, ...items, "[y/N] "]
+
+  return lines.join("\n")
+}
+
+function approvalLabel(id: string, options: ApprovalOptions): string {
+  if (options.technical === true) return id
+
+  return options.labels?.[id] ?? id
 }
 
 function failure(message: string): ApprovalRun {

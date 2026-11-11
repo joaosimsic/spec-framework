@@ -61,8 +61,9 @@ implemented from a baseline graph snapshot captured at proposal open; `spec
 refactor` enables it by default and `spec change` accepts `--simulate`. Formal
 source collection is implemented. The scratch-mode entry `spec start`, the
 mapping-review entry `spec map --review`, and area-level and relation-level
-interactive mapping curation are implemented; the workbench and plugin remain.
-Decision record
+interactive mapping curation are implemented, as is named-scope approval that
+resolves visible requirement titles to identity; the workbench and plugin
+remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -82,7 +83,7 @@ Decision record
   (area and relation decisions implemented);
 - refactor before/after simulation and named impact (implemented);
 - technical-details surface for IDs, hashes, provenance, and diagnostics;
-- named-scope approval that resolves to internal identity;
+- named-scope approval that resolves to internal identity (implemented);
 - no approval path and no `spec/spec.lock` write from any interactive surface.
 
 Exit criteria:

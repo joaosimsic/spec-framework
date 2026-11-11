@@ -5,7 +5,9 @@
 > prefixes. `--view experience --json` emits the display model with opaque refs
 > and contextual name resolution; `--technical` reveals identity. Terminal
 > mapping curation resolves visible names for areas and relations and hides
-> identity by default. The workbench and chat views remain design.
+> identity by default. `spec approve --scope` resolves visible requirement
+> titles to identity and expands acceptance criteria. The workbench and chat
+> views remain design.
 
 ## Purpose
 

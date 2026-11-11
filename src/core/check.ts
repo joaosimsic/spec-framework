@@ -4,8 +4,10 @@ import { LikeC4Adapter } from "../adapters/likec4"
 import { CliAdapter } from "../adapters/cli"
 import { JsonSchemaAdapter } from "../adapters/json-schema"
 import { QuintAdapter } from "../adapters/quint"
+import { RustAdapter } from "../adapters/rust"
 import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
+import { requiredToolsFor, selectAdapter, selectAdapters } from "./adapter-selection"
 import { SpecConfigLoader } from "./config"
 import {
   BunProcessRunner,
@@ -71,92 +73,72 @@ async function runNativeChecks(
     return
   }
 
-  diagnostics.push(...missingRequiredDiagnostics(getToolStatuses(target)))
-
-  const adapter = options.architectureAdapter ?? new LikeC4Adapter()
-  if (config.adapters.architecture !== adapter.id) {
+  const activeAdapters: NativeAdapter[] = []
+  const architecture = await selectAdapter(target, config.adapters.architecture, [
+    options.architectureAdapter ?? new LikeC4Adapter(),
+  ])
+  if (architecture.unknownId !== null) {
     diagnostics.push({
       level: "error",
       code: "ARCH-UNKNOWN-ADAPTER",
-      message: `unsupported architecture adapter '${config.adapters.architecture}'`,
+      message: `unsupported architecture adapter '${architecture.unknownId}'`,
     })
     return
   }
+  if (architecture.adapter !== null) activeAdapters.push(architecture.adapter)
 
-  const adapterRun = await adapter.run({
-    target,
-    processRunner: options.processRunner ?? new BunProcessRunner(),
-    toolLocator: options.toolLocator ?? new ToolResolver(target),
-  })
-  diagnostics.push(...adapterRun.diagnostics)
-
-  const requirementsAdapter = options.requirementsAdapter ?? new StrictDocAdapter()
-  if (config.adapters.requirements !== requirementsAdapter.id) {
+  const requirements = await selectAdapter(target, config.adapters.requirements, [
+    options.requirementsAdapter ?? new StrictDocAdapter(),
+  ])
+  if (requirements.unknownId !== null) {
     diagnostics.push({
       level: "error",
       code: "REQ-UNKNOWN-ADAPTER",
-      message: `unsupported requirements adapter '${config.adapters.requirements}'`,
+      message: `unsupported requirements adapter '${requirements.unknownId}'`,
     })
     return
   }
+  if (requirements.adapter !== null) activeAdapters.push(requirements.adapter)
 
-  const requirementsRun = await requirementsAdapter.run({
+  const formal = await selectAdapter(target, config.adapters.formal, [
+    options.formalAdapter ?? new QuintAdapter(),
+  ])
+  if (formal.unknownId !== null) {
+    diagnostics.push({
+      level: "error",
+      code: "FORMAL-UNKNOWN-ADAPTER",
+      message: `unsupported formal adapter '${formal.unknownId}'`,
+    })
+    return
+  }
+  if (formal.adapter !== null) activeAdapters.push(formal.adapter)
+
+  const contracts = await selectAdapters(
+    target,
+    config.adapters.contracts ?? [],
+    options.contractAdapters ?? [new JsonSchemaAdapter(), new CliAdapter(), new RustAdapter()],
+  )
+  for (const unknownId of contracts.unknownIds) {
+    diagnostics.push({
+      level: "error",
+      code: "CONTRACT-UNKNOWN-ADAPTER",
+      message: `unsupported contract adapter '${unknownId}'`,
+    })
+  }
+  activeAdapters.push(...contracts.active)
+
+  diagnostics.push(
+    ...missingRequiredDiagnostics(getToolStatuses(target), requiredToolsFor(activeAdapters)),
+  )
+
+  const context = {
     target,
     processRunner: options.processRunner ?? new BunProcessRunner(),
     toolLocator: options.toolLocator ?? new ToolResolver(target),
-  })
-  diagnostics.push(...requirementsRun.diagnostics)
-
-  const formalAdapter = options.formalAdapter ?? new QuintAdapter()
-  if (config.adapters.formal !== undefined) {
-    if (config.adapters.formal !== formalAdapter.id) {
-      diagnostics.push({
-        level: "error",
-        code: "FORMAL-UNKNOWN-ADAPTER",
-        message: `unsupported formal adapter '${config.adapters.formal}'`,
-      })
-      return
-    }
-
-    const formalRun = await formalAdapter.run({
-      target,
-      processRunner: options.processRunner ?? new BunProcessRunner(),
-      toolLocator: options.toolLocator ?? new ToolResolver(target),
-    })
-    diagnostics.push(...formalRun.diagnostics)
   }
-
-  await runContractChecks(target, options, config.adapters.contracts ?? [], diagnostics)
-}
-
-async function runContractChecks(
-  target: string,
-  options: CheckOptions,
-  configuredContracts: string[],
-  diagnostics: Diagnostic[],
-): Promise<void> {
-  if (configuredContracts.length === 0) {
-    return
-  }
-
-  const availableContracts = options.contractAdapters ?? [new JsonSchemaAdapter(), new CliAdapter()]
-  for (const contractId of configuredContracts) {
-    const match = availableContracts.find((candidate) => candidate.id === contractId)
-    if (match === undefined) {
-      diagnostics.push({
-        level: "error",
-        code: "CONTRACT-UNKNOWN-ADAPTER",
-        message: `unsupported contract adapter '${contractId}'`,
-      })
-      continue
-    }
-
-    const contractRun = await match.run({
-      target,
-      processRunner: options.processRunner ?? new BunProcessRunner(),
-      toolLocator: options.toolLocator ?? new ToolResolver(target),
-    })
-    diagnostics.push(...contractRun.diagnostics)
+  for (const adapter of activeAdapters) {
+    const adapterRun = await adapter.run(context)
+    diagnostics.push(...adapterRun.diagnostics)
   }
 }
 

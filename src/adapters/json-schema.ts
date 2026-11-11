@@ -12,6 +12,14 @@ type Compatibility = "none" | "backward" | "forward" | "full"
 export class JsonSchemaAdapter implements NativeAdapter {
     readonly id = "json-schema"
     readonly tool = "json-schema"
+    readonly requiredTools: readonly string[] = []
+
+    async detect(target: string): Promise<boolean> {
+        const contractsDirectory = join(target, "spec", "contracts")
+        const schemaFiles = await this.collectSchemaFiles(contractsDirectory)
+
+        return schemaFiles.length > 0
+    }
 
     async run(context: AdapterContext): Promise<AdapterRun> {
         const validator = new Ajv({ strict: false })

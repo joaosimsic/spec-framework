@@ -21,6 +21,20 @@ const TOOLS = [
     install: "install pinned Apalache release (requires Java 21+)",
   },
   { name: "java", command: "java", required: true, install: "install Java 21+" },
+  { name: "cargo", command: "cargo", required: false, install: "install Rust with rustup" },
+  { name: "rustup", command: "rustup", required: false, install: "install rustup" },
+  {
+    name: "cargo-public-api",
+    command: "cargo-public-api",
+    required: false,
+    install: "cargo install cargo-public-api (requires nightly Rust)",
+  },
+  {
+    name: "cargo-semver-checks",
+    command: "cargo-semver-checks",
+    required: false,
+    install: "cargo install cargo-semver-checks",
+  },
   { name: "bun", command: "bun", required: false, install: "install Bun" },
   { name: "uv", command: "uv", required: false, install: "install uv" },
   { name: "nix", command: "nix", required: false, install: "install Nix" },
@@ -37,9 +51,22 @@ export function getToolStatuses(target = process.cwd()): ToolStatus[] {
   }))
 }
 
-export function missingRequiredDiagnostics(statuses: ToolStatus[]): Diagnostic[] {
+export function missingRequiredDiagnostics(
+  statuses: ToolStatus[],
+  requiredNames?: string[],
+): Diagnostic[] {
+  const required = requiredNames === undefined ? null : new Set(requiredNames)
+
   return statuses
-    .filter((tool) => tool.required && !tool.present)
+    .filter((tool) => {
+      if (!tool.present) {
+        if (required === null) return tool.required
+
+        return required.has(tool.name)
+      }
+
+      return false
+    })
     .map((tool) => ({
       level: "error" as const,
       code: "TOOL-MISSING",

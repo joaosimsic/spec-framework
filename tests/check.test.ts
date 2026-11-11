@@ -570,4 +570,184 @@ describe("runCheck", () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  test("auto-runs detected architecture, requirements, and formal adapters", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(
+        join(specDir, "config.json"),
+        JSON.stringify({ ...validConfig, adapters: {} }),
+      )
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const detectedAdapter = (id: string, code: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async detect() {
+          return true
+        },
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [{ level: "error", code, message: `${id} detected` }],
+          }
+        },
+      })
+      const run = await runCheck(dir, {
+        architectureAdapter: detectedAdapter("likec4", "ARCH-DETECTED"),
+        requirementsAdapter: detectedAdapter("strictdoc", "REQ-DETECTED"),
+        formalAdapter: detectedAdapter("quint", "FORMAL-DETECTED"),
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "ARCH-DETECTED")).toBe(true)
+      expect(run.result.diagnostics.some((item) => item.code === "REQ-DETECTED")).toBe(true)
+      expect(run.result.diagnostics.some((item) => item.code === "FORMAL-DETECTED")).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("auto-runs a detected contract adapter without configuration", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const detectedContract: NativeAdapter = {
+        id: "rust",
+        tool: "rust",
+        async detect() {
+          return true
+        },
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              { level: "error", code: "CONTRACT-RUST-DETECTED", message: "detected" },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+        contractAdapters: [detectedContract],
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "CONTRACT-RUST-DETECTED")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("runs an explicitly required adapter even when detection is false", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const contractConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, contracts: ["rust"] },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(contractConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const contractAdapter: NativeAdapter = {
+        id: "rust",
+        tool: "rust",
+        async detect() {
+          return false
+        },
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              { level: "error", code: "CONTRACT-RUST-REQUIRED", message: "required" },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+        contractAdapters: [contractAdapter],
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "CONTRACT-RUST-REQUIRED")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("runs a detected and configured contract adapter only once", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const contractConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, contracts: ["rust"] },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(contractConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      let callCount = 0
+      const contractAdapter: NativeAdapter = {
+        id: "rust",
+        tool: "rust",
+        async detect() {
+          return true
+        },
+        async run() {
+          callCount += 1
+          return { ran: true, diagnostics: [] }
+        },
+      }
+      await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+        contractAdapters: [contractAdapter],
+      })
+
+      expect(callCount).toBe(1)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })

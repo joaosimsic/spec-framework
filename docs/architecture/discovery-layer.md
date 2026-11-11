@@ -36,6 +36,21 @@ Outputs:
 
 Generic discovery does not parse arbitrary source code into a call graph. That would produce false confidence and duplicate language tooling.
 
+## Adapter activation
+
+Native adapters activate automatically from source markers:
+
+| Adapter | Marker |
+|---|---|
+| LikeC4 | `.c4` or `.likec4` files under `spec/architecture` |
+| StrictDoc | `.sdoc` or `.md` files under `spec/requirements` |
+| Quint | `.qnt` files under `spec/formal` |
+| JSON Schema | `.schema.json` files under `spec/contracts` |
+| CLI | `.snapshot.json` files under `spec/contracts/cli` |
+| Rust public API | `Cargo.toml` or Rust contract sidecars |
+
+An adapter can also be required explicitly in `spec/config.json` even when its sources are absent, in which case missing sources fail closed.
+
 ## Rust discovery
 
 Phase 1 adapter:

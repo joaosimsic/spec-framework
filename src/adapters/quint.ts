@@ -12,6 +12,13 @@ interface VerifyManifest {
 export class QuintAdapter implements NativeAdapter {
     readonly id = "quint"
     readonly tool = "quint"
+    readonly requiredTools = ["apalache", "java", "quint"]
+
+    async detect(target: string): Promise<boolean> {
+        const quintFiles = await this.collectQuintFiles(join(target, "spec", "formal"))
+
+        return quintFiles.length > 0
+    }
 
     async run(context: AdapterContext): Promise<AdapterRun> {
         const executable = await context.toolLocator.resolve(this.tool)

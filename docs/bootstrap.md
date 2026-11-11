@@ -1,6 +1,6 @@
 # Bootstrap
 
-> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. The LikeC4 validation adapter is implemented; automatic provisioning and the remaining native adapters are the next Phase 1 milestones.
+> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. The LikeC4, StrictDoc, Quint, JSON Schema, CLI, and Rust public API adapters are implemented. Adapters run only when their sources or language are present, or when explicitly required in config.
 
 ## Default
 
@@ -24,7 +24,7 @@ spec check
 
 1. `spec init` detects the project type, writes `spec/config.json`, and scaffolds the full profile.
 2. `spec doctor --fix` resolves missing pinned tools using the best available runner.
-3. `spec check` runs structural checks, native validators, formal verification, and contract checks.
+3. `spec check` runs structural checks, then every active native adapter. An adapter is active when its sources or language are detected, or when it is listed in `spec/config.json`. Inactive adapters do not run and their tools are not required.
 
 If provisioning is not possible, `spec doctor` prints exact commands per missing tool. It never installs globally without explicit consent.
 

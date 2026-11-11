@@ -16,6 +16,14 @@ interface SnapshotSpec {
 export class CliAdapter implements NativeAdapter {
     readonly id = "cli"
     readonly tool = "cli"
+    readonly requiredTools: readonly string[] = []
+
+    async detect(target: string): Promise<boolean> {
+        const contractDirectory = join(target, "spec", "contracts", "cli")
+        const snapshotPaths = await this.collectSnapshots(contractDirectory)
+
+        return snapshotPaths.length > 0
+    }
 
     async run(context: AdapterContext): Promise<AdapterRun> {
         const contractDirectory = join(context.target, "spec", "contracts", "cli")

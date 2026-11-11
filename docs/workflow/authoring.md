@@ -142,7 +142,7 @@ Small slices expose friction early. Large slices hide gaps.
 
 ## Full-stack default
 
-`spec init` writes the full profile. `spec doctor --fix` provisions tools. `spec check` always reports missing capabilities. The human does not need to choose which layers exist; they choose which changes to approve.
+`spec init` writes the full profile. `spec doctor --fix` provisions tools. `spec check` reports missing capabilities for every active layer. An adapter is active when its sources or language are detected, or when it is explicitly required in config. Inactive adapters do not run and their tools are not required. The human does not need to choose which layers exist; they choose which changes to approve.
 
 ## Example
 

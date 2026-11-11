@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises"
+import { readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { attemptAsync } from "../core/result"
@@ -8,6 +8,15 @@ import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 export class StrictDocAdapter implements NativeAdapter {
   readonly id = "strictdoc"
   readonly tool = "strictdoc"
+  readonly requiredTools = ["strictdoc"]
+
+  async detect(target: string): Promise<boolean> {
+    const requirementFiles = await this.collectRequirementFiles(
+      join(target, "spec", "requirements"),
+    )
+
+    return requirementFiles.length > 0
+  }
 
   async run(context: AdapterContext): Promise<AdapterRun> {
     const executable = await context.toolLocator.resolve(this.tool)
@@ -139,6 +148,24 @@ export class StrictDocAdapter implements NativeAdapter {
     const combined = `${stdout}\n${stderr}`.trim().slice(-500).trim()
 
     return this.failure("REQ-STRICTDOC-OUTPUT", combined ? `${message}: ${combined}` : message)
+  }
+
+  private async collectRequirementFiles(directory: string): Promise<string[]> {
+    const directoryEntries = await readdir(directory, { withFileTypes: true }).catch(() => [])
+    const requirementFiles: string[] = []
+
+    for (const directoryEntry of directoryEntries) {
+      const entryPath = join(directory, directoryEntry.name)
+      if (directoryEntry.isDirectory()) {
+        requirementFiles.push(...(await this.collectRequirementFiles(entryPath)))
+        continue
+      }
+      if (!directoryEntry.isFile()) continue
+      if (!/\.(sdoc|md)$/.test(directoryEntry.name)) continue
+      requirementFiles.push(entryPath)
+    }
+
+    return requirementFiles
   }
 
   private failure(code: string, message: string): Diagnostic {

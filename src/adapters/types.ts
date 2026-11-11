@@ -15,5 +15,7 @@ export interface AdapterRun {
 export interface NativeAdapter {
   readonly id: string
   readonly tool: string
+  readonly requiredTools?: readonly string[]
+  detect?(target: string): Promise<boolean>
   run(context: AdapterContext): Promise<AdapterRun>
 }

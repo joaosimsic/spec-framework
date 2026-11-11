@@ -1,3 +1,4 @@
+import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { attempt } from "../core/result"
 import type { Diagnostic } from "../core/types"
@@ -19,6 +20,13 @@ interface LikeC4Payload {
 export class LikeC4Adapter implements NativeAdapter {
   readonly id = "likec4"
   readonly tool = "likec4"
+  readonly requiredTools = ["likec4"]
+
+  async detect(target: string): Promise<boolean> {
+    const modelFiles = await this.collectModelFiles(join(target, "spec", "architecture"))
+
+    return modelFiles.length > 0
+  }
 
   async run(context: AdapterContext): Promise<AdapterRun> {
     const executable = await context.toolLocator.resolve(this.tool)
@@ -121,6 +129,24 @@ export class LikeC4Adapter implements NativeAdapter {
     if (!this.isRecord(start)) return undefined
 
     return typeof start.line === "number" ? start.line : undefined
+  }
+
+  private async collectModelFiles(directory: string): Promise<string[]> {
+    const directoryEntries = await readdir(directory, { withFileTypes: true }).catch(() => [])
+    const modelFiles: string[] = []
+
+    for (const directoryEntry of directoryEntries) {
+      const entryPath = join(directory, directoryEntry.name)
+      if (directoryEntry.isDirectory()) {
+        modelFiles.push(...(await this.collectModelFiles(entryPath)))
+        continue
+      }
+      if (!directoryEntry.isFile()) continue
+      if (!/\.(c4|likec4)$/.test(directoryEntry.name)) continue
+      modelFiles.push(entryPath)
+    }
+
+    return modelFiles
   }
 
   private failure(code: string, message: string): Diagnostic {

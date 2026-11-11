@@ -16,7 +16,7 @@ export interface SpecConfig {
     adoption: string
   }
   adapters: {
-    architecture: string
+    architecture?: string
     requirements?: string
     formal?: string
     contracts?: string[]
@@ -110,11 +110,8 @@ export class SpecConfigLoader {
     if (!this.isRecord(value)) {
       return this.failure("SPEC-BAD-CONFIG", "adapters must be an object")
     }
-    if (typeof value.architecture !== "string") {
-      return this.failure("SPEC-BAD-CONFIG", "adapters.architecture must be a string")
-    }
 
-    for (const key of ["requirements", "formal"] as const) {
+    for (const key of ["architecture", "requirements", "formal"] as const) {
       const adapter = value[key]
       if (adapter !== undefined && typeof adapter !== "string") {
         return this.failure("SPEC-BAD-CONFIG", `adapters.${key} must be a string`)
@@ -125,7 +122,8 @@ export class SpecConfigLoader {
     if (!Array.isArray(contracts)) return contracts
 
     return {
-      architecture: value.architecture,
+      architecture:
+        typeof value.architecture === "string" ? value.architecture : undefined,
       requirements:
         typeof value.requirements === "string" ? value.requirements : undefined,
       formal: typeof value.formal === "string" ? value.formal : undefined,

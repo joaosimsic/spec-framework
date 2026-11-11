@@ -1,5 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { join, basename } from "node:path"
+import { QuintAdapter } from "../adapters/quint"
+import { RustAdapter } from "../adapters/rust"
 
 const requirementTemplate = `[DOCUMENT]
 TITLE: Example requirements
@@ -52,7 +54,12 @@ views {
 }
 `
 
-const configFor = (name: string, existing: boolean) => `{
+const configFor = (
+  name: string,
+  existing: boolean,
+  contractAdapters: string[],
+  formalActive: boolean,
+) => `{
   "version": 1,
   "profile": "full",
   "project": {
@@ -61,9 +68,8 @@ const configFor = (name: string, existing: boolean) => `{
   },
   "adapters": {
     "architecture": "likec4",
-    "requirements": "strictdoc",
-    "formal": "quint",
-    "contracts": ["json-schema", "cli"]
+    "requirements": "strictdoc",${formalActive ? '\n    "formal": "quint",' : ""}
+    "contracts": ${JSON.stringify(contractAdapters)}
   },
   "approval": {
     "mode": "hash-lock",
@@ -86,7 +92,8 @@ Start with:
 6. Run \`spec doctor --fix\` to provision the full stack.
 7. Run \`spec check\` before review.
 
-Approved content is hash-locked in \`spec.lock\`.
+Native adapters activate when their sources or language are present, or when
+listed in \`config.json\`. Approved content is hash-locked in \`spec.lock\`.
 `
 
 const toolchainLock = `{
@@ -111,8 +118,10 @@ quint verify spec/formal/*.qnt --invariant <property>
 
 const contractsReadme = `# Contracts
 
-Contract definitions live here. Phase 1 supports JSON Schema and CLI snapshot
-adapters. Every contract declares an owner, consumers, and a
+Contract definitions live here. Phase 1 supports JSON Schema, CLI snapshot, and
+Rust public API adapters. Adapters activate automatically when their sources or
+language are present, or when listed under \`adapters.contracts\` in
+\`spec/config.json\`. Every contract declares an owner, consumers, and a
 compatibility policy.
 
 JSON Schema contracts are \`json-schema/*.schema.json\` files validated with Ajv
@@ -125,6 +134,14 @@ schema file. Schema hashes are compared against
 CLI contracts are \`cli/*.snapshot.json\` files with \`command\`,
 \`exitCode\`, \`stdoutIncludes\`, \`stdoutExcludes\`, \`stderrIncludes\`, and
 \`stderrExcludes\`. The adapter runs the command and checks the assertions.
+
+Rust public API contracts are \`rust/*.contract.json\` files with \`id\`,
+\`owner\`, \`consumers\`, \`compatibility\`, \`package\`, optional \`manifest\`
+(defaults to \`Cargo.toml\`), and \`baseline\`. The baseline is an object with
+exactly one of \`version\`, \`rev\`, or \`root\`. The adapter extracts the public
+API with \`cargo public-api\`, checks
+\`contracts/.baselines/<name>.rust-public-api.sha256\`, and verifies
+compatibility with \`cargo-semver-checks\`.
 `
 
 const exampleSchema = `{
@@ -186,6 +203,10 @@ export async function initProject(target: string, options: InitOptions = {}) {
     }
   }
 
+  const contractAdapters = ["json-schema", "cli"]
+  if (await new RustAdapter().detect(target)) contractAdapters.push("rust")
+  const formalActive = await new QuintAdapter().detect(target)
+
   const dirs = [
     "architecture",
     "requirements",
@@ -203,7 +224,12 @@ export async function initProject(target: string, options: InitOptions = {}) {
   }
 
   const files: Record<string, string> = {
-    "config.json": configFor(basename(target), Boolean(options.existing)),
+    "config.json": configFor(
+      basename(target),
+      Boolean(options.existing),
+      contractAdapters,
+      formalActive,
+    ),
     "README.md": specReadme,
     "requirements/example.sdoc": requirementTemplate,
     "architecture/model.c4": architectureTemplate,

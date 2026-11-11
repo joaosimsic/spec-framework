@@ -30,6 +30,8 @@ interface ContractAdapter {
 
 Rules:
 
+- adapters activate when their language or sources are detected, or when listed explicitly in `spec/config.json`;
+- inactive adapters do not run and do not require their tools;
 - adapters never approve contracts;
 - adapters record tool versions and input hashes;
 - adapters fail closed;
@@ -61,6 +63,8 @@ For a Rust library:
 - breaking changes are checked with `cargo-semver-checks`;
 - the audit bundle includes the public API report and compatibility verdict;
 - in-process contracts do not require an IDL.
+
+Rust contracts live in `spec/contracts/rust/*.contract.json` and declare `id`, `owner`, `consumers`, `compatibility`, `package`, optional `manifest`, and a `baseline` containing one of `version`, `rev`, or `root`. The adapter runs `cargo public-api`, compares the normalized surface against `spec/contracts/.baselines/<name>.rust-public-api.sha256`, and runs `cargo-semver-checks` for non-`none` compatibility.
 
 The language compiler remains the source of truth for types. The framework records the surface and its compatibility evidence.
 

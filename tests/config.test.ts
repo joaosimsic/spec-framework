@@ -85,7 +85,7 @@ describe("SpecConfigLoader", () => {
     }
   })
 
-  test("requires an architecture adapter", async () => {
+  test("allows adapters to be omitted for auto-detection", async () => {
     const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
     try {
       await mkdir(join(target, "spec"), { recursive: true })
@@ -101,8 +101,9 @@ describe("SpecConfigLoader", () => {
 
       const [config, error] = await new SpecConfigLoader(target).load()
 
-      expect(config).toBeNull()
-      expect(error?.code).toBe("SPEC-BAD-CONFIG")
+      expect(error).toBeNull()
+      expect(config?.adapters.architecture).toBeUndefined()
+      expect(config?.adapters.requirements).toBe("strictdoc")
     } finally {
       await rm(target, { recursive: true, force: true })
     }

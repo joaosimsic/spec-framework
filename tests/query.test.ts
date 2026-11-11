@@ -203,7 +203,64 @@ describe("runQuery", () => {
       expect(run.code).toBe(0)
       expect(run.output).toContain("Sample behavior - Draft - not reviewed (requirement)")
       expect(run.output).toContain("Sample criterion - Draft - not reviewed (acceptance criterion)")
+      expect(run.output).toContain("A related item is missing from the model.")
       expect(run.output).not.toMatch(/\b(?:REQ|AC)-/)
+      expect(run.output).not.toContain("GRAPH-")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("prints identity and provenance only with technical details", async () => {
+    const target = await createTarget()
+    try {
+      const run = await runQuery(target, { technical: true, workspaceReader: reader() })
+
+      expect(run.code).toBe(0)
+      expect(run.output).toContain("Sample behavior")
+      expect(run.output).toContain("id: REQ-SAMPLE-001")
+      expect(run.output).toContain("provenance: human:test@2026-11-10")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("emits an experience view with opaque refs", async () => {
+    const target = await createTarget()
+    try {
+      const run = await runQuery(target, {
+        json: true,
+        view: "experience",
+        workspaceReader: reader(),
+      })
+      const model = JSON.parse(run.output) as {
+        version: number
+        graphVersion: number
+        commit: string
+        entries: Array<{
+          ref: string
+          label: string
+          kindLabel: string
+          state: string
+          technical: { id: string }
+        }>
+      }
+
+      expect(run.code).toBe(0)
+      expect(model.version).toBe(1)
+      expect(model.graphVersion).toBe(1)
+      expect(model.commit).toBe("a1b2c3d")
+      expect(model.entries.map((entry) => entry.ref)).toEqual(["ref_0", "ref_1"])
+      expect(model.entries.map((entry) => entry.technical.id)).toEqual([
+        "AC-SAMPLE-001",
+        "REQ-SAMPLE-001",
+      ])
+      expect(model.entries.every((entry) => !/\b(?:REQ|AC)-/.test(entry.ref))).toBe(true)
+      expect(model.entries[1]).toMatchObject({
+        label: "Sample behavior",
+        kindLabel: "Requirement",
+        state: "Draft - not reviewed",
+      })
     } finally {
       await rm(target, { recursive: true, force: true })
     }

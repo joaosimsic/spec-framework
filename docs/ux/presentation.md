@@ -1,9 +1,10 @@
 # Presentation and internal identity
 
-> Status: partially implemented. `spec query` default output uses titles and
-> plain-language state without internal ID prefixes. Opaque refs, contextual
-> disambiguation, the technical-details surface, and the workbench and chat
-> views remain design.
+> Status: partially implemented. `spec query` default output uses titles,
+> plain-language state, blockers, and open questions without internal ID
+> prefixes. `--view experience --json` emits the display model with opaque refs
+> and contextual name resolution; `--technical` reveals identity. The workbench
+> and chat views remain design.
 
 ## Purpose
 

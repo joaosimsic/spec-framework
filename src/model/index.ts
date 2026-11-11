@@ -1,3 +1,14 @@
+export {
+  DISPLAY_MODEL_VERSION,
+  type DisplayChoice,
+  type DisplayEntry,
+  type DisplayFailure,
+  type DisplayModel,
+  type DisplayReference,
+  type DisplayRelationship,
+  type DisplayTechnical,
+} from "./display-types"
+export { DisplayProjection } from "./display"
 export { SpecGraphBuilder } from "./graph"
 export { RequirementsGraphSource } from "./requirements"
 export {

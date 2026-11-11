@@ -3,23 +3,11 @@ import { SpecConfigLoader } from "../core/config"
 import { lintBlocks } from "../core/lint"
 import { loadRequirementSources } from "../core/requirements"
 import type { Diagnostic } from "../core/types"
-import { SpecGraphBuilder, RequirementsGraphSource } from "../model/index"
-import type { GraphElement, GraphStatus, SpecGraph } from "../model/types"
+import { DisplayProjection, RequirementsGraphSource, SpecGraphBuilder } from "../model/index"
+import type { GraphElement, SpecGraph } from "../model/types"
 import { GitWorkspaceReader } from "./git"
+import { renderHuman, renderTechnical } from "./render"
 import type { QueryOptions, QueryRun, WorkspaceMetadataReader } from "./types"
-
-const STATE_LABELS: Record<GraphStatus, string> = {
-  draft: "Draft - not reviewed",
-  proposed: "Ready for review",
-  approved: "Approved",
-  deprecated: "Retired",
-  unknown: "State unavailable",
-}
-
-const KIND_LABELS: Record<string, string> = {
-  requirement: "requirement",
-  acceptance_criterion: "acceptance criterion",
-}
 
 export async function runQuery(target: string, options: QueryOptions = {}): Promise<QueryRun> {
   const [config, configError] = await new SpecConfigLoader(target).load()
@@ -61,11 +49,27 @@ export async function runQuery(target: string, options: QueryOptions = {}): Prom
     return failure(`unknown element: ${options.id}`)
   }
 
+  const projection = new DisplayProjection(graph)
+
   return {
     graph,
-    output: options.json === true ? JSON.stringify(graph, null, 2) : renderText(graph),
+    output: outputFor(graph, projection, options),
     code: 0,
   }
+}
+
+function outputFor(
+  graph: SpecGraph,
+  projection: DisplayProjection,
+  options: QueryOptions,
+): string {
+  if (options.json === true && options.view === "experience") {
+    return JSON.stringify(projection.model, null, 2)
+  }
+  if (options.json === true) return JSON.stringify(graph, null, 2)
+  if (options.technical === true) return renderTechnical(projection.model)
+
+  return renderHuman(projection.model)
 }
 
 function filterGraph(graph: SpecGraph, options: QueryOptions): SpecGraph {
@@ -91,18 +95,6 @@ function matches(
   if (status !== undefined && element.status !== status) return false
 
   return true
-}
-
-function renderText(graph: SpecGraph): string {
-  const lines = graph.elements.map((element) => {
-    const label = element.title ?? "(untitled)"
-    const state = element.status === undefined ? "State unavailable" : STATE_LABELS[element.status]
-    return `${label} - ${state} (${KIND_LABELS[element.kind] ?? element.kind})`
-  })
-  lines.push("")
-  lines.push(`${graph.elements.length} element(s)`)
-
-  return lines.join("\n")
 }
 
 function messages(diagnostics: Diagnostic[]): string {

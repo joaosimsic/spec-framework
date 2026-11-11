@@ -1,9 +1,10 @@
 # Query and agent interface
 
 > Status: partially implemented. `spec query` emits the deterministic identity
-> graph for SDoc requirement and acceptance records, with id, kind, and status
-> filters. Architecture, formal, contract, and evidence collectors, the
-> experience view with refs, the opencode plugin, and MCP remain design.
+> graph and display model for SDoc requirement and acceptance records, with id,
+> kind, and status filters. The display model carries names, plain-language
+> state, blockers, open questions, and opaque refs. Architecture, formal,
+> contract, and evidence collectors, the opencode plugin, and MCP remain design.
 > MCP and the broader agent surface are Phase 2.
 
 ## Purpose
@@ -118,12 +119,16 @@ Current implementation:
 spec query --json
 spec query --id REQ-AUTH-001 --json
 spec query --kind requirement --status approved --json
+spec query --view experience --json
+spec query --technical
 spec query --allow-dirty
 ```
 
 `--id`, `--kind`, and `--status` filter elements. JSON includes internal
-identity; default output uses titles and plain-language state without ID
-prefixes. The query requires a git worktree and refuses a dirty tree unless
+identity; `--view experience --json` emits the display model with opaque refs
+and a technical payload. Default output uses titles and plain-language state
+without ID prefixes; `--technical` reveals identity, provenance, links, and
+diagnostics. The query requires a git worktree and refuses a dirty tree unless
 `--allow-dirty` is passed. Impact, coverage, and semantic query forms remain
 design.
 

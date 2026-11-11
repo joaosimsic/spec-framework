@@ -6,7 +6,7 @@ import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
-import { runQuery } from "./query/index"
+import { runQuery, type QueryView } from "./query/index"
 
 const HELP = `spec-framework CLI
 
@@ -15,7 +15,7 @@ Usage:
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
   spec map [--draft] [--json]
-  spec query [--id <id>] [--kind <kind>] [--status <status>] [--json] [--allow-dirty]
+  spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
@@ -105,6 +105,8 @@ interface QueryArguments {
   id?: string
   kind?: string
   status?: string
+  view: QueryView
+  technical: boolean
   json: boolean
   allowDirty: boolean
   error?: string
@@ -114,6 +116,8 @@ function parseQueryArguments(args: string[]): QueryArguments {
   let id: string | undefined
   let kind: string | undefined
   let status: string | undefined
+  let view: QueryView = "identity"
+  let technical = false
   let json = false
   let allowDirty = false
   let index = args[0] === "query" ? 1 : 0
@@ -125,16 +129,47 @@ function parseQueryArguments(args: string[]): QueryArguments {
         json = true
         index += 1
         break
+      case "--technical":
+        technical = true
+        index += 1
+        break
       case "--allow-dirty":
         allowDirty = true
         index += 1
         break
+      case "--view": {
+        const value = args[index + 1]
+        if (value !== "identity" && value !== "experience") {
+          return {
+            id,
+            kind,
+            status,
+            view,
+            technical,
+            json,
+            allowDirty,
+            error: "--view requires identity or experience",
+          }
+        }
+        view = value
+        index += 2
+        break
+      }
       case "--id":
       case "--kind":
       case "--status": {
         const value = args[index + 1]
         if (value === undefined || value.startsWith("-")) {
-          return { id, kind, status, json, allowDirty, error: `${argument} requires a value` }
+          return {
+            id,
+            kind,
+            status,
+            view,
+            technical,
+            json,
+            allowDirty,
+            error: `${argument} requires a value`,
+          }
         }
         if (argument === "--id") id = value
         if (argument === "--kind") kind = value
@@ -144,13 +179,22 @@ function parseQueryArguments(args: string[]): QueryArguments {
       }
       default:
         if (argument.startsWith("-")) {
-          return { id, kind, status, json, allowDirty, error: `unknown query option: ${argument}` }
+          return {
+            id,
+            kind,
+            status,
+            view,
+            technical,
+            json,
+            allowDirty,
+            error: `unknown query option: ${argument}`,
+          }
         }
         index += 1
     }
   }
 
-  return { id, kind, status, json, allowDirty }
+  return { id, kind, status, view, technical, json, allowDirty }
 }
 
 async function commandQuery(args: string[]): Promise<number> {
@@ -164,6 +208,8 @@ async function commandQuery(args: string[]): Promise<number> {
     id: parsed.id,
     kind: parsed.kind,
     status: parsed.status,
+    view: parsed.view,
+    technical: parsed.technical,
     json: parsed.json,
     allowDirty: parsed.allowDirty,
   })

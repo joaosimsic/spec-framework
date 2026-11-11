@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the confidence queue, and applies typed area curation actions. Relation-level curation, promotion into approved architecture, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. Promotion into approved architecture, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
 
 ## Commands
 
@@ -121,9 +121,13 @@ The report is included in the audit bundle until the draft is resolved.
 or equivalent terminal review over the same draft graph.
 
 - Confidence and provenance become plain-language review prompts.
-- The queue supports `accept`, `reject`, `rename`, `merge`, `split`,
-  `set-owner`, `set-responsibility`, `set-boundary`, and `open-question`
-  actions through repeatable `--action <json|file>` values.
+- The queue supports `accept`, `reject`, `accept-relation`, `reject-relation`,
+  `rename`, `merge`, `split`, `set-owner`, `set-responsibility`,
+  `set-boundary`, and `open-question` actions through repeatable
+  `--action <json|file>` values.
+- Inferred, ambiguous, and unknown relations enter a relation queue. Accepting
+  one records human provenance and marks it observed; rejecting one removes it
+  from the draft.
 - Each action is recorded in `spec/proposals/<slug>.mapping.json` against the
   review snapshot on a same-worktree branch.
 - `spec/architecture/draft.gen.c4` is regenerated for inspection. The review

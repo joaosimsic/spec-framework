@@ -61,9 +61,25 @@ export interface MappingReviewItem {
   technical: MappingReviewTechnical
 }
 
+export interface MappingReviewRelationTechnical {
+  source: string
+  target: string
+  type: string
+  provenance: string
+}
+
+export interface MappingReviewRelationItem {
+  label: string
+  confidence: Confidence
+  confidenceLabel: string
+  prompt: string
+  technical: MappingReviewRelationTechnical
+}
+
 export interface MappingReviewGaps {
   areasWithoutOwner: number
   areasWithoutResponsibility: number
+  relationsNeedingReview: number
   externalDependencies: string[]
   unresolvedRequirementLinks: number
 }
@@ -75,6 +91,7 @@ export interface MappingReview {
   state: MappingReviewState
   summary: MapSummary
   queue: MappingReviewItem[]
+  relationQueue: MappingReviewRelationItem[]
   gaps: MappingReviewGaps
   notes: string[]
   prompts: string[]
@@ -83,6 +100,8 @@ export interface MappingReview {
 
 export class MappingReviewFactory {
   static build(report: MapReport, direction: string): MappingReview {
+    const relationQueue = this.relationQueue(report)
+
     return {
       version: MAPPING_REVIEW_VERSION,
       mode: "mapping",
@@ -90,9 +109,11 @@ export class MappingReviewFactory {
       state: "waiting for curation",
       summary: { ...report.summary },
       queue: [...report.elements].sort(this.compare).map((element) => this.item(element)),
+      relationQueue,
       gaps: {
         areasWithoutOwner: report.gaps.missingOwners.length,
         areasWithoutResponsibility: report.gaps.missingResponsibilities.length,
+        relationsNeedingReview: relationQueue.length,
         externalDependencies: this.externalDependencies(report.gaps.externalDependencies),
         unresolvedRequirementLinks: report.gaps.unresolvedRequirementLinks.length,
       },
@@ -125,6 +146,42 @@ export class MappingReviewFactory {
     }
   }
 
+  private static relationQueue(report: MapReport): MappingReviewRelationItem[] {
+    const byId = new Map(report.elements.map((element) => [element.id, element]))
+    const items: MappingReviewRelationItem[] = []
+
+    for (const element of report.elements) {
+      for (const link of element.links) {
+        const target = byId.get(link.to)
+        if (target === undefined) continue
+
+        const confidence = link.confidence ?? "unknown"
+        if (confidence === "observed") continue
+
+        const typeLabel = this.relationTypeLabel(link.type)
+        items.push({
+          label: `${this.label(element)} -> ${this.label(target)} (${typeLabel})`,
+          confidence,
+          confidenceLabel: CONFIDENCE_LABELS[confidence],
+          prompt: `Confirm this ${typeLabel} relation or reject it.`,
+          technical: {
+            source: element.id,
+            target: target.id,
+            type: link.type,
+            provenance: link.provenance ?? element.provenance,
+          },
+        })
+      }
+    }
+
+    return items.sort((left, right) => {
+      const confidenceOrder = CONFIDENCE_ORDER[left.confidence] - CONFIDENCE_ORDER[right.confidence]
+      if (confidenceOrder !== 0) return confidenceOrder
+      const labelOrder = left.label.localeCompare(right.label)
+      return labelOrder === 0 ? left.technical.type.localeCompare(right.technical.type) : labelOrder
+    })
+  }
+
   private static label(element: DraftElement): string {
     const title = element.title.trim()
     if (title !== "") return title
@@ -139,6 +196,10 @@ export class MappingReviewFactory {
   private static externalDependencies(values: string[]): string[] {
     const names = values.map((value) => value.split(" -> ").at(-1) ?? value)
     return [...new Set(names)].sort()
+  }
+
+  private static relationTypeLabel(value: string): string {
+    return this.humanize(value).toLowerCase()
   }
 
   private static humanize(value: string): string {

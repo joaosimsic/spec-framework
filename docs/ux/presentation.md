@@ -4,8 +4,8 @@
 > plain-language state, blockers, and open questions without internal ID
 > prefixes. `--view experience --json` emits the display model with opaque refs
 > and contextual name resolution; `--technical` reveals identity. Terminal
-> mapping curation resolves visible names and hides identity by default. The
-> workbench and chat views remain design.
+> mapping curation resolves visible names for areas and relations and hides
+> identity by default. The workbench and chat views remain design.
 
 ## Purpose
 

@@ -178,6 +178,101 @@ describe("mapping curation", () => {
     }
   })
 
+  test("curates inferred relations without leaking identity", async () => {
+    const target = await createTarget()
+    try {
+      await writeFile(
+        join(target, "package.json"),
+        `${JSON.stringify({ name: "app", dependencies: { sqlite3: "1" } })}\n`,
+      )
+      const git = await openReview(target)
+
+      const initial = JSON.parse(
+        (
+          await runMapReview(target, {
+            json: true,
+            author: "tester",
+            gitRepository: git,
+            now: fixedNow,
+          })
+        ).output,
+      ) as MapReviewReport
+      const queued = initial.review.relationQueue.find(
+        (item) => item.technical.source === "CMP-APP",
+      )
+      expect(queued).toBeDefined()
+      expect(queued?.label).toBe("app -> sqlite3 (depends on)")
+      expect(queued?.technical).toEqual(
+        expect.objectContaining({
+          target: "DAT-SQLITE3",
+          type: "depends_on",
+          provenance: "code:package.json#dependencies",
+        }),
+      )
+
+      const accepted = JSON.parse(
+        (
+          await runMapReview(target, {
+            actions: [
+              { kind: "accept", target: "app" },
+              { kind: "accept", target: "sample" },
+              { kind: "accept", target: "sqlite3" },
+              {
+                kind: "accept-relation",
+                source: "app",
+                target: "sqlite3",
+                type: "depends_on",
+              },
+            ],
+            json: true,
+            author: "tester",
+            gitRepository: git,
+            now: fixedNow,
+          })
+        ).output,
+      ) as MapReviewReport
+
+      expect(accepted.review.state).toBe("curation complete")
+      expect(accepted.review.relationQueue).toHaveLength(0)
+      expect(accepted.curation.summary.acceptedRelations).toBe(1)
+      expect(
+        accepted.curation.relations.find(
+          (relation) => relation.sourceId === "CMP-APP" && relation.targetId === "DAT-SQLITE3",
+        ),
+      ).toEqual(
+        expect.objectContaining({
+          type: "depends_on",
+          confidence: "observed",
+          provenance: "human:tester@2026-11-11",
+        }),
+      )
+
+      const rejected = JSON.parse(
+        (
+          await runMapReview(target, {
+            actions: [{ kind: "reject-relation", source: "app", target: "sqlite3" }],
+            json: true,
+            author: "tester",
+            gitRepository: git,
+            now: fixedNow,
+          })
+        ).output,
+      ) as MapReviewReport
+
+      expect(rejected.curation.summary.rejectedRelations).toBe(1)
+      expect(
+        rejected.curation.relations.some(
+          (relation) => relation.sourceId === "CMP-APP" && relation.targetId === "DAT-SQLITE3",
+        ),
+      ).toBe(false)
+
+      const draft = await readFile(join(target, "spec", "architecture", "draft.gen.c4"), "utf8")
+      expect(draft).not.toContain("'depends_on'")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
   test("marks the review complete when every area is resolved", async () => {
     const target = await createTarget()
     try {
@@ -270,6 +365,20 @@ describe("mapping curation", () => {
 
       expect(run.code).toBe(1)
       expect(run.output).toContain("unknown area 'missing'")
+      expect((await readSnapshot(target)).decisions).toHaveLength(before.decisions.length)
+      expect(await Bun.file(join(target, "spec", "architecture", "draft.gen.c4")).exists()).toBe(
+        false,
+      )
+
+      const relationRun = await runMapReview(target, {
+        actions: [{ kind: "accept-relation", source: "app", target: "missing" }],
+        author: "tester",
+        gitRepository: git,
+        now: fixedNow,
+      })
+
+      expect(relationRun.code).toBe(1)
+      expect(relationRun.output).toContain("unknown area 'missing'")
       expect((await readSnapshot(target)).decisions).toHaveLength(before.decisions.length)
       expect(await Bun.file(join(target, "spec", "architecture", "draft.gen.c4")).exists()).toBe(
         false,

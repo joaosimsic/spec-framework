@@ -1,8 +1,8 @@
 # Brownfield mapping
 
-> Status: `spec map --draft` and the `spec map --review` entry are implemented.
-> Interactive curation actions, the workbench, and drift checks are design only.
-> See [use-case modes](workflow/use-cases.md).
+> Status: `spec map --draft` and the `spec map --review` entry with area and
+> relation curation are implemented. The workbench and drift checks are design
+> only. See [use-case modes](workflow/use-cases.md).
 
 ## Principle
 
@@ -64,10 +64,12 @@ answer.
 
 - `spec map --review` opens the [workbench](workflow/workbench.md) or an
   equivalent terminal review.
-- The human accepts, rejects, renames, merges, splits, assigns owners, and
-  records open questions.
+- The human accepts, rejects, renames, merges, splits, assigns owners, records
+  open questions, and accepts or rejects uncertain relations.
 - Every action is a typed proposal operation on the same-worktree proposal
   branch.
+- Inferred, ambiguous, and unknown relations appear in a relation queue;
+  observed relations stay out of the queue but can still be rejected.
 - Confidence appears as plain language: “Clear from code”, “Inferred — confirm
   or correct”, “Uncertain boundary — choose”, “Needs human input”.
 - Default interaction shows names, not `CMP-*` codes. Technical details reveal

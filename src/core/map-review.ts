@@ -224,8 +224,11 @@ function currentReview(
   const resolved = new Set(state.resolvedIds)
   const queue = review.queue.filter((item) => !resolved.has(item.technical.id))
   const unresolved = state.areas.filter((area) => !resolved.has(area.id)).length
+  const relationsPending = review.relationQueue.length
   const status =
-    unresolved === 0 && (state.decisions.length > 0 || state.areas.length === 0)
+    unresolved === 0 &&
+    relationsPending === 0 &&
+    (state.decisions.length > 0 || state.areas.length === 0)
       ? "curation complete"
       : state.decisions.length > 0
         ? "curation in progress"

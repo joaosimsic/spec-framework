@@ -2,7 +2,7 @@ import { ChangeReportRenderer } from "../change/report"
 import type { Proposal } from "../change/types"
 import type { MappingCurationReport } from "./curation-types"
 import { MappingCurationReportRenderer } from "./curation-report"
-import type { MappingReview, MappingReviewItem } from "./review"
+import type { MappingReview, MappingReviewItem, MappingReviewRelationItem } from "./review"
 import type { MapReport } from "./types"
 
 const CONFIDENCE_GROUPS: MappingReviewItem["confidence"][] = [
@@ -33,6 +33,16 @@ export class MappingReviewReportRenderer {
       }
     }
 
+    if (review.relationQueue.length > 0) {
+      lines.push("", "relation queue:")
+      for (const confidence of CONFIDENCE_GROUPS) {
+        const items = review.relationQueue.filter((item) => item.confidence === confidence)
+        if (items.length === 0) continue
+        lines.push(`  ${items[0]?.confidenceLabel ?? confidence}: ${items.length}`)
+        for (const item of items) lines.push(`  - ${item.label}`)
+      }
+    }
+
     const gaps = this.gapLines(review)
     if (gaps.length > 0) lines.push("", "gaps:", ...gaps)
 
@@ -58,6 +68,7 @@ export class MappingReviewReportRenderer {
       `mapping-review-summary: areas=${review.summary.elements} relations=${review.summary.relations}`,
       `mapping-review-draft: ${report.draftPath ?? "none"}`,
       ...review.queue.map((item) => this.itemLine(item)),
+      ...review.relationQueue.map((item) => this.relationLine(item)),
       ...report.gaps.missingOwners.map((id) => `mapping-review-gap: missing-owner ${id}`),
       ...report.gaps.missingResponsibilities.map(
         (id) => `mapping-review-gap: missing-responsibility ${id}`,
@@ -91,6 +102,9 @@ export class MappingReviewReportRenderer {
         `  - ${review.gaps.areasWithoutResponsibility} area(s) still need a stated responsibility.`,
       )
     }
+    if (review.gaps.relationsNeedingReview > 0) {
+      lines.push(`  - ${review.gaps.relationsNeedingReview} relation(s) still need confirmation.`)
+    }
     for (const dependency of review.gaps.externalDependencies) {
       lines.push(`  - External dependency without a local boundary: ${dependency}`)
     }
@@ -107,6 +121,15 @@ export class MappingReviewReportRenderer {
     return [
       `mapping-review-area: ${item.technical.id}`,
       `kind=${item.technical.kind}`,
+      `confidence=${item.confidence}`,
+      `provenance=${item.technical.provenance}`,
+    ].join(" ")
+  }
+
+  private static relationLine(item: MappingReviewRelationItem): string {
+    return [
+      `mapping-review-relation: ${item.technical.source} -> ${item.technical.target}`,
+      `type=${item.technical.type}`,
       `confidence=${item.confidence}`,
       `provenance=${item.technical.provenance}`,
     ].join(" ")

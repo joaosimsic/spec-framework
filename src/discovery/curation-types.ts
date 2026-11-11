@@ -1,10 +1,12 @@
-import type { DraftElement, MapReport } from "./types"
+import type { Confidence, DraftElement, MapReport } from "./types"
 
 export const MAPPING_SNAPSHOT_VERSION = 1
 
 export type CurationAction =
   | { kind: "accept"; target: string }
   | { kind: "reject"; target: string }
+  | { kind: "accept-relation"; source: string; target: string; type?: string }
+  | { kind: "reject-relation"; source: string; target: string; type?: string }
   | { kind: "rename"; target: string; title: string }
   | { kind: "merge"; targets: string[]; title: string }
   | { kind: "split"; target: string; parts: string[] }
@@ -27,10 +29,20 @@ export interface MappingSnapshot {
 export interface MappingCurationSummary {
   accepted: number
   rejected: number
+  acceptedRelations: number
+  rejectedRelations: number
   renamed: number
   merged: number
   split: number
   questions: number
+}
+
+export interface MappingCurationRelation {
+  sourceId: string
+  targetId: string
+  type: string
+  confidence: Confidence
+  provenance: string
 }
 
 export interface MappingCurationQuestion {
@@ -43,6 +55,7 @@ export interface MappingCurationQuestion {
 
 export interface MappingCurationState {
   areas: DraftElement[]
+  relations: MappingCurationRelation[]
   resolvedIds: string[]
   decisions: CurationDecision[]
   questions: MappingCurationQuestion[]

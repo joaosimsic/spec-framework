@@ -19,6 +19,53 @@ describe("CurationParser", () => {
     ])
   })
 
+  test("parses relation actions with optional types", () => {
+    const [actions, error] = CurationParser.parseJson(
+      JSON.stringify([
+        { kind: "accept-relation", source: "Application", target: "database" },
+        {
+          kind: "reject-relation",
+          source: "Application",
+          target: "database",
+          type: "depends_on",
+        },
+      ]),
+    )
+
+    expect(error).toBeNull()
+    expect(actions).toEqual([
+      { kind: "accept-relation", source: "Application", target: "database" },
+      {
+        kind: "reject-relation",
+        source: "Application",
+        target: "database",
+        type: "depends_on",
+      },
+    ])
+  })
+
+  test("rejects incomplete relation actions", () => {
+    const [, sourceError] = CurationParser.parse({
+      kind: "accept-relation",
+      target: "database",
+    })
+    expect(sourceError).toContain("requires a source")
+
+    const [, targetError] = CurationParser.parse({
+      kind: "reject-relation",
+      source: "Application",
+    })
+    expect(targetError).toContain("requires a target")
+
+    const [, typeError] = CurationParser.parse({
+      kind: "accept-relation",
+      source: "Application",
+      target: "database",
+      type: " ",
+    })
+    expect(typeError).toContain("type must be a non-empty string")
+  })
+
   test("requires unique merge targets and split parts", () => {
     const [, mergeError] = CurationParser.parse({
       kind: "merge",

@@ -53,6 +53,10 @@ export class CurationParser {
         return this.readTargetAction(value, "accept")
       case "reject":
         return this.readTargetAction(value, "reject")
+      case "accept-relation":
+        return this.readRelationAction(value, "accept-relation")
+      case "reject-relation":
+        return this.readRelationAction(value, "reject-relation")
       case "rename":
         return this.readRename(value)
       case "merge":
@@ -80,6 +84,25 @@ export class CurationParser {
     if (target === null) return [null, `${kind} requires a target`]
 
     return [{ kind, target }, null]
+  }
+
+  private static readRelationAction(
+    value: Record<string, unknown>,
+    kind: "accept-relation" | "reject-relation",
+  ): Result<CurationAction, string> {
+    const source = this.readText(value["source"])
+    if (source === null) return [null, `${kind} requires a source`]
+    const target = this.readText(value["target"])
+    if (target === null) return [null, `${kind} requires a target`]
+
+    let type: string | undefined
+    if (value["type"] !== undefined) {
+      const parsed = this.readText(value["type"])
+      if (parsed === null) return [null, `${kind} type must be a non-empty string`]
+      type = parsed
+    }
+
+    return [{ kind, source, target, ...(type === undefined ? {} : { type }) }, null]
   }
 
   private static readRename(value: Record<string, unknown>): Result<CurationAction, string> {

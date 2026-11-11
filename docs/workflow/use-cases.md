@@ -5,8 +5,8 @@
 > reports. `spec refactor` is a thin alias that defaults to refactor mode and
 > warns when no approved baseline exists. `spec start` opens a scratch-mode
 > proposal for a greenfield repository. `spec map --review` opens or resumes a
-> mapping proposal, prints the confidence queue, and records typed area
-> curation actions. Relation-level curation, promotion into approved
+> mapping proposal, prints the area and relation confidence queues, and records
+> typed area and relation curation actions. Promotion into approved
 > architecture, the workbench, and the opencode plugin are not implemented. The
 > mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
@@ -103,8 +103,9 @@ specification, or a specification that covers only part of the system.
    - uncertain boundary;
    - needs human input.
 5. The human accepts, rejects, renames, merges, splits, owns, and describes the
-   elements. `spec map --review --action <json|file>` records each decision
-   against the proposal snapshot. Unknown intent becomes a named open question.
+   elements, and accepts or rejects uncertain relations.
+   `spec map --review --action <json|file>` records each decision against the
+   proposal snapshot. Unknown intent becomes a named open question.
 6. `spec check` runs. The human approves an explicit subset of the model.
 7. `spec map --check` reports drift against the approved subset.
 
@@ -118,7 +119,8 @@ specification, or a specification that covers only part of the system.
 
 ### Exit criteria
 
-- The confidence queue is resolved or explicitly left open with an owner.
+- The area and relation confidence queues are resolved or explicitly left open
+  with an owner.
 - The approved scope is explicit and does not claim the whole system.
 - Drift findings are available for the approved subset.
 

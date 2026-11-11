@@ -3,6 +3,7 @@ import type {
   CurationAction,
   CurationDecision,
   MappingCurationQuestion,
+  MappingCurationRelation,
   MappingCurationState,
   MappingCurationSummary,
 } from "./curation-types"
@@ -11,6 +12,11 @@ import type { Result } from "../core/result"
 
 interface MutableArea extends DraftElement {
   resolved: boolean
+}
+
+interface ResolvedRelation {
+  source: MutableArea
+  link: DraftLink
 }
 
 export class MappingCurationEngine {
@@ -61,6 +67,7 @@ export class MappingCurationEngine {
 
     return {
       areas: areas.sort((left, right) => left.id.localeCompare(right.id)),
+      relations: this.relations(),
       resolvedIds: [...this.areas.values()]
         .filter((area) => area.resolved)
         .map((area) => area.id)
@@ -91,6 +98,10 @@ export class MappingCurationEngine {
         return this.accept(action.target, at, author)
       case "reject":
         return this.reject(action.target)
+      case "accept-relation":
+        return this.acceptRelation(action, at, author)
+      case "reject-relation":
+        return this.rejectRelation(action)
       case "rename":
         return this.rename(action.target, action.title)
       case "merge":
@@ -127,6 +138,41 @@ export class MappingCurationEngine {
 
     this.areas.delete(area.id)
     this.removeLinksTo(area.id)
+
+    return [true, null]
+  }
+
+  private acceptRelation(
+    action: Extract<CurationAction, { kind: "accept-relation" }>,
+    at: string,
+    author: string,
+  ): Result<boolean, string> {
+    const [relation, relationError] = this.resolveRelation(
+      action.source,
+      action.target,
+      action.type,
+    )
+    if (relationError !== null) return [null, relationError]
+    if (relation === null) return [null, "relation failed to resolve"]
+
+    relation.link.confidence = "observed"
+    relation.link.provenance = this.humanProvenance(author, at)
+
+    return [true, null]
+  }
+
+  private rejectRelation(
+    action: Extract<CurationAction, { kind: "reject-relation" }>,
+  ): Result<boolean, string> {
+    const [relation, relationError] = this.resolveRelation(
+      action.source,
+      action.target,
+      action.type,
+    )
+    if (relationError !== null) return [null, relationError]
+    if (relation === null) return [null, "relation failed to resolve"]
+
+    relation.source.links = relation.source.links.filter((link) => link !== relation.link)
 
     return [true, null]
   }
@@ -298,6 +344,41 @@ export class MappingCurationEngine {
     return [areas, null]
   }
 
+  private resolveRelation(
+    sourceTarget: string,
+    targetTarget: string,
+    type: string | undefined,
+  ): Result<ResolvedRelation, string> {
+    const [source, sourceError] = this.resolve(sourceTarget)
+    if (sourceError !== null) return [null, sourceError]
+    if (source === null) return [null, `unknown area '${sourceTarget}'`]
+
+    const [target, targetError] = this.resolve(targetTarget)
+    if (targetError !== null) return [null, targetError]
+    if (target === null) return [null, `unknown area '${targetTarget}'`]
+
+    const expectedType = type === undefined ? null : normalizeRelationType(type)
+    const matches = source.links.filter(
+      (link) =>
+        link.to === target.id &&
+        (expectedType === null || normalizeRelationType(link.type) === expectedType),
+    )
+    const label = `${source.title} -> ${target.title}`
+
+    if (matches.length === 0) {
+      const qualifier = type === undefined ? "" : ` of type '${type}'`
+      return [null, `unknown relation '${label}'${qualifier}`]
+    }
+    if (matches.length > 1) {
+      return [null, `relation '${label}' is ambiguous; supply a type`]
+    }
+
+    const link = matches[0]
+    if (link === undefined) return [null, `unknown relation '${label}'`]
+
+    return [{ source, link }, null]
+  }
+
   private titleAvailable(title: string, ...excludedIds: string[]): Result<boolean, string> {
     const normalized = title.trim().toLowerCase()
     if (normalized === "") return [null, "title is required"]
@@ -382,10 +463,37 @@ export class MappingCurationEngine {
     }
   }
 
+  private relations(): MappingCurationRelation[] {
+    const ids = new Set(this.areas.keys())
+    const relations: MappingCurationRelation[] = []
+
+    for (const area of this.areas.values()) {
+      for (const link of area.links) {
+        if (!ids.has(link.to)) continue
+        relations.push({
+          sourceId: area.id,
+          targetId: link.to,
+          type: link.type,
+          confidence: link.confidence ?? "unknown",
+          provenance: link.provenance ?? area.provenance,
+        })
+      }
+    }
+
+    return relations.sort((left, right) => {
+      const sourceOrder = left.sourceId.localeCompare(right.sourceId)
+      if (sourceOrder !== 0) return sourceOrder
+      const typeOrder = left.type.localeCompare(right.type)
+      return typeOrder === 0 ? left.targetId.localeCompare(right.targetId) : typeOrder
+    })
+  }
+
   private summarize(): MappingCurationSummary {
     const summary: MappingCurationSummary = {
       accepted: 0,
       rejected: 0,
+      acceptedRelations: 0,
+      rejectedRelations: 0,
       renamed: 0,
       merged: 0,
       split: 0,
@@ -399,6 +507,12 @@ export class MappingCurationEngine {
           break
         case "reject":
           summary.rejected += 1
+          break
+        case "accept-relation":
+          summary.acceptedRelations += 1
+          break
+        case "reject-relation":
+          summary.rejectedRelations += 1
           break
         case "rename":
           summary.renamed += 1
@@ -458,4 +572,11 @@ export function curatedMapReport(
       ),
     },
   }
+}
+
+function normalizeRelationType(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
 }

@@ -1,6 +1,7 @@
 # Query and agent interface
 
-> Status: Phase 2 design. Query and MCP surfaces are not implemented.
+> Status: design, not implemented. The unified graph query and opencode plugin
+> are Phase 1.5; MCP and the broader agent surface are Phase 2.
 
 ## Purpose
 
@@ -29,6 +30,27 @@ The query interface is read-only.
 Mutation is a separate concern. Authoring over MCP or Explorer requires a later
 decision, explicit enablement, branch isolation, validation, and human approval.
 It is not part of this interface.
+
+## Presentation projection and refs
+
+The query interface emits two views over the same graph:
+
+- the identity view with stable IDs, status values, hashes, and provenance;
+- the experience view with names, summaries, plain-language state, and open
+  questions.
+
+Interactive clients use opaque `ref` handles for the experience view. A ref is
+scoped to a graph version and a session, is not stable, and is never written to
+sources or audit artifacts. Tools accept a ref, a visible name, or a technical
+ID. Ambiguous names require a contextual choice.
+
+The identity view is the machine contract. The experience view never becomes
+authoritative and cannot approve anything. See
+[presentation and internal identity](../ux/presentation.md).
+
+The [opencode plugin](../workflow/opencode-plugin.md) is a client of this
+interface. It uses refs and names in conversation and keeps identity in a
+technical payload.
 
 ## Graph JSON
 

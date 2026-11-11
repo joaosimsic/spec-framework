@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --check`, rustdoc item mapping, and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review`, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
 
 ## Commands
 
@@ -12,6 +12,7 @@ Implementation status: `spec map --draft` discovers generic package boundaries a
 | ----------------------- | ----------------------------------------------------------- |
 | `spec init --existing`  | Detect project structure, write config, scaffold empty spec |
 | `spec map --draft`      | Extract draft architecture and report confidence            |
+| `spec map --review`     | Interactive curation of the draft architecture              |
 | `spec map --check`      | Compare approved architecture with current code graph       |
 | `spec import-contracts` | Extract draft contract definitions                          |
 | `spec gap`              | Report missing links, owners, contracts, and evidence       |
@@ -113,6 +114,21 @@ The report lists:
 - approved elements absent from code.
 
 The report is included in the audit bundle until the draft is resolved.
+
+## Interactive review
+
+`spec map --review` opens the [workbench](../workflow/workbench.md) or an
+equivalent terminal review over the same draft graph.
+
+- Confidence and provenance become plain-language review prompts.
+- The queue supports accept, reject, rename, merge, split, owner,
+  responsibility, boundary, and open-question actions.
+- Each action is a typed proposal operation on a same-worktree branch.
+- Default interaction uses names; technical details reveal IDs and provenance.
+- The review never approves. A human approves an explicit scope through the CLI.
+
+A static mapping report remains available as an export. It is not the mapping
+workflow.
 
 ## Human curation
 

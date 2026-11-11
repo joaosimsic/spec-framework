@@ -63,25 +63,41 @@ flowchart TB
 
 ## Sources of truth
 
-| Concern                                         | Source                                          | Authority                             |
-| ----------------------------------------------- | ----------------------------------------------- | ------------------------------------- |
-| Systems, components, relations                  | LikeC4 model                                    | Architecture linter and human review  |
-| Capabilities and capability hierarchy           | Capability model linked to LikeC4 and StrictDoc | Capability lint and human review      |
-| Requirements, acceptance criteria, traceability | StrictDoc documents                             | StrictDoc validation and spec-lint    |
-| Ontologies, concepts, semantic contracts        | RDF/OWL/SKOS/SHACL sources                      | Semantic adapter and SHACL validation |
-| Verification objectives and methods             | Verification plan linked to requirements        | Coverage and evidence checks          |
-| Behavior, invariants, temporal properties       | Quint modules                                   | Quint type checker and model checker  |
-| Implementation syntax, types, and build state   | Compiler or build tool                          | Compiler preflight adapter            |
-| Language APIs                                   | Language toolchain output                       | Contract adapter                      |
-| Data formats                                    | JSON Schema, CUE, CDDL, or Protobuf             | Contract adapter                      |
-| CLI behavior                                    | Help snapshots and contract tests               | Contract adapter                      |
-| Wire protocols                                  | Protobuf, CDDL, or protocol schema              | Contract adapter                      |
-| Approval                                        | `spec.lock` plus signed tag                     | Human                                 |
-| Readable output                                 | Generated audit bundle                          | Deterministic renderer                |
-| Agent access                                    | Read-only graph query and MCP                   | Stable query contract                 |
-| Review surface                                  | Read-only Explorer                              | Validated graph, never a source       |
+| Concern                                         | Source                                          | Authority                               |
+| ----------------------------------------------- | ----------------------------------------------- | --------------------------------------- |
+| Systems, components, relations                  | LikeC4 model                                    | Architecture linter and human review    |
+| Capabilities and capability hierarchy           | Capability model linked to LikeC4 and StrictDoc | Capability lint and human review        |
+| Requirements, acceptance criteria, traceability | StrictDoc documents                             | StrictDoc validation and spec-lint      |
+| Ontologies, concepts, semantic contracts        | RDF/OWL/SKOS/SHACL sources                      | Semantic adapter and SHACL validation   |
+| Verification objectives and methods             | Verification plan linked to requirements        | Coverage and evidence checks            |
+| Behavior, invariants, temporal properties       | Quint modules                                   | Quint type checker and model checker    |
+| Implementation syntax, types, and build state   | Compiler or build tool                          | Compiler preflight adapter              |
+| Language APIs                                   | Language toolchain output                       | Contract adapter                        |
+| Data formats                                    | JSON Schema, CUE, CDDL, or Protobuf             | Contract adapter                        |
+| CLI behavior                                    | Help snapshots and contract tests               | Contract adapter                        |
+| Wire protocols                                  | Protobuf, CDDL, or protocol schema              | Contract adapter                        |
+| Approval                                        | `spec.lock` plus signed tag                     | Human                                   |
+| Readable output                                 | Generated audit bundle                          | Deterministic renderer                  |
+| Agent access                                    | Read-only graph query and MCP                   | Stable query contract                   |
+| Review surface                                  | Read-only Explorer                              | Validated graph, never a source         |
+| Interactive planning                            | Workbench and opencode plugin                   | Proposal branch, never approved content |
 
 No layer owns the whole truth. Links between layers are stable IDs. The glue ensures the graph is closed: every reference resolves and every required relation exists.
+
+## Interaction surfaces
+
+The graph is consumed through a presentation projection and opaque refs.
+Humans see names, summaries, plain-language state, and named open questions.
+Tools and audit artifacts keep the full identity. See
+[presentation and internal identity](../ux/presentation.md).
+
+| Surface         | Can read            | Can write                    | Can approve |
+| --------------- | ------------------- | ---------------------------- | ----------- |
+| CLI/terminal    | Full graph          | Proposals through the engine | Human only  |
+| Workbench       | Full graph          | Proposal branch only         | No          |
+| opencode plugin | Scoped context pack | Proposals through tools      | No          |
+| Explorer        | Validated model     | Nothing                      | No          |
+| Audit bundle    | Validated model     | Nothing; generated artifact  | No          |
 
 ## ID flow
 
@@ -122,7 +138,7 @@ flowchart LR
 3. **Link** entities by ID and check cross-layer rules.
 4. **Verify** formal properties, conformance tests, semantic constraints, and planned verification cases; store evidence.
 5. **Gate** on unapproved changes, unanswered questions, expired waivers, missing links, uncovered capabilities, and unverified obligations.
-6. **Render** the audit bundle, change report, and read-only graph query.
+6. **Render** the audit bundle, change report, display graph, and proposal views.
 7. **Approve** specific element hashes; update `spec.lock`.
 
 ## Deterministic versus probabilistic

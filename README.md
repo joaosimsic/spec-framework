@@ -4,6 +4,8 @@
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, query/MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
+The interactive use-case model — scratch, mapping, refactor, the presentation layer that hides internal IDs, the React/Vite workbench, and the opencode plugin — is also documented design, not implemented. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
+
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
 The framework does not ask an LLM to write a better prose document. It changes the representation:
@@ -123,8 +125,12 @@ Start here:
 - [Verification layer](docs/architecture/verification-layer.md)
 - [Query and agent interface](docs/architecture/query-and-agent-interface.md)
 - [Workspace and branches](docs/architecture/workspace-and-branches.md)
+- [Use-case modes](docs/workflow/use-cases.md)
 - [Workflow](docs/workflow/authoring.md)
+- [Workbench](docs/workflow/workbench.md)
+- [opencode plugin](docs/workflow/opencode-plugin.md)
 - [Explorer](docs/workflow/explorer.md)
+- [Presentation and identity](docs/ux/presentation.md)
 - [Model lifecycle](docs/workflow/model-lifecycle.md)
 - [Audit bundle](docs/architecture/audit-bundle.md)
 - [Roadmap](docs/roadmap.md)
@@ -149,12 +155,16 @@ spec/        self-hosted specification scaffold
 Next:
 
 ```
+src/model/      unified spec graph, display projection, opaque refs
+src/change/     typed proposal operations, same-worktree branches, impact
 src/bundle/     audit PDF/HTML assembly, manifest, hashes
 src/evidence/   evidence artifact hashing and regeneration
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
 src/query/      read-only graph query and MCP interface
 src/explorer/   read-only local review surface
+src/workbench/  React/Vite proposal workbench and local API
 src/workspace/  multi-repo composition and branch contexts
+plugin/opencode/ conversational planning plugin, published and local loader
 templates/      repo bootstrap, agent config, CI, pinned toolchain
 ```
 

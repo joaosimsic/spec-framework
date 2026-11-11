@@ -4,6 +4,11 @@
 
 The audit bundle is the final readable, auditable artifact. It is generated deterministically from the specification sources and evidence. No LLM writes it at render time.
 
+The bundle keeps full internal identity: element IDs, status values, provenance,
+confidence, hashes, and diagnostic codes. Interactive surfaces hide those by
+default; the audit record does not. Human-readable sections may use names, but
+the traceability appendices and manifest preserve identity.
+
 ## Outputs
 
 Every bundle produces:

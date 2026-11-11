@@ -43,7 +43,34 @@ Exit criteria:
 - default agent cannot edit approved specs;
 - self-hosted bundle exists.
 
-## Phase 2 — Adapters, semantic model, and review surface
+## Phase 1.5 — Interactive use-case paths
+
+Status: design accepted, not implemented. Decision record
+[0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
+
+- unified spec graph and deterministic graph builder;
+- presentation projection with names, plain-language state, and opaque refs;
+- proposal engine with typed operations and same-worktree proposal branches;
+- `spec start`, `spec map --review`, and the `spec refactor` alias;
+- React/Vite workbench for scratch, mapping, and refactor;
+- terminal interactive paths for the same modes;
+- opencode plugin as both a standalone package and a local self-hosting loader;
+- interactive mapping curation with a confidence queue;
+- refactor before/after simulation and named impact;
+- technical-details surface for IDs, hashes, provenance, and diagnostics;
+- named-scope approval that resolves to internal identity;
+- no approval path and no `spec/spec.lock` write from any interactive surface.
+
+Exit criteria:
+
+- one graph powers CLI, workbench, and plugin context;
+- a human completes mapping curation without reading an internal ID;
+- a refactor preview lists affected named requirements, contracts, checks,
+  evidence, and approvals;
+- the plugin cannot approve or edit `spec.lock`;
+- the audit bundle keeps full identity and hashes.
+
+## Phase 2 — Adapters, semantic model, and verification
 
 - capability model (`CAP-*`) and coverage;
 - verification objectives and cases (`VOBJ-*`, `VER-*`);
@@ -79,7 +106,8 @@ Exit criteria:
 - policy profiles;
 - richer drift detection;
 - formal tool alternatives (TLA+, Alloy) as evidence adapters;
-- optional mutation-enabled MCP and Explorer behind a separate decision;
+- optional mutation of approved content or approval over MCP and Explorer behind
+  a separate decision;
 - evaluation on real projects.
 
 ## Self-hosting milestones
@@ -93,27 +121,31 @@ Exit criteria:
 
 ## Risks
 
-| Risk                                        | Mitigation                                                                           |
-| ------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Tool provisioning friction                  | `spec doctor --fix`, pinned runners, exact fallbacks                                 |
-| StrictDoc embedding of LikeC4/Quint         | Phase 1 spike; Typst/Pandoc fallback                                                 |
-| Full-stack CI cost                          | cache, parallelize, structural preflight                                             |
-| LLM formal quality                          | mandatory checker loop; human review                                                 |
-| Compiler preflight mistaken for conformance | explicit scope; separate evidence from formal and contract checks                    |
-| Semantic layer toolchain drift              | optional activation; pinned local vocabularies; deterministic adapter                |
-| SHACL treated as proof of behavior          | explicit scope; keep semantic, formal, and conformance evidence separate             |
-| Explorer or MCP becomes an approval path    | read-only default; separate mutation decision; hash-locked approval remains CLI-only |
-| Multi-repo pin drift                        | explicit composition, pins, admission, and recorded baseline                         |
-| Non-Rust conformance                        | generic trace adapter; explicit waivers until supported                              |
-| Self-hosting exposes gaps                   | intentional; fix before external adoption                                            |
+| Risk                                         | Mitigation                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------- |
+| Tool provisioning friction                   | `spec doctor --fix`, pinned runners, exact fallbacks                            |
+| StrictDoc embedding of LikeC4/Quint          | Phase 1 spike; Typst/Pandoc fallback                                            |
+| Full-stack CI cost                           | cache, parallelize, structural preflight                                        |
+| LLM formal quality                           | mandatory checker loop; human review                                            |
+| Compiler preflight mistaken for conformance  | explicit scope; separate evidence from formal and contract checks               |
+| Semantic layer toolchain drift               | optional activation; pinned local vocabularies; deterministic adapter           |
+| SHACL treated as proof of behavior           | explicit scope; keep semantic, formal, and conformance evidence separate        |
+| Interactive surface becomes an approval path | proposal-only writes; no approval tool; hash-locked approval remains CLI-only   |
+| Internal IDs leak into normal interaction    | experience projection, opaque refs, default-output leak tests                   |
+| Chat invents certainty or decisions          | every accepted decision recorded; explicit open questions; no unverified claims |
+| Plugin API drift                             | one compatibility adapter; target the installed opencode API first              |
+| Multi-repo pin drift                         | explicit composition, pins, admission, and recorded baseline                    |
+| Non-Rust conformance                         | generic trace adapter; explicit waivers until supported                         |
+| Self-hosting exposes gaps                    | intentional; fix before external adoption                                       |
 
 ## Non-goals for Phase 1
 
 - Code-level proofs.
 - Every language and protocol.
 - Hosted service.
-- Web UI. The Phase 2 Explorer is a local read-only review surface, not a hosted or editing UI.
-- Mutation-enabled MCP or Explorer.
+- A hosted or multi-user workbench. The Phase 1.5 workbench is local and
+  proposal-only.
+- Mutation of approved content or approval over any interactive surface.
 - Multi-repository workspaces before Phase 3.
 - Replacing existing build systems.
 - Automatic requirement extraction from code.

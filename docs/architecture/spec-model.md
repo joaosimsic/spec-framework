@@ -29,6 +29,11 @@
 
 IDs are stable and never reused. Deprecated elements keep their ID and status.
 
+These identifiers are internal identity, not the default human interface. The
+experience layer shows titles, plain-language state, and named questions. The
+audit bundle keeps the full identity. See
+[presentation and internal identity](../ux/presentation.md).
+
 ## Required fields
 
 Every element has:

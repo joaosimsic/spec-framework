@@ -1,5 +1,9 @@
 # Brownfield mapping
 
+> Status: `spec map --draft` is implemented. Interactive mapping review
+> (`spec map --review`), the workbench, and drift checks are design only. See
+> [use-case modes](workflow/use-cases.md).
+
 ## Principle
 
 Code describes implemented behavior. It does not describe intent, scope, priorities, or acceptable tradeoffs. Mapping code into a specification produces a **draft model**, not approved architecture.
@@ -47,9 +51,30 @@ sequenceDiagram
 1. Human runs `spec map --draft`.
 2. Discovery adapters emit draft elements and relations with provenance.
 3. The mapping report lists low-confidence elements, missing owners, missing contracts, and unobserved boundaries.
-4. Human curates the model in LikeC4.
+4. Human curates the model in LikeC4 or runs `spec map --review` for the
+   interactive path.
 5. `spec check` runs architecture validation and cross-layer checks.
 6. Human approves the reviewed elements.
+
+## Interactive mapping
+
+A static draft is a starting point, not the mapping workflow. Interactive
+mapping shows the graph, the confidence queue, and the questions code cannot
+answer.
+
+- `spec map --review` opens the [workbench](workflow/workbench.md) or an
+  equivalent terminal review.
+- The human accepts, rejects, renames, merges, splits, assigns owners, and
+  records open questions.
+- Every action is a typed proposal operation on the same-worktree proposal
+  branch.
+- Confidence appears as plain language: “Clear from code”, “Inferred — confirm
+  or correct”, “Uncertain boundary — choose”, “Needs human input”.
+- Default interaction shows names, not `CMP-*` codes. Technical details reveal
+  the full identity and provenance.
+
+The model still describes structure, not behavior or intent. Mapping does not
+infer requirements, capabilities, ownership, or approval.
 
 ## Confidence levels
 

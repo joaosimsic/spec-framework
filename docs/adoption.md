@@ -6,6 +6,18 @@
 
 Adopting the framework must not require rewriting the project, freezing development, or installing a bespoke platform. Adoption is incremental, but the default profile is full-stack and approval requires the full verification path.
 
+## Use-case entry points
+
+| Starting point             | Planned entry                 | Design                           |
+| -------------------------- | ----------------------------- | -------------------------------- |
+| Empty repository           | `spec start "<goal>"`         | [Scratch](workflow/use-cases.md) |
+| Existing repository        | `spec map --review`           | [Mapping](workflow/use-cases.md) |
+| Approved baseline changing | `spec refactor "<direction>"` | [Refac](workflow/use-cases.md)   |
+
+The interactive workbench and opencode plugin are design only. The implemented
+Phase 1 path remains `spec init`, `spec map --draft`, `spec check`, and
+`spec approve`.
+
 ## Greenfield
 
 ```bash

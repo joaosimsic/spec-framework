@@ -48,13 +48,23 @@
 - How should coverage roll up across capability, requirement, and verification layers without hiding gaps?
 - When is inspection or demonstration sufficient evidence instead of a waiver?
 
-## Query, MCP, and Explorer
+## Query, MCP, Explorer, and workbench
 
 - What is the stable JSON schema for the unified graph query?
 - Should MCP expose prompts, tools, or both for each workflow?
 - Which authentication model is appropriate for local-only MCP and Explorer access?
-- What must a separate decision require before mutation-enabled MCP or Explorer is allowed?
-- Should the Explorer export static HTML first or start directly as a local server?
+- What must a separate decision require before mutation of approved content over MCP or Explorer is allowed?
+- How should the workbench represent large graphs without a direct-manipulation library?
+- Which second interactive operation needs a full before/after graph simulation?
+
+## Presentation and identity
+
+- How should `ref` handles be scoped and invalidated across graph versions and sessions?
+- How should default-output leak tests detect internal ID prefixes without false positives?
+- Should technical details be available in chat by default, or only after an explicit request?
+- How should named approval scopes resolve when two items share a title?
+- What context-pack size keeps chat useful without dumping source prose?
+- How should the workbench present confidence without implying approval?
 
 ## Workspace and lifecycle
 
@@ -77,6 +87,10 @@
 - How should the read-only unified MCP server relate to the native LikeC4, StrictDoc, and Quint tools?
 - How should the agent query evidence without reading large logs?
 - What is the minimum permission model that remains portable across agent tools?
+- Which spec operations belong in the plugin tool surface instead of MCP?
+- How should the plugin stay compatible with the installed opencode API across versions?
+- How should same-worktree proposals handle two concurrent planning sessions?
+- How should the plugin detect and record a decision that was only stated in chat?
 
 ## Adoption
 

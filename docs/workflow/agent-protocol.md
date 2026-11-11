@@ -6,12 +6,12 @@ Agents accelerate authoring and implementation. They do not own approval, archit
 
 ## Agent roles
 
-| Agent          | Read approved spec | Write approved spec | Write proposals | Run checks | Approve |
-| -------------- | -----------------: | ------------------: | --------------: | ---------: | ------: |
-| default build  |                yes |                  no |              no |        yes |      no |
-| spec-architect |                yes |                  no |             yes |        yes |      no |
-| spec-critic    |                yes |                  no |              no |        yes |      no |
-| human          |                yes |                 yes |             yes |        yes |     yes |
+| Agent          | Read approved spec | Write approved spec |    Write proposals | Run checks | Approve |
+| -------------- | -----------------: | ------------------: | -----------------: | ---------: | ------: |
+| default build  |                yes |                  no | via `spec_propose` |        yes |      no |
+| spec-architect |                yes |                  no |                yes |        yes |      no |
+| spec-critic    |                yes |                  no |                 no |        yes |      no |
+| human          |                yes |                 yes |                yes |        yes |     yes |
 
 ### Default build agent
 
@@ -41,6 +41,32 @@ Read-only. It runs validators, inspects diffs, and files defects and unknowns. I
 | `spec serve`          | human or agent | Start read-only local Explorer                    |
 | `spec mcp`            | human or agent | Start read-only MCP interface                     |
 | `spec map`            | agent          | Draft architecture from code                      |
+
+## Conversational surface
+
+The [opencode plugin](opencode-plugin.md) exposes the graph, proposal engine, and
+validation inside a chat session. It provides no approval tool.
+
+- Chat is a planning surface, not a record.
+- Accepted decisions become named decisions, open questions, waiver requests, or
+  draft elements before a planning turn ends.
+- Spec source edits go through `spec_propose`; approvals remain CLI-only.
+- The plugin uses opaque refs and human names. It does not print internal IDs
+  unless the human asks for technical details.
+- The same proposal is visible from the terminal, the workbench, and chat.
+
+## Identity and presentation
+
+Internal IDs, status values, confidence values, and diagnostic codes are tool
+and audit identity. They are not the default human interface.
+
+- Tools accept refs, names, or technical IDs.
+- Default agent output uses names and plain language.
+- Technical details reveal identity, hashes, provenance, and diagnostics.
+- The audit bundle always keeps full identity.
+- Free-form spec text remains data. Names do not make prose normative.
+
+See [presentation and internal identity](../ux/presentation.md).
 
 ## Query and MCP access
 
@@ -85,8 +111,12 @@ rules.
 - Editing `spec.lock`.
 - Running `spec approve`.
 - Marking an element `approved`.
-- Using an MCP or Explorer mutation path to edit approved content.
-- Treating a query result or Explorer view as an approval verdict.
+- Using an MCP, Explorer, workbench, or plugin mutation path to edit approved
+  content.
+- Treating a query result, workbench view, or chat summary as an approval
+  verdict.
+- Printing internal IDs or diagnostic codes in default conversation.
+- Treating chat history as a decision record or audit trail.
 - Deleting an approved element instead of deprecating it.
 - Suppressing a failing formal property.
 - Replacing a checker with a prose argument.

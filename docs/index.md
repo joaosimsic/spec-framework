@@ -38,25 +38,29 @@
 
 | Document                                           | Question it answers                                   |
 | -------------------------------------------------- | ----------------------------------------------------- |
+| [Use-case modes](workflow/use-cases.md)            | How do scratch, mapping, and refactor differ?         |
 | [Authoring](workflow/authoring.md)                 | How does a change go from direction to approved spec? |
 | [Agent protocol](workflow/agent-protocol.md)       | What may an LLM do, and what may it not do?           |
+| [opencode plugin](workflow/opencode-plugin.md)     | How does conversational planning work?                |
 | [Change management](workflow/change-management.md) | How are changes reviewed and re-verified?             |
 | [Approval](workflow/approval.md)                   | How does human authority work mechanically?           |
+| [Workbench](workflow/workbench.md)                 | What does the interactive proposal surface show?      |
 | [Explorer](workflow/explorer.md)                   | What does the read-only review surface show?          |
 | [Model lifecycle](workflow/model-lifecycle.md)     | How are model versions migrated and verified?         |
 
 ## Depth
 
-| Document                                      | Question it answers                         |
-| --------------------------------------------- | ------------------------------------------- |
-| [Formal verification](formal-verification.md) | What is actually verified, and what is not? |
-| [Non-web projects](non-web.md)                | How does this work without HTTP APIs?       |
-| [Tooling](tooling.md)                         | Which tools and versions are required?      |
-| [Security](security.md)                       | What are the trust boundaries and threats?  |
-| [Evaluation](evaluation.md)                   | How will the framework be judged?           |
-| [Roadmap](roadmap.md)                         | What is built, in what order?               |
-| [Open questions](open-questions.md)           | What is still undecided?                    |
-| [References](references.md)                   | Where do the underlying ideas come from?    |
+| Document                                        | Question it answers                          |
+| ----------------------------------------------- | -------------------------------------------- |
+| [Formal verification](formal-verification.md)   | What is actually verified, and what is not?  |
+| [Non-web projects](non-web.md)                  | How does this work without HTTP APIs?        |
+| [Tooling](tooling.md)                           | Which tools and versions are required?       |
+| [Security](security.md)                         | What are the trust boundaries and threats?   |
+| [Presentation and identity](ux/presentation.md) | What do humans see, and what stays internal? |
+| [Evaluation](evaluation.md)                     | How will the framework be judged?            |
+| [Roadmap](roadmap.md)                           | What is built, in what order?                |
+| [Open questions](open-questions.md)             | What is still undecided?                     |
+| [References](references.md)                     | Where do the underlying ideas come from?     |
 
 ## Decision records
 
@@ -70,3 +74,4 @@
 - [0008 Compiler preflight adapter](design-decisions/0008-compiler-preflight.md)
 - [0009 Reqvire feature adoption](design-decisions/0009-reqvire-feature-adoption.md)
 - [0010 Optional semantic layer](design-decisions/0010-optional-semantic-layer.md)
+- [0011 Interactive use-case modes](design-decisions/0011-interactive-use-case-modes.md)

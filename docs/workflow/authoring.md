@@ -4,6 +4,17 @@
 
 The agent drafts. Deterministic tools validate. The human approves. Code follows the approved specification.
 
+This is one loop with three starting states: scratch, mapping, and refactor.
+See [use-case modes](use-cases.md).
+
+Planning is interactive. The terminal, the [workbench](workbench.md), and the
+[opencode plugin](opencode-plugin.md) operate on the same proposal. A static
+report or bundle is an output, not the working surface.
+
+Humans work with names, questions, and outcomes. Stable IDs, status values, and
+diagnostic codes stay in sources and the audit bundle. See
+[presentation and internal identity](../ux/presentation.md).
+
 ## Roles
 
 | Role                 | Responsibility                                             |
@@ -106,13 +117,17 @@ The agent may summarize, but the human reviews the generated bundle and diff, no
 
 ### 5. Approval
 
-The human runs:
+The human approves a named scope. Interactive approval resolves the identity
+internally; scripted approval may pass IDs directly.
 
 ```bash
-spec approve REQ-AUTH-001 CMP-AUTH CON-AUTH-001
+spec approve --scope "Session expiry"
+spec approve REQ-AUTH-001 AC-AUTH-001
 ```
 
-Approval records content hashes and evidence hashes. Any later content change invalidates the approval.
+Named-scope approval is planned. The current CLI accepts element IDs directly.
+Approval records content hashes and evidence hashes. Any later content change
+invalidates the approval. The workbench and the agent cannot approve.
 
 ### 6. Implementation
 

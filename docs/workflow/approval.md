@@ -52,9 +52,23 @@ The lock contains no secrets. It may be committed. The content hash covers the
 canonical record fields except `STATUS`, so recording approval does not
 invalidate the approved content.
 
+## Approval experience
+
+Approval is selected by named scope in interactive use. The tool resolves the
+scope to internal identity, shows what is included, and records the hashes.
+Internal IDs remain available for scripted approval and in the audit bundle.
+
+Named-scope selection is part of the Phase 1.5 design. The current CLI accepts
+element IDs directly.
+
+The workbench and the opencode plugin cannot approve. A query result or chat
+summary is not an approval verdict. See
+[presentation and internal identity](../ux/presentation.md).
+
 ## Approval command
 
 ```bash
+spec approve --scope "Session expiry"
 spec approve REQ-AUTH-001 AC-AUTH-001
 ```
 

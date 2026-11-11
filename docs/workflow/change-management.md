@@ -4,6 +4,18 @@
 
 Every change is a proposal against an approved baseline. The change report explains impact before code changes.
 
+`spec change` is the shared engine for all use-case modes. `spec refactor` is a
+thin alias. Scratch and mapping proposals use the same engine with drafts only.
+See [use-case modes](use-cases.md).
+
+Proposals use one same-worktree Git branch. The branch records its base commit
+and baseline. Git worktrees are deferred until concurrent proposals require
+them.
+
+The human-facing report uses names and outcomes first. Internal IDs, hashes, and
+diagnostic codes appear in technical details and in the audit bundle. See
+[presentation and internal identity](../ux/presentation.md).
+
 ## Proposal lifecycle
 
 ```mermaid
@@ -49,6 +61,29 @@ CHANGE auth-expiry
   INVALID   EVD-AUTH-004-001    requirement hash changed
   BLOCKED   1 missing verification case
 ```
+
+The example above is the technical view. The default review surface says
+“Session management changed”, “Refresh failure handling added”, and “Token store
+dependency added”, then lists the affected checks and approvals. IDs and hashes
+are available under technical details.
+
+## Refactor operations
+
+Refactoring uses typed operations, not free-form edits:
+
+| Operation         | Meaning                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `rename`          | Change a title or label; IDs stay stable                       |
+| `split`           | Create new elements and `replaces` links from one element      |
+| `merge`           | Combine elements into a new element, deprecating the originals |
+| `extract`         | Move a responsibility into a new component or capability       |
+| `move`            | Change containment or ownership                                |
+| `deprecate`       | Retire an element without deleting it                          |
+| `replace`         | Introduce a replacement with explicit deprecation              |
+| `change-contract` | Change a boundary and record compatibility impact              |
+
+The workbench simulates the before and after graph. The proposal cannot be
+implemented until a human approves the changed scope.
 
 ## Impact analysis
 

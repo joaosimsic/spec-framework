@@ -70,6 +70,11 @@ A context records:
 Branch names are the public interface. Internal worktree paths and IDs are
 private implementation details.
 
+The first interactive slice uses same-worktree proposal branches: one active
+proposal in the current checkout, with a recorded base commit and baseline. Git
+worktrees are deferred until concurrent proposals require them. Multi-repository
+branch contexts remain Phase 3.
+
 ## Admission
 
 A branch context is admitted only when:

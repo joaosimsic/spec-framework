@@ -13,6 +13,10 @@ record.
 
 Phase 2 delivers a read-only Explorer. Editing and mutation are out of scope.
 
+The [workbench](workbench.md) is a separate interactive surface. It may edit a
+proposal but never approved content or `spec/spec.lock`. The Explorer remains
+strictly read-only over the validated model.
+
 ## Views
 
 - overview: systems, capabilities, coverage, blockers;

@@ -56,10 +56,12 @@ typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
 `move`, and `change-contract` are implemented. Change reports include
 deterministic impact analysis over the graph, invalidated evidence, approvals to
 renew, and open questions. The `spec refactor` alias is implemented and warns
-when no approved baseline exists. Formal source collection is implemented. The
-scratch-mode entry `spec start`, the mapping-review entry `spec map --review`,
-and area-level and relation-level interactive mapping curation are implemented;
-the workbench, plugin, and refactor simulation remain.
+when no approved baseline exists. Refactor before/after simulation is
+implemented from a baseline graph snapshot captured at proposal open; `spec
+refactor` enables it by default and `spec change` accepts `--simulate`. Formal
+source collection is implemented. The scratch-mode entry `spec start`, the
+mapping-review entry `spec map --review`, and area-level and relation-level
+interactive mapping curation are implemented; the workbench and plugin remain.
 Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
@@ -78,7 +80,7 @@ Decision record
 - opencode plugin as both a standalone package and a local self-hosting loader;
 - interactive mapping curation over the area and relation confidence queues
   (area and relation decisions implemented);
-- refactor before/after simulation and named impact;
+- refactor before/after simulation and named impact (implemented);
 - technical-details surface for IDs, hashes, provenance, and diagnostics;
 - named-scope approval that resolves to internal identity;
 - no approval path and no `spec/spec.lock` write from any interactive surface.

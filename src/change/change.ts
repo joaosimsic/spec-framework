@@ -4,7 +4,11 @@ import type { SpecLock } from "../approval/types"
 import { SpecConfigLoader } from "../core/config"
 import { attemptAsync, type Result } from "../core/result"
 import type { ToolLocator, ProcessRunner } from "../core/runner"
+import { GraphSimulator, type SimulationReport } from "../model"
+import type { SpecGraph } from "../model/types"
 import { GitProposalRepository } from "./git"
+import { ProposalGraphLoader } from "./graph-loader"
+import { ProposalGraphSnapshotStore } from "./graph-store"
 import { ProposalImpactAnalyzer } from "./impact"
 import { WorkspaceOperationApplier, type OperationApplication } from "./operations"
 import { ChangeReportRenderer } from "./report"
@@ -29,6 +33,7 @@ export interface ProposalGit {
 export interface ChangeOptions {
   mode?: ProposalMode
   operations?: ProposalOperation[]
+  simulate?: boolean
   json?: boolean
   technical?: boolean
   author?: string
@@ -58,6 +63,7 @@ export interface ChangeStatusRun {
 export interface OpenedProposal {
   proposal: Proposal
   lock: SpecLock | null
+  baseline_graph: SpecGraph | null
 }
 
 class ProposalNaming {
@@ -127,6 +133,16 @@ export async function openProposal(
     operations: [],
   }
 
+  const [loadedGraph, graphError] = await new ProposalGraphLoader().load(target, {
+    workspace: "single-repo",
+    commit: state.commit,
+    dirty: false,
+  })
+  if (options.simulate === true && (graphError !== null || loadedGraph === null)) {
+    return [null, graphError ?? "baseline graph unavailable"]
+  }
+  const baselineGraph = graphError === null ? loadedGraph : null
+
   const [, createError] = await git.createBranch(target, branch, state.commit)
   if (createError !== null) return [null, `cannot create '${branch}': ${createError}`]
 
@@ -135,7 +151,16 @@ export async function openProposal(
   if (saveError !== null) return [null, saveError]
   if (saved === null) return [null, "proposal was not saved"]
 
-  return [{ proposal, lock }, null]
+  if (baselineGraph !== null) {
+    const [, snapshotError] = await new ProposalGraphSnapshotStore(target).save(
+      branch,
+      proposal.id,
+      baselineGraph,
+    )
+    if (snapshotError !== null && options.simulate === true) return [null, snapshotError]
+  }
+
+  return [{ proposal, lock, baseline_graph: baselineGraph }, null]
 }
 
 export async function runChange(
@@ -171,6 +196,15 @@ export async function runChange(
   if (impactError !== null) return changeFailure(impactError)
   if (impact === null) return changeFailure("impact analysis failed")
 
+  const [simulation, simulationError] = await ChangeSimulation.build(
+    target,
+    completed,
+    opened.baseline_graph,
+    impact.graph,
+    options.simulate === true,
+  )
+  if (simulationError !== null) return changeFailure(simulationError)
+
   const [, completeError] = await store.save(completed)
   if (completeError !== null) return changeFailure(completeError)
 
@@ -179,6 +213,7 @@ export async function runChange(
     operations: applied.logs,
     changes: applied.changes,
     impact: impact.impact,
+    ...(simulation === null ? {} : { simulation }),
   }
   const output = options.json
     ? JSON.stringify(report, null, 2)
@@ -213,6 +248,13 @@ export async function runProposalOperations(
   const [lock, lockLoadError] = await loadApprovalLock(target)
   if (lockLoadError !== null) return changeFailure(lockLoadError)
 
+  const [baselineGraph, baselineError] = await ChangeSimulation.baseline(
+    target,
+    proposal,
+    options.simulate === true,
+  )
+  if (baselineError !== null) return changeFailure(baselineError)
+
   const [applied, applyError] = await new WorkspaceOperationApplier(target, options.now).apply(
     operations,
   )
@@ -232,6 +274,15 @@ export async function runProposalOperations(
   if (impactError !== null) return changeFailure(impactError)
   if (impact === null) return changeFailure("impact analysis failed")
 
+  const [simulation, simulationError] = await ChangeSimulation.build(
+    target,
+    completed,
+    baselineGraph,
+    impact.graph,
+    options.simulate === true,
+  )
+  if (simulationError !== null) return changeFailure(simulationError)
+
   const [, saveError] = await store.save(completed)
   if (saveError !== null) return changeFailure(saveError)
 
@@ -240,6 +291,7 @@ export async function runProposalOperations(
     operations: applied.logs,
     changes: applied.changes,
     impact: impact.impact,
+    ...(simulation === null ? {} : { simulation }),
   }
   const output = options.json
     ? JSON.stringify(report, null, 2)
@@ -304,6 +356,48 @@ async function loadApprovalLock(target: string): Promise<Result<SpecLock | null,
   if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
 
   return [null, lockError.message]
+}
+
+class ChangeSimulation {
+  static async baseline(
+    target: string,
+    proposal: Proposal,
+    enabled: boolean,
+  ): Promise<Result<SpecGraph | null, string>> {
+    if (!enabled) return [null, null]
+
+    const [snapshot, snapshotError] = await new ProposalGraphSnapshotStore(target).load(
+      proposal.branch,
+    )
+    if (snapshotError !== null) return [null, snapshotError]
+    if (snapshot === null) {
+      return [null, "baseline graph snapshot unavailable; reopen the proposal to capture it"]
+    }
+
+    return [snapshot.graph, null]
+  }
+
+  static async build(
+    target: string,
+    proposal: Proposal,
+    baseline: SpecGraph | null,
+    after: SpecGraph,
+    enabled: boolean,
+  ): Promise<Result<SimulationReport | null, string>> {
+    if (!enabled) return [null, null]
+
+    let before = baseline
+    if (before === null) {
+      const [resolved, baselineError] = await this.baseline(target, proposal, true)
+      if (baselineError !== null) return [null, baselineError]
+      before = resolved
+    }
+    if (before === null) {
+      return [null, "baseline graph snapshot unavailable; reopen the proposal to capture it"]
+    }
+
+    return [new GraphSimulator().simulate(before, after), null]
+  }
 }
 
 function changeFailure(message: string): ChangeRun {

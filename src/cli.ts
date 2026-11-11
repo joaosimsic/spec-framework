@@ -31,10 +31,10 @@ Usage:
   spec map [--draft] [--review [--action <json|file>]... [--technical]] [--json]
   spec start "<goal>" [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
-  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
-  spec change --op <json|file> [--op <json|file>]... [--technical] [--json]
+  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--simulate] [--technical] [--json]
+  spec change --op <json|file> [--op <json|file>]... [--simulate] [--technical] [--json]
   spec change --status [--technical] [--json]
-  spec refactor "<direction>" [--op <json|file>]... [--technical] [--json]
+  spec refactor "<direction>" [--op <json|file>]... [--simulate] [--technical] [--json]
   spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
@@ -426,6 +426,7 @@ interface ChangeArguments {
   status: boolean
   mode?: ProposalMode
   operations: ProposalOperation[]
+  simulate: boolean
   technical: boolean
   json: boolean
   error?: string
@@ -452,6 +453,7 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
   let status = false
   let mode: ProposalMode | undefined
   const operations: ProposalOperation[] = []
+  let simulate = false
   let technical = false
   let json = false
   let index = args[0] === "change" ? 1 : 0
@@ -473,12 +475,18 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
       index += 1
       continue
     }
+    if (argument === "--simulate") {
+      simulate = true
+      index += 1
+      continue
+    }
     if (argument === "--mode") {
       const value = args[index + 1]
       if (value !== "scratch" && value !== "mapping" && value !== "refactor") {
         return {
           status,
           operations,
+          simulate,
           technical,
           json,
           error: "--mode requires scratch, mapping, or refactor",
@@ -491,13 +499,21 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
     if (argument === "--op") {
       const value = args[index + 1]
       if (value === undefined || value.startsWith("-")) {
-        return { status, operations, technical, json, error: "--op requires JSON or a file path" }
+        return {
+          status,
+          operations,
+          simulate,
+          technical,
+          json,
+          error: "--op requires JSON or a file path",
+        }
       }
       const [parsed, parseError] = await readOperationSource(value)
       if (parseError !== null || parsed === null) {
         return {
           status,
           operations,
+          simulate,
           technical,
           json,
           error: parseError ?? "cannot parse operations",
@@ -508,20 +524,41 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
       continue
     }
     if (argument.startsWith("-")) {
-      return { status, operations, technical, json, error: `unknown change option: ${argument}` }
+      return {
+        status,
+        operations,
+        simulate,
+        technical,
+        json,
+        error: `unknown change option: ${argument}`,
+      }
     }
     if (direction !== undefined) {
-      return { status, operations, technical, json, error: "change accepts one direction" }
+      return {
+        status,
+        operations,
+        simulate,
+        technical,
+        json,
+        error: "change accepts one direction",
+      }
     }
     direction = argument
     index += 1
   }
 
   if (status && direction !== undefined) {
-    return { status, operations, technical, json, error: "--status does not accept a direction" }
+    return {
+      status,
+      operations,
+      simulate,
+      technical,
+      json,
+      error: "--status does not accept a direction",
+    }
   }
 
-  return { direction, status, mode, operations, technical, json }
+  return { direction, status, mode, operations, simulate, technical, json }
 }
 
 async function commandChange(args: string[]): Promise<number> {
@@ -542,6 +579,7 @@ async function commandChange(args: string[]): Promise<number> {
 
   if (parsed.direction === undefined && parsed.operations.length > 0) {
     const run = await runProposalOperations(process.cwd(), parsed.operations, {
+      simulate: parsed.simulate,
       technical: parsed.technical,
       json: parsed.json,
     })
@@ -560,6 +598,7 @@ async function commandChange(args: string[]): Promise<number> {
   const run = await runChange(process.cwd(), parsed.direction, {
     mode: parsed.mode,
     operations: parsed.operations,
+    simulate: parsed.simulate,
     technical: parsed.technical,
     json: parsed.json,
   })
@@ -575,7 +614,12 @@ async function commandRefactor(args: string[]): Promise<number> {
     return 2
   }
 
-  return commandChange(["change", "--mode", "refactor", ...rest])
+  return commandChange([
+    "change",
+    "--mode",
+    "refactor",
+    ...(rest.includes("--simulate") ? rest : ["--simulate", ...rest]),
+  ])
 }
 
 interface BundleArguments {

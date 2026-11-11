@@ -1,4 +1,5 @@
 import { ImpactReportRenderer } from "./impact-report"
+import { SimulationReportRenderer } from "./simulation-report"
 import type { ChangeEntry, ChangeReport, Proposal, ProposalOperationLog } from "./types"
 
 const ACTION_LABELS = {
@@ -24,6 +25,11 @@ export class ChangeReportRenderer {
 
     if (report.operations.length > 0) {
       lines.push(`operations: ${report.operations.length}`)
+    }
+
+    if (report.simulation !== undefined) {
+      lines.push("")
+      lines.push(...SimulationReportRenderer.human(report.simulation))
     }
 
     lines.push("")
@@ -52,6 +58,10 @@ export class ChangeReportRenderer {
 
     for (const operation of report.operations) {
       lines.push(this.operationLine(operation))
+    }
+
+    if (report.simulation !== undefined) {
+      lines.push(...SimulationReportRenderer.technical(report.simulation))
     }
 
     lines.push(...ImpactReportRenderer.technical(report.impact))

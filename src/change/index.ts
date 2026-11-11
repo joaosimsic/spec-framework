@@ -18,8 +18,15 @@ export {
 export { StartReportRenderer } from "./start-report"
 export { ProposalOperationParser } from "./operation-parser"
 export { GitProposalRepository } from "./git"
+export { ProposalGraphLoader } from "./graph-loader"
+export {
+  PROPOSAL_GRAPH_VERSION,
+  ProposalGraphSnapshotStore,
+  type ProposalGraphSnapshot,
+} from "./graph-store"
 export { ProposalImpactAnalyzer, type ProposalImpactResult } from "./impact"
 export { ImpactReportRenderer } from "./impact-report"
+export { SimulationReportRenderer } from "./simulation-report"
 export {
   SdocOperationApplier,
   WorkspaceOperationApplier,

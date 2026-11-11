@@ -1,9 +1,10 @@
 # Use-case modes
 
 > Status: partially implemented. `spec change` provides the shared proposal
-> engine with same-worktree branches, typed cross-source operations, and impact
-> reports. `spec refactor` is a thin alias that defaults to refactor mode and
-> warns when no approved baseline exists. `spec start` opens a scratch-mode
+> engine with same-worktree branches, typed cross-source operations, impact
+> reports, and before/after graph simulation. `spec refactor` is a thin alias
+> that defaults to refactor mode, enables simulation, and warns when no approved
+> baseline exists. `spec start` opens a scratch-mode
 > proposal for a greenfield repository. `spec map --review` opens or resumes a
 > mapping proposal, prints the area and relation confidence queues, and records
 > typed area and relation curation actions. Promotion into approved
@@ -136,11 +137,13 @@ must run first. A draft-only refactor is allowed only with an explicit warning.
 1. `spec refactor "<direction>"` is a thin alias over the shared change engine.
    Without an approved baseline it warns that the result is a draft-only
    refactor.
-2. The engine creates a same-worktree proposal branch and records the baseline.
+2. The engine creates a same-worktree proposal branch, records the baseline,
+   and captures the baseline graph snapshot.
 3. The human chooses a typed operation: rename, split, merge, extract, move,
    deprecate, replace, or change contract.
-4. The workbench simulates before and after states and shows the named impact:
-   affected requirements, contracts, checks, evidence, and approvals.
+4. The CLI simulates before and after states and shows the named impact:
+   affected requirements, contracts, checks, evidence, and approvals. The
+   workbench simulation remains design.
 5. Chat and workbench edits update the same proposal.
 6. `spec check` validates the proposal.
 7. The human approves the changed named scope in the CLI.

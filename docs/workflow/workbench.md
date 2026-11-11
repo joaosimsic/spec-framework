@@ -2,7 +2,9 @@
 
 > Status: design. The workbench is not implemented. The terminal mapping
 > curation path, including area and relation decisions, is implemented and
-> stores its proposal snapshot for a future workbench. Decision record
+> stores its proposal snapshot for a future workbench. The terminal refactor
+> simulation is implemented from the baseline graph snapshot stored with a
+> proposal. Decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > interaction model and the write boundary.
 

@@ -1,4 +1,4 @@
-import type { ImpactReport } from "../model"
+import type { ImpactReport, SimulationReport } from "../model"
 
 export const PROPOSAL_VERSION = 1
 
@@ -96,4 +96,5 @@ export interface ChangeReport {
   operations: ProposalOperationLog[]
   changes: ChangeEntry[]
   impact: ImpactReport
+  simulation?: SimulationReport
 }

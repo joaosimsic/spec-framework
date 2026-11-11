@@ -27,6 +27,15 @@ export {
   type ImpactState,
 } from "./impact-types"
 export { RequirementsGraphSource } from "./requirements"
+export { GraphSimulator } from "./simulation"
+export {
+  SIMULATION_VERSION,
+  type GraphSimulation,
+  type SimulationElement,
+  type SimulationReport,
+  type SimulationState,
+  type SimulationUnavailable,
+} from "./simulation-types"
 export { collectWorkspaceContributions } from "./sources"
 export {
   GRAPH_VERSION,

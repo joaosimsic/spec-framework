@@ -3,14 +3,9 @@ import type { SpecLock } from "../approval/types"
 import { loadRequirementSources } from "../core/requirements"
 import type { Result } from "../core/result"
 import type { SdocBlock } from "../core/types"
-import {
-  collectWorkspaceContributions,
-  ImpactAnalyzer,
-  SpecGraphBuilder,
-  type ImpactApproval,
-  type ImpactReport,
-} from "../model"
+import { ImpactAnalyzer, type ImpactApproval, type ImpactReport } from "../model"
 import type { GraphWorkspace, SpecGraph } from "../model/types"
+import { ProposalGraphLoader } from "./graph-loader"
 import type { Proposal, ProposalOperationLog } from "./types"
 
 export interface ProposalImpactResult {
@@ -26,24 +21,20 @@ export class ProposalImpactAnalyzer {
     operations: ProposalOperationLog[],
     lock: SpecLock | null,
   ): Promise<Result<ProposalImpactResult, string>> {
-    const sources = await loadRequirementSources(this.target)
-    const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
-    if (sourceErrors.length > 0) {
-      return [null, sourceErrors.map((item) => item.message).join("\n")]
-    }
-
-    const builder = new SpecGraphBuilder()
-    for (const contribution of await collectWorkspaceContributions(this.target, sources.blocks)) {
-      builder.add(contribution)
-    }
     const workspace: GraphWorkspace = {
       workspace: "single-repo",
       commit: proposal.base_commit,
       dirty: true,
     }
-    const [graph, buildError] = builder.build(workspace)
-    if (buildError !== null) return [null, `${buildError.code}: ${buildError.message}`]
-    if (graph === null) return [null, "graph builder returned no graph"]
+    const [graph, graphError] = await new ProposalGraphLoader().load(this.target, workspace)
+    if (graphError !== null) return [null, graphError]
+    if (graph === null) return [null, "graph loader returned no graph"]
+
+    const sources = await loadRequirementSources(this.target)
+    const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
+    if (sourceErrors.length > 0) {
+      return [null, sourceErrors.map((item) => item.message).join("\n")]
+    }
 
     const blocks = this.blocksById(sources.blocks)
     const changedIds = this.changedIds(operations, lock, blocks)

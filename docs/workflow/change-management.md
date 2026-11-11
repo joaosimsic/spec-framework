@@ -3,9 +3,12 @@
 > Status: partially implemented. `spec change` creates same-worktree proposal
 > branches, applies typed operations `rename`, `deprecate`, `replace`, `split`,
 > `merge`, `extract`, `move`, and `change-contract`, and reports impact over the
-> SDoc, annotated LikeC4, formal source, and contract sidecar graph.
-> `spec refactor` is a thin alias that warns without an approved baseline, and
-> `spec start` opens a scratch-mode proposal. The workbench remains design.
+> SDoc, annotated LikeC4, formal source, and contract sidecar graph. Change
+> reports can include a before/after graph simulation from the baseline snapshot
+> captured at proposal open; `spec refactor` enables it by default and `spec
+change` accepts `--simulate`. `spec refactor` is a thin alias that warns
+> without an approved baseline, and `spec start` opens a scratch-mode proposal.
+> The workbench remains design.
 
 ## Principle
 
@@ -109,8 +112,13 @@ afterward. Annotated elements use a `// <ID>` comment. Unannotated elements stay
 out of the graph instead of receiving a guessed ID. `change-contract` changes
 the policy sidecar, not the schema source.
 
-The workbench simulates the before and after graph. The proposal cannot be
-implemented until a human approves the changed scope.
+The CLI simulates the before and after graph from the baseline snapshot stored
+with the proposal. `spec refactor` enables simulation by default; `spec change`
+and `spec change --op` accept `--simulate`. The report lists added, removed, and
+modified elements with names in the default view; technical output and JSON keep
+IDs, changed fields, and baseline commits. A requested simulation fails closed
+when the baseline snapshot is missing. The workbench simulation remains design.
+The proposal cannot be implemented until a human approves the changed scope.
 
 ## Impact analysis
 

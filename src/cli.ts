@@ -6,6 +6,7 @@ import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
+import { runQuery } from "./query/index"
 
 const HELP = `spec-framework CLI
 
@@ -14,6 +15,7 @@ Usage:
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
   spec map [--draft] [--json]
+  spec query [--id <id>] [--kind <kind>] [--status <status>] [--json] [--allow-dirty]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
@@ -23,6 +25,7 @@ Commands:
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
   map       Discover draft architecture from the repository
+  query     Read the unified spec graph
   approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
@@ -93,6 +96,76 @@ async function commandMap(args: string[]): Promise<number> {
   const run = await runMap(process.cwd(), {
     draft: hasFlag(args, "--draft"),
     json: hasFlag(args, "--json"),
+  })
+  console.log(run.output)
+  return run.code
+}
+
+interface QueryArguments {
+  id?: string
+  kind?: string
+  status?: string
+  json: boolean
+  allowDirty: boolean
+  error?: string
+}
+
+function parseQueryArguments(args: string[]): QueryArguments {
+  let id: string | undefined
+  let kind: string | undefined
+  let status: string | undefined
+  let json = false
+  let allowDirty = false
+  let index = args[0] === "query" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    switch (argument) {
+      case "--json":
+        json = true
+        index += 1
+        break
+      case "--allow-dirty":
+        allowDirty = true
+        index += 1
+        break
+      case "--id":
+      case "--kind":
+      case "--status": {
+        const value = args[index + 1]
+        if (value === undefined || value.startsWith("-")) {
+          return { id, kind, status, json, allowDirty, error: `${argument} requires a value` }
+        }
+        if (argument === "--id") id = value
+        if (argument === "--kind") kind = value
+        if (argument === "--status") status = value
+        index += 2
+        break
+      }
+      default:
+        if (argument.startsWith("-")) {
+          return { id, kind, status, json, allowDirty, error: `unknown query option: ${argument}` }
+        }
+        index += 1
+    }
+  }
+
+  return { id, kind, status, json, allowDirty }
+}
+
+async function commandQuery(args: string[]): Promise<number> {
+  const parsed = parseQueryArguments(args)
+  if (parsed.error) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  const run = await runQuery(process.cwd(), {
+    id: parsed.id,
+    kind: parsed.kind,
+    status: parsed.status,
+    json: parsed.json,
+    allowDirty: parsed.allowDirty,
   })
   console.log(run.output)
   return run.code
@@ -185,6 +258,8 @@ export async function main(args: string[]): Promise<number> {
       return commandCheck(args)
     case "map":
       return commandMap(args)
+    case "query":
+      return commandQuery(args)
     case "approve":
       return commandApprove(args)
     case "version":

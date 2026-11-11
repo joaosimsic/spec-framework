@@ -1,10 +1,10 @@
 # spec-framework
 
-**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, human approval with a hash lock, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Evidence hashing and the audit bundle are next.
+**Status: Phase 1 skeleton plus the first Phase 1.5 slice.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, a read-only `spec query`, human approval with a hash lock, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Evidence hashing and the audit bundle are next.
 
-Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, query/MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
+Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
-The interactive use-case model — scratch, mapping, refactor, the presentation layer that hides internal IDs, the React/Vite workbench, and the opencode plugin — is also documented design, not implemented. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
+The first interactive slice is implemented: `spec query` emits the deterministic identity graph for SDoc requirement and acceptance records. The rest of the interactive use-case model — scratch, mapping, refactor, the presentation layer with opaque refs, the React/Vite workbench, and the opencode plugin — is documented design, not implemented. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -70,6 +70,7 @@ spec init
 spec doctor --fix
 spec check
 spec map --draft
+spec query --json
 spec change "add session expiry handling"
 spec bundle
 spec approve REQ-AUTH-001 AC-AUTH-001
@@ -85,6 +86,7 @@ Current skeleton:
 - `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
 - `spec check` runs every active architecture, requirements, formal, contract, and implementation compiler adapter. An architecture, requirements, formal, or contract adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. The compiler adapter activates when `spec/implementation/compile.json` exists or `adapters.implementation` is set. Active adapters fail on missing native tools.
 - `spec map --draft` discovers generic package and Rust workspace boundaries, writes `spec/architecture/draft.gen.c4`, and reports missing owners, low-confidence elements, external dependencies, and unresolved requirement links. It never modifies `spec/architecture/model.c4`.
+- `spec query [--id <id>] [--kind <kind>] [--status <status>] [--json] [--allow-dirty]` emits the read-only unified graph over SDoc requirement and acceptance records. JSON is the identity contract; default output uses titles and plain-language state. It refuses a dirty tree unless `--allow-dirty` is passed and never writes sources or `spec/spec.lock`.
 - `spec approve <ids...>` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records into `spec/spec.lock`, and sets their status to `Approved`.
 - `spec check` also rejects a stale lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked.
 
@@ -142,6 +144,8 @@ Full index: [docs/index.md](docs/index.md).
 ```
 bin/         CLI entry point
 src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
+src/model/   unified spec graph, deterministic builder, and SDoc element collector
+src/query/   read-only graph query and git workspace metadata
 src/approval/ spec.lock hashing, human approval, and lock verification
 src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
 tests/       unit and integration tests
@@ -155,12 +159,12 @@ spec/        self-hosted specification scaffold
 Next:
 
 ```
-src/model/      unified spec graph, display projection, opaque refs
+src/model/      display projection and opaque refs
 src/change/     typed proposal operations, same-worktree branches, impact
 src/bundle/     audit PDF/HTML assembly, manifest, hashes
 src/evidence/   evidence artifact hashing and regeneration
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
-src/query/      read-only graph query and MCP interface
+src/query/      MCP interface and impact/coverage queries
 src/explorer/   read-only local review surface
 src/workbench/  React/Vite proposal workbench and local API
 src/workspace/  multi-repo composition and branch contexts

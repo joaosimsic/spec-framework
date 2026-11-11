@@ -1,6 +1,9 @@
 # Presentation and internal identity
 
-> Status: design. The presentation layer is not implemented.
+> Status: partially implemented. `spec query` default output uses titles and
+> plain-language state without internal ID prefixes. Opaque refs, contextual
+> disambiguation, the technical-details surface, and the workbench and chat
+> views remain design.
 
 ## Purpose
 

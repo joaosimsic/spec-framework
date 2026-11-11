@@ -45,10 +45,14 @@ Exit criteria:
 
 ## Phase 1.5 — Interactive use-case paths
 
-Status: design accepted, not implemented. Decision record
+Status: in progress. The deterministic graph builder and read-only
+`spec query` identity view are implemented over SDoc requirement and acceptance
+records. The experience projection, other source collectors, proposal engine,
+interactive modes, workbench, and plugin remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
-- unified spec graph and deterministic graph builder;
+- unified spec graph and deterministic graph builder (initial SDoc collector
+  and `spec query` implemented);
 - presentation projection with names, plain-language state, and opaque refs;
 - proposal engine with typed operations and same-worktree proposal branches;
 - `spec start`, `spec map --review`, and the `spec refactor` alias;

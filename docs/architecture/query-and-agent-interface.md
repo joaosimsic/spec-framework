@@ -1,7 +1,10 @@
 # Query and agent interface
 
-> Status: design, not implemented. The unified graph query and opencode plugin
-> are Phase 1.5; MCP and the broader agent surface are Phase 2.
+> Status: partially implemented. `spec query` emits the deterministic identity
+> graph for SDoc requirement and acceptance records, with id, kind, and status
+> filters. Architecture, formal, contract, and evidence collectors, the
+> experience view with refs, the opencode plugin, and MCP remain design.
+> MCP and the broader agent surface are Phase 2.
 
 ## Purpose
 
@@ -87,6 +90,15 @@ Rules:
 - evidence references include result and hash, not the full log;
 - the document is deterministic for the same inputs.
 
+The initial SDoc collector emits these link types: `derives_from` for
+`CAPABILITY`, `acceptance` for `ACCEPTANCE`, `component` for `COMPONENT`,
+`formalization` for `FORMAL`, `contract` for `CONTRACTS`, `verification` for
+`VERIFICATION`, `evidence` for `EVIDENCE`, and `waiver` for `WAIVER`. The
+collector skips `FORMAL: none` and `CAPABILITY: infrastructure`. Links that do
+not resolve become `GRAPH-UNRESOLVED-LINK` findings; the graph does not invent
+missing elements. The relation vocabulary is interim until the full cross-layer
+link pass.
+
 ## Query commands
 
 ```bash
@@ -99,6 +111,21 @@ spec query --semantic --sparql query.rq --json
 
 The exact command set is implementation-defined, but the output contract and
 read-only rules are not.
+
+Current implementation:
+
+```bash
+spec query --json
+spec query --id REQ-AUTH-001 --json
+spec query --kind requirement --status approved --json
+spec query --allow-dirty
+```
+
+`--id`, `--kind`, and `--status` filter elements. JSON includes internal
+identity; default output uses titles and plain-language state without ID
+prefixes. The query requires a git worktree and refuses a dirty tree unless
+`--allow-dirty` is passed. Impact, coverage, and semantic query forms remain
+design.
 
 ## MCP surface
 

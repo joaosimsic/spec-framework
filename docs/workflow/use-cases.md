@@ -4,10 +4,11 @@
 > engine with same-worktree branches, typed cross-source operations, and impact
 > reports. `spec refactor` is a thin alias that defaults to refactor mode and
 > warns when no approved baseline exists. `spec start` opens a scratch-mode
-> proposal for a greenfield repository. `spec map --review` opens a mapping
-> proposal and prints the confidence queue. Interactive mapping curation, the
-> workbench, and the opencode plugin are not implemented. The mode model is
-> accepted in decision record
+> proposal for a greenfield repository. `spec map --review` opens or resumes a
+> mapping proposal, prints the confidence queue, and records typed area
+> curation actions. Relation-level curation, promotion into approved
+> architecture, the workbench, and the opencode plugin are not implemented. The
+> mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
@@ -102,7 +103,8 @@ specification, or a specification that covers only part of the system.
    - uncertain boundary;
    - needs human input.
 5. The human accepts, rejects, renames, merges, splits, owns, and describes the
-   elements. Unknown intent becomes a named open question.
+   elements. `spec map --review --action <json|file>` records each decision
+   against the proposal snapshot. Unknown intent becomes a named open question.
 6. `spec check` runs. The human approves an explicit subset of the model.
 7. `spec map --check` reports drift against the approved subset.
 

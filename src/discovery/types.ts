@@ -15,6 +15,9 @@ export interface DraftElement {
   provenance: string
   confidence: Confidence
   links: DraftLink[]
+  owner?: string
+  responsibility?: string
+  boundary?: string
 }
 
 export interface DraftModel {

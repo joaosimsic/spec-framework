@@ -1,5 +1,7 @@
 import { ChangeReportRenderer } from "../change/report"
 import type { Proposal } from "../change/types"
+import type { MappingCurationReport } from "./curation-types"
+import { MappingCurationReportRenderer } from "./curation-report"
 import type { MappingReview, MappingReviewItem } from "./review"
 import type { MapReport } from "./types"
 
@@ -11,7 +13,7 @@ const CONFIDENCE_GROUPS: MappingReviewItem["confidence"][] = [
 ]
 
 export class MappingReviewReportRenderer {
-  static human(review: MappingReview): string {
+  static human(review: MappingReview, curation?: MappingCurationReport): string {
     const lines = [
       "mapping review open",
       `goal: ${review.direction}`,
@@ -37,13 +39,20 @@ export class MappingReviewReportRenderer {
     if (review.notes.length > 0)
       lines.push("", "notes:", ...review.notes.map((note) => `  - ${note}`))
 
+    if (curation !== undefined) lines.push(...MappingCurationReportRenderer.human(curation))
+
     lines.push("", "review prompts:", ...review.prompts.map((prompt) => `- ${prompt}`))
     lines.push("", "next:", ...review.next.map((step) => `- ${step}`))
 
     return lines.join("\n")
   }
 
-  static technical(review: MappingReview, report: MapReport, proposal: Proposal): string {
+  static technical(
+    review: MappingReview,
+    report: MapReport,
+    proposal: Proposal,
+    curation?: MappingCurationReport,
+  ): string {
     const lines = [
       `mapping-review: mode=${review.mode} state=${review.state} direction=${review.direction}`,
       `mapping-review-summary: areas=${review.summary.elements} relations=${review.summary.relations}`,
@@ -64,6 +73,7 @@ export class MappingReviewReportRenderer {
       ),
       ...review.prompts.map((prompt) => `mapping-review-prompt: ${prompt}`),
       ...review.next.map((step) => `mapping-review-next: ${step}`),
+      ...(curation === undefined ? [] : MappingCurationReportRenderer.technical(curation)),
       "",
       ChangeReportRenderer.status(proposal, true),
     ]

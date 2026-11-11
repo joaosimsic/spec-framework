@@ -17,6 +17,8 @@ import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./c
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
 import { runMapReview } from "./core/map-review"
+import { CurationParser } from "./discovery/curation-parser"
+import type { CurationAction } from "./discovery/curation-types"
 import { runBundle } from "./bundle/index"
 import { runQuery, type QueryView } from "./query/index"
 
@@ -26,7 +28,7 @@ Usage:
   spec init [--existing] [--force]
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
-  spec map [--draft] [--review [--technical]] [--json]
+  spec map [--draft] [--review [--action <json|file>]... [--technical]] [--json]
   spec start "<goal>" [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
@@ -42,7 +44,7 @@ Commands:
   init      Create the full-stack spec scaffold
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
-  map       Discover draft architecture or open a mapping review
+  map       Discover draft architecture, open a mapping review, or curate it
   start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
@@ -114,19 +116,123 @@ async function commandCheck(args: string[]): Promise<number> {
   return run.code
 }
 
-async function commandMap(args: string[]): Promise<number> {
-  const review = hasFlag(args, "--review")
-  const draft = hasFlag(args, "--draft")
+interface MapArguments {
+  review: boolean
+  draft: boolean
+  actions: CurationAction[]
+  technical: boolean
+  json: boolean
+  error?: string
+}
 
-  if (review) {
-    if (draft) {
+async function readActionSource(value: string): Promise<[CurationAction[] | null, string | null]> {
+  const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
+  if (existsError === null && exists === true) {
+    const [text, readError] = await attemptAsync(() => Bun.file(value).text())
+    if (readError !== null || text === null) {
+      return [null, readError === null ? `cannot read ${value}` : readError]
+    }
+
+    return CurationParser.parseJson(text)
+  }
+
+  return CurationParser.parseJson(value)
+}
+
+async function parseMapArguments(args: string[]): Promise<MapArguments> {
+  let review = false
+  let draft = false
+  const actions: CurationAction[] = []
+  let technical = false
+  let json = false
+  let index = args[0] === "map" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    switch (argument) {
+      case "--review":
+        review = true
+        index += 1
+        break
+      case "--draft":
+        draft = true
+        index += 1
+        break
+      case "--technical":
+        technical = true
+        index += 1
+        break
+      case "--json":
+        json = true
+        index += 1
+        break
+      case "--action": {
+        const value = args[index + 1]
+        if (value === undefined || value.startsWith("-")) {
+          return {
+            review,
+            draft,
+            actions,
+            technical,
+            json,
+            error: "--action requires JSON or a file path",
+          }
+        }
+        const [parsed, parseError] = await readActionSource(value)
+        if (parseError !== null || parsed === null) {
+          return {
+            review,
+            draft,
+            actions,
+            technical,
+            json,
+            error: parseError ?? "cannot parse actions",
+          }
+        }
+        actions.push(...parsed)
+        index += 2
+        break
+      }
+      default:
+        if (argument.startsWith("-")) {
+          return {
+            review,
+            draft,
+            actions,
+            technical,
+            json,
+            error: `unknown map option: ${argument}`,
+          }
+        }
+        index += 1
+    }
+  }
+
+  return { review, draft, actions, technical, json }
+}
+
+async function commandMap(args: string[]): Promise<number> {
+  const parsed = await parseMapArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  if (parsed.actions.length > 0 && !parsed.review) {
+    console.error("map: --action requires --review")
+    return 2
+  }
+
+  if (parsed.review) {
+    if (parsed.draft) {
       console.error("map: --review cannot be combined with --draft")
       return 2
     }
 
     const run = await runMapReview(process.cwd(), {
-      json: hasFlag(args, "--json"),
-      technical: hasFlag(args, "--technical"),
+      actions: parsed.actions,
+      json: parsed.json,
+      technical: parsed.technical,
     })
     printWarnings(run.warnings)
     console.log(run.output)
@@ -134,8 +240,8 @@ async function commandMap(args: string[]): Promise<number> {
   }
 
   const run = await runMap(process.cwd(), {
-    draft,
-    json: hasFlag(args, "--json"),
+    draft: parsed.draft,
+    json: parsed.json,
   })
   console.log(run.output)
   return run.code

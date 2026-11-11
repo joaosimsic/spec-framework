@@ -1,6 +1,6 @@
 import type { Confidence, DraftElement, MapReport, MapSummary } from "./types"
 
-export const MAPPING_REVIEW_VERSION = 1
+export const MAPPING_REVIEW_VERSION = 2
 
 const CONFIDENCE_ORDER: Record<Confidence, number> = {
   unknown: 0,
@@ -38,11 +38,13 @@ const REVIEW_PROMPTS = [
 ] satisfies string[]
 
 const NEXT_STEPS = [
+  "Resolve remaining areas or record open questions.",
   "Run spec check.",
-  "Approve the reviewed subset with the CLI after checks pass.",
+  "Approval remains a separate CLI-only human action.",
 ] satisfies string[]
 
-export type MappingReviewState = "waiting for curation"
+export type MappingReviewState =
+  "waiting for curation" | "curation in progress" | "curation complete"
 
 export interface MappingReviewTechnical {
   id: string

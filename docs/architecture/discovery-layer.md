@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens a mapping proposal and prints the confidence queue. Interactive curation actions, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the confidence queue, and applies typed area curation actions. Relation-level curation, promotion into approved architecture, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Implementation status: `spec map --draft` discovers generic package boundaries a
 | ----------------------- | ----------------------------------------------------------- |
 | `spec init --existing`  | Detect project structure, write config, scaffold empty spec |
 | `spec map --draft`      | Extract draft architecture and report confidence            |
-| `spec map --review`     | Interactive curation of the draft architecture              |
+| `spec map --review`     | Open or resume a mapping review and curate draft areas      |
 | `spec map --check`      | Compare approved architecture with current code graph       |
 | `spec import-contracts` | Extract draft contract definitions                          |
 | `spec gap`              | Report missing links, owners, contracts, and evidence       |
@@ -117,13 +117,17 @@ The report is included in the audit bundle until the draft is resolved.
 
 ## Interactive review
 
-`spec map --review` opens the [workbench](../workflow/workbench.md) or an
-equivalent terminal review over the same draft graph.
+`spec map --review` opens or resumes the [workbench](../workflow/workbench.md)
+or equivalent terminal review over the same draft graph.
 
 - Confidence and provenance become plain-language review prompts.
-- The queue supports accept, reject, rename, merge, split, owner,
-  responsibility, boundary, and open-question actions.
-- Each action is a typed proposal operation on a same-worktree branch.
+- The queue supports `accept`, `reject`, `rename`, `merge`, `split`,
+  `set-owner`, `set-responsibility`, `set-boundary`, and `open-question`
+  actions through repeatable `--action <json|file>` values.
+- Each action is recorded in `spec/proposals/<slug>.mapping.json` against the
+  review snapshot on a same-worktree branch.
+- `spec/architecture/draft.gen.c4` is regenerated for inspection. The review
+  never writes `spec/architecture/model.c4`, `spec/spec.lock`, or approval state.
 - Default interaction uses names; technical details reveal IDs and provenance.
 - The review never approves. A human approves an explicit scope through the CLI.
 

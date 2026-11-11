@@ -18,7 +18,7 @@ export function renderDraftModel(elements: DraftElement[]): string {
   const elementLines = elements.map((element) => {
     const alias = aliases.get(element.id) ?? likec4Alias(element.id)
     return [
-      `  // ${element.id} ${element.confidence} ${element.provenance}`,
+      `  // ${element.id} ${element.confidence} ${element.provenance}${metadata(element)}`,
       `  ${alias} = ${element.kind} '${quote(element.title)}'`,
     ]
   })
@@ -74,6 +74,17 @@ function buildAliases(elements: DraftElement[]): Map<string, string> {
   }
 
   return aliases
+}
+
+function metadata(element: DraftElement): string {
+  const fields: string[] = []
+  if (element.owner !== undefined) fields.push(`owner=${JSON.stringify(element.owner)}`)
+  if (element.responsibility !== undefined) {
+    fields.push(`responsibility=${JSON.stringify(element.responsibility)}`)
+  }
+  if (element.boundary !== undefined) fields.push(`boundary=${JSON.stringify(element.boundary)}`)
+
+  return fields.length === 0 ? "" : ` ${fields.join(" ")}`
 }
 
 function quote(value: string): string {

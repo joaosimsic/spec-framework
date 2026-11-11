@@ -64,7 +64,7 @@ async function createTarget(): Promise<string> {
   const target = await mkdtemp(join(tmpdir(), "map-review-"))
   await mkdir(join(target, "spec"), { recursive: true })
   await writeFile(join(target, "spec", "config.json"), `${JSON.stringify(config, null, 2)}\n`)
-  await writeFile(join(target, "package.json"), `${JSON.stringify({ name: "sample" })}\n`)
+  await writeFile(join(target, "package.json"), `${JSON.stringify({ name: "app" })}\n`)
 
   return target
 }
@@ -100,6 +100,11 @@ describe("runMapReview", () => {
       expect(proposal.mode).toBe("mapping")
       expect(proposal.status).toBe("proposed")
       expect(proposal.baseline).toEqual({ commit: "base123", lock_hash: null })
+      expect(
+        await Bun.file(
+          join(target, "spec", "proposals", "review-sample-mapping.mapping.json"),
+        ).exists(),
+      ).toBe(true)
       expect(await Bun.file(join(target, "spec", "spec.lock")).exists()).toBe(false)
     } finally {
       await rm(target, { recursive: true, force: true })
@@ -134,9 +139,9 @@ describe("runMapReview", () => {
       })
 
       const report = JSON.parse(run.output) as MapReviewReport
-      expect(report.version).toBe(1)
+      expect(report.version).toBe(2)
       expect(report.review.mode).toBe("mapping")
-      expect(report.review.queue.some((item) => item.technical.id === "CMP-SAMPLE")).toBe(true)
+      expect(report.review.queue.some((item) => item.technical.id === "CMP-APP")).toBe(true)
       expect(report.proposal.branch).toBe("spec/review-sample-mapping")
       expect(report.proposal.baseline).toEqual({ commit: "base123", lock_hash: null })
       expect(report.map.elements.some((element) => element.id === "SYS-SAMPLE")).toBe(true)
@@ -157,7 +162,7 @@ describe("runMapReview", () => {
 
       expect(run.code).toBe(0)
       expect(run.output).toContain("mapping-review: mode=mapping")
-      expect(run.output).toContain("mapping-review-area: CMP-SAMPLE")
+      expect(run.output).toContain("mapping-review-area: CMP-APP")
       expect(run.output).toContain("provenance=code:package.json")
       expect(run.output).toContain("proposal: prop-review-sample-mapping")
       expect(run.output).toContain("baseline_commit: base123")

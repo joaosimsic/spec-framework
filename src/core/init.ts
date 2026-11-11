@@ -111,9 +111,63 @@ quint verify spec/formal/*.qnt --invariant <property>
 
 const contractsReadme = `# Contracts
 
-Contract definitions live here. Phase 1 supports JSON Schema, CLI snapshots, and
-Rust public API adapters. Every contract declares an owner, consumers, and a
+Contract definitions live here. Phase 1 supports JSON Schema and CLI snapshot
+adapters. Every contract declares an owner, consumers, and a
 compatibility policy.
+
+JSON Schema contracts are \`json-schema/*.schema.json\` files validated with Ajv
+against draft 2020-12. Each schema needs a sibling \`<name>.contract.json\`
+sidecar with \`id\`, \`owner\`, \`consumers\`, \`compatibility\`
+(\`none\`, \`backward\`, \`forward\`, or \`full\`), and \`schema\` naming the
+schema file. Schema hashes are compared against
+\`contracts/.baselines/<name>.sha256\`; the approve step records baselines.
+
+CLI contracts are \`cli/*.snapshot.json\` files with \`command\`,
+\`exitCode\`, \`stdoutIncludes\`, \`stdoutExcludes\`, \`stderrIncludes\`, and
+\`stderrExcludes\`. The adapter runs the command and checks the assertions.
+`
+
+const exampleSchema = `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-framework/example",
+  "title": "Example contract payload",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1 }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}
+`
+
+const exampleSidecar = `{
+  "id": "CON-EXAMPLE-001",
+  "owner": "spec-framework",
+  "consumers": ["spec-cli"],
+  "compatibility": "backward",
+  "schema": "example.schema.json",
+  "versioning": "semver"
+}
+`
+
+const versionSnapshot = `{
+  "command": ["bun", "run", "bin/spec.ts", "version"],
+  "exitCode": 0,
+  "stdoutIncludes": ["0.1.0"],
+  "stdoutExcludes": [],
+  "stderrIncludes": [],
+  "stderrExcludes": []
+}
+`
+
+const helpSnapshot = `{
+  "command": ["bun", "run", "bin/spec.ts", "help"],
+  "exitCode": 0,
+  "stdoutIncludes": ["Usage:"],
+  "stdoutExcludes": [],
+  "stderrIncludes": [],
+  "stderrExcludes": []
+}
 `
 
 export interface InitOptions {
@@ -155,6 +209,10 @@ export async function initProject(target: string, options: InitOptions = {}) {
     "architecture/model.c4": architectureTemplate,
     "formal/README.md": formalReadme,
     "contracts/README.md": contractsReadme,
+    "contracts/json-schema/example.schema.json": exampleSchema,
+    "contracts/json-schema/example.contract.json": exampleSidecar,
+    "contracts/cli/version.snapshot.json": versionSnapshot,
+    "contracts/cli/help.snapshot.json": helpSnapshot,
     "toolchain.lock.json": toolchainLock,
   }
 

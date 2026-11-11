@@ -19,6 +19,7 @@ export interface SpecConfig {
     architecture: string
     requirements?: string
     formal?: string
+    contracts?: string[]
   }
   approval: {
     mode: string
@@ -120,12 +121,25 @@ export class SpecConfigLoader {
       }
     }
 
+    const contracts = this.readContractAdapters(value.contracts)
+    if (!Array.isArray(contracts)) return contracts
+
     return {
       architecture: value.architecture,
       requirements:
         typeof value.requirements === "string" ? value.requirements : undefined,
       formal: typeof value.formal === "string" ? value.formal : undefined,
+      contracts,
     }
+  }
+
+  private readContractAdapters(value: unknown): string[] | ConfigFailure {
+    if (value === undefined) return []
+    if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
+      return this.failure("SPEC-BAD-CONFIG", "adapters.contracts must be an array of strings")
+    }
+
+    return [...value]
   }
 
   private readApproval(value: unknown): SpecConfig["approval"] | ConfigFailure {

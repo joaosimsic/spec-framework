@@ -1,0 +1,8 @@
+{
+  "command": ["bun", "run", "bin/spec.ts", "version"],
+  "exitCode": 0,
+  "stdoutIncludes": ["0.1.0"],
+  "stdoutExcludes": [],
+  "stderrIncludes": [],
+  "stderrExcludes": []
+}

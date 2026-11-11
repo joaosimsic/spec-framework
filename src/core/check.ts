@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { LikeC4Adapter } from "../adapters/likec4"
+import { CliAdapter } from "../adapters/cli"
+import { JsonSchemaAdapter } from "../adapters/json-schema"
 import { QuintAdapter } from "../adapters/quint"
 import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
@@ -39,6 +41,7 @@ export interface CheckOptions {
   architectureAdapter?: NativeAdapter
   requirementsAdapter?: NativeAdapter
   formalAdapter?: NativeAdapter
+  contractAdapters?: NativeAdapter[]
   processRunner?: ProcessRunner
   toolLocator?: ToolLocator
 }
@@ -105,24 +108,56 @@ async function runNativeChecks(
   diagnostics.push(...requirementsRun.diagnostics)
 
   const formalAdapter = options.formalAdapter ?? new QuintAdapter()
-  if (config.adapters.formal === undefined) {
-    return
-  }
-  if (config.adapters.formal !== formalAdapter.id) {
-    diagnostics.push({
-      level: "error",
-      code: "FORMAL-UNKNOWN-ADAPTER",
-      message: `unsupported formal adapter '${config.adapters.formal}'`,
+  if (config.adapters.formal !== undefined) {
+    if (config.adapters.formal !== formalAdapter.id) {
+      diagnostics.push({
+        level: "error",
+        code: "FORMAL-UNKNOWN-ADAPTER",
+        message: `unsupported formal adapter '${config.adapters.formal}'`,
+      })
+      return
+    }
+
+    const formalRun = await formalAdapter.run({
+      target,
+      processRunner: options.processRunner ?? new BunProcessRunner(),
+      toolLocator: options.toolLocator ?? new ToolResolver(target),
     })
+    diagnostics.push(...formalRun.diagnostics)
+  }
+
+  await runContractChecks(target, options, config.adapters.contracts ?? [], diagnostics)
+}
+
+async function runContractChecks(
+  target: string,
+  options: CheckOptions,
+  configuredContracts: string[],
+  diagnostics: Diagnostic[],
+): Promise<void> {
+  if (configuredContracts.length === 0) {
     return
   }
 
-  const formalRun = await formalAdapter.run({
-    target,
-    processRunner: options.processRunner ?? new BunProcessRunner(),
-    toolLocator: options.toolLocator ?? new ToolResolver(target),
-  })
-  diagnostics.push(...formalRun.diagnostics)
+  const availableContracts = options.contractAdapters ?? [new JsonSchemaAdapter(), new CliAdapter()]
+  for (const contractId of configuredContracts) {
+    const match = availableContracts.find((candidate) => candidate.id === contractId)
+    if (match === undefined) {
+      diagnostics.push({
+        level: "error",
+        code: "CONTRACT-UNKNOWN-ADAPTER",
+        message: `unsupported contract adapter '${contractId}'`,
+      })
+      continue
+    }
+
+    const contractRun = await match.run({
+      target,
+      processRunner: options.processRunner ?? new BunProcessRunner(),
+      toolLocator: options.toolLocator ?? new ToolResolver(target),
+    })
+    diagnostics.push(...contractRun.diagnostics)
+  }
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {

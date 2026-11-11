@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "ajv": "8.17.1",
     "likec4": "1.60.0",
     "typescript": "latest"
   },

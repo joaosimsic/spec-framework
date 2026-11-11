@@ -11,6 +11,12 @@ describe("initProject", () => {
     try {
       const created = await initProject(dir)
       expect(created.length).toBeGreaterThan(0)
+      expect(created.some((path) => path.endsWith("contracts/json-schema/example.schema.json"))).toBe(
+        true,
+      )
+      expect(created.some((path) => path.endsWith("contracts/cli/version.snapshot.json"))).toBe(
+        true,
+      )
 
       const run = await runCheck(dir, { structural: true })
       expect(run.code).toBe(0)

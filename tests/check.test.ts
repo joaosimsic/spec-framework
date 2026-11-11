@@ -418,4 +418,156 @@ describe("runCheck", () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  test("runs the contract adapters for native checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const contractConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, contracts: ["json-schema"] },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(contractConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string, tool: string): NativeAdapter => ({
+        id,
+        tool,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const contractAdapter: NativeAdapter = {
+        id: "json-schema",
+        tool: "json-schema",
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              {
+                level: "error",
+                code: "CONTRACT-TEST",
+                message: "contract failed",
+              },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4", "likec4"),
+        requirementsAdapter: silentAdapter("strictdoc", "strictdoc"),
+        formalAdapter: silentAdapter("quint", "quint"),
+        contractAdapters: [contractAdapter],
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "CONTRACT-TEST")).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects an unknown contract adapter", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const unknownConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, contracts: ["other"] },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(unknownConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const contractAdapter: NativeAdapter = {
+        id: "json-schema",
+        tool: "json-schema",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+        contractAdapters: [contractAdapter],
+      })
+
+      expect(
+        run.result.diagnostics.some((item) => item.code === "CONTRACT-UNKNOWN-ADAPTER"),
+      ).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips contract adapters for structural checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(dir, "spec", "requirements"), { recursive: true })
+      let called = false
+      const contractAdapter: NativeAdapter = {
+        id: "json-schema",
+        tool: "json-schema",
+        async run() {
+          called = true
+          return { ran: true, diagnostics: [] }
+        },
+      }
+
+      await runCheck(dir, { structural: true, contractAdapters: [contractAdapter] })
+
+      expect(called).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips contract checks when the config has no contracts key", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      let called = false
+      const contractAdapter: NativeAdapter = {
+        id: "json-schema",
+        tool: "json-schema",
+        async run() {
+          called = true
+          return { ran: true, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+        contractAdapters: [contractAdapter],
+      })
+
+      expect(called).toBe(false)
+      expect(run.result.diagnostics.some((item) => item.code.startsWith("CONTRACT-"))).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })

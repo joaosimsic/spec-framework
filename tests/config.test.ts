@@ -107,4 +107,59 @@ describe("SpecConfigLoader", () => {
       await rm(target, { recursive: true, force: true })
     }
   })
+
+  test("loads contract adapters", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(target, "spec"), { recursive: true })
+      await writeFile(join(target, "spec", "config.json"), JSON.stringify(validConfig))
+
+      const [config, error] = await new SpecConfigLoader(target).load()
+
+      expect(error).toBeNull()
+      expect(config?.adapters.contracts).toEqual(["json-schema"])
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("defaults contracts to an empty list", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(target, "spec"), { recursive: true })
+      const { contracts: _omitted, ...adapters } = validConfig.adapters
+      await writeFile(
+        join(target, "spec", "config.json"),
+        JSON.stringify({ ...validConfig, adapters }),
+      )
+
+      const [config, error] = await new SpecConfigLoader(target).load()
+
+      expect(error).toBeNull()
+      expect(config?.adapters.contracts).toEqual([])
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects non-array contracts", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(target, "spec"), { recursive: true })
+      await writeFile(
+        join(target, "spec", "config.json"),
+        JSON.stringify({
+          ...validConfig,
+          adapters: { ...validConfig.adapters, contracts: "json-schema" },
+        }),
+      )
+
+      const [config, error] = await new SpecConfigLoader(target).load()
+
+      expect(config).toBeNull()
+      expect(error?.code).toBe("SPEC-BAD-CONFIG")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
 })

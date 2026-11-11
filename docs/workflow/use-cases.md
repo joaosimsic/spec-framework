@@ -3,8 +3,9 @@
 > Status: partially implemented. `spec change` provides the shared proposal
 > engine with same-worktree branches, typed cross-source operations, and impact
 > reports. `spec refactor` is a thin alias that defaults to refactor mode and
-> warns when no approved baseline exists. `spec start`, `spec map --review`, the
-> workbench, and the opencode plugin are not implemented. The mode model is accepted in
+> warns when no approved baseline exists. `spec start` opens a scratch-mode
+> proposal for a greenfield repository. `spec map --review`, the workbench, and
+> the opencode plugin are not implemented. The mode model is accepted in
 > decision record [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
@@ -51,7 +52,8 @@ baseline.
 ### Flow
 
 1. `spec init` scaffolds the full profile.
-2. `spec start "<goal>"` enters `scratch` mode.
+2. `spec start "<goal>"` enters `scratch` mode. It requires a clean tree, so
+   commit the scaffold before starting.
 3. The agent interviews the human: users, scope, non-goals, constraints, quality
    attributes, failure expectations, and operational context.
 4. Answers become named decisions, open questions, capabilities, and draft

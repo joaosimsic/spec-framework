@@ -67,9 +67,7 @@ describe("ProposalOperationParser", () => {
     ])
 
     expect(error).toBeNull()
-    expect(operations).toEqual([
-      { kind: "rename", target: "REQ-SAMPLE-001", title: "New title" },
-    ])
+    expect(operations).toEqual([{ kind: "rename", target: "REQ-SAMPLE-001", title: "New title" }])
 
     const [invalid, invalidError] = ProposalOperationParser.parseList({ kind: "delete" })
     expect(invalid).toBeNull()

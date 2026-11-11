@@ -7,14 +7,7 @@ export type ProposalMode = "scratch" | "mapping" | "refactor"
 export type ProposalStatus = "draft" | "proposed" | "validated" | "approved" | "superseded"
 
 export type ProposalOperationKind =
-  | "rename"
-  | "deprecate"
-  | "replace"
-  | "split"
-  | "merge"
-  | "extract"
-  | "move"
-  | "change-contract"
+  "rename" | "deprecate" | "replace" | "split" | "merge" | "extract" | "move" | "change-contract"
 
 export interface ProposalRecordFields {
   [field: string]: string

@@ -104,24 +104,26 @@ describe("ImpactAnalyzer", () => {
   })
 
   test("invalidates linked evidence and renews approvals", () => {
-    const report = new ImpactAnalyzer().analyze(sampleGraph, ["REQ-SAMPLE-001"], [
-      { id: "REQ-SAMPLE-001", evidence: ["EVD-SAMPLE-001"] },
-      { id: "AC-SAMPLE-001", evidence: ["EVD-SAMPLE-001"] },
-      { id: "REQ-OTHER-001", evidence: ["EVD-SAMPLE-001"] },
-    ])
+    const report = new ImpactAnalyzer().analyze(
+      sampleGraph,
+      ["REQ-SAMPLE-001"],
+      [
+        { id: "REQ-SAMPLE-001", evidence: ["EVD-SAMPLE-001"] },
+        { id: "AC-SAMPLE-001", evidence: ["EVD-SAMPLE-001"] },
+        { id: "REQ-OTHER-001", evidence: ["EVD-SAMPLE-001"] },
+      ],
+    )
 
     expect(report.invalidated_evidence).toEqual(["EVD-SAMPLE-001"])
-    expect(report.approvals_to_renew).toEqual([
-      "AC-SAMPLE-001",
-      "REQ-OTHER-001",
-      "REQ-SAMPLE-001",
-    ])
+    expect(report.approvals_to_renew).toEqual(["AC-SAMPLE-001", "REQ-OTHER-001", "REQ-SAMPLE-001"])
   })
 
   test("reports missing changed elements only through dependent identities", () => {
-    const report = new ImpactAnalyzer().analyze(sampleGraph, ["REQ-MISSING-001"], [
-      { id: "REQ-MISSING-001", evidence: ["EVD-MISSING-001"] },
-    ])
+    const report = new ImpactAnalyzer().analyze(
+      sampleGraph,
+      ["REQ-MISSING-001"],
+      [{ id: "REQ-MISSING-001", evidence: ["EVD-MISSING-001"] }],
+    )
 
     expect(report.changed).toEqual([])
     expect(report.affected).toEqual([])

@@ -1,8 +1,6 @@
-export const QUINT_ID_COMMENT =
-  /^\s*\/\/\s*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)(?:\s+(.*))?\s*$/
+export const QUINT_ID_COMMENT = /^\s*\/\/\s*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)(?:\s+(.*))?\s*$/
 export const QUINT_MODULE = /^\s*module\s+([A-Za-z_][A-Za-z0-9_]*)\b/
-export const QUINT_DECLARATION =
-  /^\s*(?:pure\s+)?(val|invariant)\s+([A-Za-z_][A-Za-z0-9_]*)\b/
+export const QUINT_DECLARATION = /^\s*(?:pure\s+)?(val|invariant)\s+([A-Za-z_][A-Za-z0-9_]*)\b/
 
 export type QuintDeclarationKind = "val" | "invariant"
 

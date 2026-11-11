@@ -4,8 +4,8 @@
 > branches, applies typed operations `rename`, `deprecate`, `replace`, `split`,
 > `merge`, `extract`, `move`, and `change-contract`, and reports impact over the
 > SDoc, annotated LikeC4, formal source, and contract sidecar graph.
-> `spec refactor` is a thin alias that warns without an approved baseline. The
-> workbench remains design.
+> `spec refactor` is a thin alias that warns without an approved baseline, and
+> `spec start` opens a scratch-mode proposal. The workbench remains design.
 
 ## Principle
 

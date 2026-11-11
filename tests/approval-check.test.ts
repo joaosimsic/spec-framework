@@ -187,10 +187,9 @@ describe("runCheck approval lock verification", () => {
       await approveSample(target)
       await writeFile(
         join(target, "spec", "requirements", "core.sdoc"),
-        requirement.replace("REQ-SAMPLE-001", "REQ-SAMPLE-002").replace(
-          "AC-SAMPLE-001",
-          "AC-SAMPLE-002",
-        ),
+        requirement
+          .replace("REQ-SAMPLE-001", "REQ-SAMPLE-002")
+          .replace("AC-SAMPLE-001", "AC-SAMPLE-002"),
       )
 
       const run = await runCheck(target, { structural: true })
@@ -276,9 +275,9 @@ describe("runCheck approval lock verification", () => {
       const run = await runEvidenceCheck(target, [])
 
       expect(run.code).toBe(1)
-      expect(
-        run.result.diagnostics.some((item) => item.code === "APPROVAL-EVIDENCE-MISSING"),
-      ).toBe(true)
+      expect(run.result.diagnostics.some((item) => item.code === "APPROVAL-EVIDENCE-MISSING")).toBe(
+        true,
+      )
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -294,8 +293,7 @@ describe("runCheck approval lock verification", () => {
       expect(
         run.result.diagnostics.some(
           (item) =>
-            item.code === "APPROVAL-EVIDENCE-MISMATCH" ||
-            item.code === "APPROVAL-EVIDENCE-MISSING",
+            item.code === "APPROVAL-EVIDENCE-MISMATCH" || item.code === "APPROVAL-EVIDENCE-MISSING",
         ),
       ).toBe(false)
     } finally {

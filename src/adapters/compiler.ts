@@ -16,9 +16,7 @@ interface CompileConfig {
 }
 
 type CompilerConfigFailureCode =
-  | "IMPL-COMPILE-NO-CONFIG"
-  | "IMPL-COMPILE-BAD-CONFIG"
-  | "IMPL-COMPILE-NO-CHECKS"
+  "IMPL-COMPILE-NO-CONFIG" | "IMPL-COMPILE-BAD-CONFIG" | "IMPL-COMPILE-NO-CHECKS"
 
 interface CompilerConfigFailure {
   code: CompilerConfigFailureCode
@@ -35,15 +33,27 @@ class CompilerConfigLoader {
   async load(): Promise<Result<CompileConfig, CompilerConfigFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.configPath).exists())
     if (existsError) {
-      return [null, this.failure("IMPL-COMPILE-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`)]
+      return [
+        null,
+        this.failure("IMPL-COMPILE-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`),
+      ]
     }
     if (!exists) {
-      return [null, this.failure("IMPL-COMPILE-NO-CONFIG", `missing ${this.configPath}; add spec/implementation/compile.json`)]
+      return [
+        null,
+        this.failure(
+          "IMPL-COMPILE-NO-CONFIG",
+          `missing ${this.configPath}; add spec/implementation/compile.json`,
+        ),
+      ]
     }
 
     const [text, readError] = await attemptAsync(() => Bun.file(this.configPath).text())
     if (readError) {
-      return [null, this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}: ${readError}`)]
+      return [
+        null,
+        this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}: ${readError}`),
+      ]
     }
     if (text === null) {
       return [null, this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}`)]
@@ -51,7 +61,13 @@ class CompilerConfigLoader {
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError) {
-      return [null, this.failure("IMPL-COMPILE-BAD-CONFIG", `invalid JSON in ${this.configPath}: ${parseError}`)]
+      return [
+        null,
+        this.failure(
+          "IMPL-COMPILE-BAD-CONFIG",
+          `invalid JSON in ${this.configPath}: ${parseError}`,
+        ),
+      ]
     }
 
     return this.validate(parsed)
@@ -189,7 +205,9 @@ export class CompilerAdapter implements NativeAdapter {
     if (config === null) {
       return {
         ran: true,
-        diagnostics: [this.failure("IMPL-COMPILE-BAD-CONFIG", "configuration produced no result", configPath)],
+        diagnostics: [
+          this.failure("IMPL-COMPILE-BAD-CONFIG", "configuration produced no result", configPath),
+        ],
       }
     }
 
@@ -224,7 +242,13 @@ export class CompilerAdapter implements NativeAdapter {
       result: failed ? "fail" : "pass",
       inputs,
       command: [...check.command],
-      ...(failed ? { details: diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n") } : {}),
+      ...(failed
+        ? {
+            details: diagnostics
+              .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
+              .join("\n"),
+          }
+        : {}),
     })
   }
 
@@ -260,16 +284,14 @@ export class CompilerAdapter implements NativeAdapter {
       ]
     }
     if (commandResult === null) {
-      return [this.failure("IMPL-COMPILE-RUN", `${check.id}: command produced no result`, configPath)]
+      return [
+        this.failure("IMPL-COMPILE-RUN", `${check.id}: command produced no result`, configPath),
+      ]
     }
     if (commandResult.exitCode === 0) return []
 
     return [
-      this.failure(
-        "IMPL-COMPILE-FAILED",
-        this.failedMessage(check.id, commandResult),
-        configPath,
-      ),
+      this.failure("IMPL-COMPILE-FAILED", this.failedMessage(check.id, commandResult), configPath),
     ]
   }
 

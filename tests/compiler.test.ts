@@ -109,7 +109,9 @@ describe("CompilerAdapter", () => {
     const target = await createTarget()
     try {
       await writeCompileConfig(target, {
-        checks: [{ id: "build", command: ["bun", "run", "build"], workingDirectory: "packages/core" }],
+        checks: [
+          { id: "build", command: ["bun", "run", "build"], workingDirectory: "packages/core" },
+        ],
       })
       const { processRunner } = await runAdapter(target)
 

@@ -119,7 +119,8 @@ export class RustDiscovery {
       if (Array.isArray(value.dependencies)) {
         for (const dependencyValue of value.dependencies) {
           if (!this.isRecord(dependencyValue)) continue
-          if (typeof dependencyValue.name !== "string" || dependencyValue.name.trim() === "") continue
+          if (typeof dependencyValue.name !== "string" || dependencyValue.name.trim() === "")
+            continue
           dependencies.push({
             name:
               typeof dependencyValue.rename === "string" && dependencyValue.rename.trim() !== ""
@@ -181,7 +182,9 @@ export class RustDiscovery {
 
       for (const dependency of cargoPackage.dependencies) {
         const local =
-          (dependency.path === null ? undefined : byDirectory.get(this.resolveDependency(cargoPackage, dependency))) ??
+          (dependency.path === null
+            ? undefined
+            : byDirectory.get(this.resolveDependency(cargoPackage, dependency))) ??
           byName.get(slugify(dependency.name))
         if (local !== undefined && local.id !== element.id) {
           this.addLink(element, {

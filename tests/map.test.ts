@@ -133,20 +133,14 @@ describe("runMap", () => {
 
       const run = await runMap(target)
       const elements = run.report?.elements ?? []
-      expect(elements.map((element) => element.id)).toEqual([
-        "CMP-DOCS",
-        "CMP-SRC",
-        "SYS-SAMPLE",
-      ])
+      expect(elements.map((element) => element.id)).toEqual(["CMP-DOCS", "CMP-SRC", "SYS-SAMPLE"])
       expect(elements.filter((element) => element.kind === "component")).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ id: "CMP-SRC", confidence: "ambiguous" }),
           expect.objectContaining({ id: "CMP-DOCS", confidence: "ambiguous" }),
         ]),
       )
-      expect(run.report?.findings.some((finding) => finding.code === "MAP-NO-MANIFESTS")).toBe(
-        true,
-      )
+      expect(run.report?.findings.some((finding) => finding.code === "MAP-NO-MANIFESTS")).toBe(true)
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -163,9 +157,7 @@ describe("runMap", () => {
       )
 
       const run = await runMap(target)
-      expect(run.report?.gaps.unresolvedRequirementLinks).toEqual([
-        "REQ-SAMPLE-001 -> CMP-MISSING",
-      ])
+      expect(run.report?.gaps.unresolvedRequirementLinks).toEqual(["REQ-SAMPLE-001 -> CMP-MISSING"])
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -212,10 +204,7 @@ describe("runMap", () => {
       }
       expect(report.version).toBe(1)
       expect(report.draftPath).toBeNull()
-      expect(report.elements.map((element) => element.id)).toEqual([
-        "CMP-ROOT-APP",
-        "SYS-SAMPLE",
-      ])
+      expect(report.elements.map((element) => element.id)).toEqual(["CMP-ROOT-APP", "SYS-SAMPLE"])
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -263,15 +252,12 @@ describe("RustDiscovery", () => {
       ]
       const processRunner = new FakeProcessRunner([success])
 
-      const contribution = await new RustDiscovery(
-        processRunner,
-        new FakeToolLocator(),
-      ).discover(target, "SYS-SAMPLE")
+      const contribution = await new RustDiscovery(processRunner, new FakeToolLocator()).discover(
+        target,
+        "SYS-SAMPLE",
+      )
 
-      expect(contribution.elements.map((element) => element.id)).toEqual([
-        "CMP-ALPHA",
-        "CMP-BETA",
-      ])
+      expect(contribution.elements.map((element) => element.id)).toEqual(["CMP-ALPHA", "CMP-BETA"])
       expect(contribution.elements[1]?.links).toContainEqual({
         type: "depends_on",
         to: "CMP-ALPHA",

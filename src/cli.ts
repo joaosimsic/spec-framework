@@ -7,6 +7,7 @@ import {
   runChange,
   runChangeStatus,
   runProposalOperations,
+  runStart,
   type ProposalMode,
   type ProposalOperation,
 } from "./change/index"
@@ -25,6 +26,7 @@ Usage:
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
   spec map [--draft] [--json]
+  spec start "<goal>" [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
   spec change --op <json|file> [--op <json|file>]... [--technical] [--json]
@@ -40,6 +42,7 @@ Commands:
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
   map       Discover draft architecture from the repository
+  start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
   refactor  Alias for spec change in refactor mode
@@ -115,6 +118,64 @@ async function commandMap(args: string[]): Promise<number> {
     draft: hasFlag(args, "--draft"),
     json: hasFlag(args, "--json"),
   })
+  console.log(run.output)
+  return run.code
+}
+
+interface StartArguments {
+  goal?: string
+  technical: boolean
+  json: boolean
+  error?: string
+}
+
+function parseStartArguments(args: string[]): StartArguments {
+  let goal: string | undefined
+  let technical = false
+  let json = false
+  let index = args[0] === "start" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--json") {
+      json = true
+      index += 1
+      continue
+    }
+    if (argument === "--technical") {
+      technical = true
+      index += 1
+      continue
+    }
+    if (argument.startsWith("-")) {
+      return { technical, json, error: `unknown start option: ${argument}` }
+    }
+    if (goal !== undefined) {
+      return { goal, technical, json, error: "start accepts one goal" }
+    }
+    goal = argument
+    index += 1
+  }
+
+  return { goal, technical, json }
+}
+
+async function commandStart(args: string[]): Promise<number> {
+  const parsed = parseStartArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+  if (parsed.goal === undefined) {
+    console.error('usage: spec start "<goal>" [--json] [--technical]')
+    return 2
+  }
+
+  const run = await runStart(process.cwd(), parsed.goal, {
+    technical: parsed.technical,
+    json: parsed.json,
+  })
+  printWarnings(run.warnings)
   console.log(run.output)
   return run.code
 }
@@ -538,7 +599,7 @@ async function commandApprove(args: string[]): Promise<number> {
 }
 
 export async function main(args: string[]): Promise<number> {
-  const [command = "help", ...rest] = withoutFlags(args)
+  const [command = "help"] = withoutFlags(args)
 
   switch (command) {
     case "init":
@@ -549,6 +610,8 @@ export async function main(args: string[]): Promise<number> {
       return commandCheck(args)
     case "map":
       return commandMap(args)
+    case "start":
+      return commandStart(args)
     case "query":
       return commandQuery(args)
     case "change":

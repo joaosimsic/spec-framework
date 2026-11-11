@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+spec/audit
+spec/evidence
+spec/**/*.gen.*
+bun.lock

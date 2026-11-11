@@ -62,10 +62,9 @@ export class RequirementsGraphSource {
     }
   }
 
-  private optionalFields(block: SdocBlock): Pick<
-    GraphElement,
-    "title" | "status" | "owner" | "provenance"
-  > {
+  private optionalFields(
+    block: SdocBlock,
+  ): Pick<GraphElement, "title" | "status" | "owner" | "provenance"> {
     const title = block.fields.TITLE
     const owner = block.fields.OWNER
     const provenance = block.fields.PROVENANCE

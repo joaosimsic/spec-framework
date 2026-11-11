@@ -8,7 +8,7 @@ Normative for agents working in this repo. `spec.md` is normative for the build;
 Standardize on the existing tuple (`packages/core/src/kernel/result.ts`):
 
 ```ts
-export type Result<T, E = unknown> = [value: T | null, err: E | null];
+export type Result<T, E = unknown> = [value: T | null, err: E | null]
 ```
 
 - Return `Result` for all expected failures: validation, parsing, guards, LLM
@@ -17,16 +17,16 @@ export type Result<T, E = unknown> = [value: T | null, err: E | null];
   `Result<object, E>` over multiple returns or out-params:
 
 ```ts
-type MdlScore = { gain: number; cost: number };
+type MdlScore = { gain: number; cost: number }
 
 const scoreSplit = (): Result<MdlScore, string> => {
-    if (bad) return [null, 'MDL_BLOAT_REJECTED'];
+  if (bad) return [null, "MDL_BLOAT_REJECTED"]
 
-    return [{ gain, cost }, null];
-};
+  return [{ gain, cost }, null]
+}
 
-const [scored, err] = scoreSplit();
-if (err) return [null, err];
+const [scored, err] = scoreSplit()
+if (err) return [null, err]
 ```
 
 - Destructure as `const [value, err] = ...`, check `err` first, early-return.
@@ -94,9 +94,12 @@ if (err) return [null, err];
 ## 5. Formatting [NORMATIVE]
 
 - **Prettier is the source of truth.** `.prettierrc.json` is normative:
-  `semi: true`, `singleQuote: true`, `tabWidth: 4`, `printWidth: 100`,
-  `trailingComma: all`, `endOfLine: lf`. `eslint-config-prettier`
-  only disables conflicting ESLint rules — it does not replace Prettier.
+  `semi: false`, `singleQuote: false`, `tabWidth: 2`, `printWidth: 100`,
+  `trailingComma: "all"`, `endOfLine: "lf"`. Generated and ignored trees are
+  listed in `.prettierignore`. `eslint-config-prettier` only disables conflicting
+  ESLint rules; it does not replace Prettier.
+- **ESLint enforces correctness.** `eslint.config.js` uses the recommended
+  JavaScript and TypeScript rule sets. `bun run lint` must pass.
 - **All code must be formatted.** Before committing, pushing, or opening a
   PR, run `bun run format` (`prettier --write .`). CI and local checks run
   `bun run format:check` (`prettier --check .`); unformatted code fails the
@@ -215,15 +218,15 @@ if (err) return [null, err];
   **adjacent lines with no blank lines between them**:
 
 ```ts
-const [withEnv, envErr] = applyEnvOverrides(merged, env);
+const [withEnv, envErr] = applyEnvOverrides(merged, env)
 if (envErr) {
-    return [null, envErr];
+  return [null, envErr]
 }
 if (withEnv === null) {
-    return [null, 'Env overlay returned null'];
+  return [null, "Env overlay returned null"]
 }
 
-return validateAppConfig(withEnv);
+return validateAppConfig(withEnv)
 ```
 
 - Never separate the declaration from its verification with blank lines. A

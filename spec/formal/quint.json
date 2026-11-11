@@ -1,1 +1,1 @@
-{"invariants":{"example.qnt":["noNegative"]},"maxSteps":10}
+{ "invariants": { "example.qnt": ["noNegative"] }, "maxSteps": 10 }

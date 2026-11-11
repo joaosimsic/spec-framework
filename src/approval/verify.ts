@@ -63,16 +63,15 @@ function indexBlocks(blocks: SdocBlock[]): Map<string, SdocBlock> {
   return byId
 }
 
-function verifyLockedElements(
-  lock: SpecLock,
-  blocks: Map<string, SdocBlock>,
-): Diagnostic[] {
+function verifyLockedElements(lock: SpecLock, blocks: Map<string, SdocBlock>): Diagnostic[] {
   const diagnostics: Diagnostic[] = []
 
   for (const [id, element] of Object.entries(lock.elements)) {
     const block = blocks.get(id)
     if (block === undefined) {
-      diagnostics.push(error("APPROVAL-MISSING-ELEMENT", `approved element '${id}' no longer exists`))
+      diagnostics.push(
+        error("APPROVAL-MISSING-ELEMENT", `approved element '${id}' no longer exists`),
+      )
       continue
     }
 
@@ -98,11 +97,7 @@ function verifyLockedElements(
   return diagnostics
 }
 
-function missingAcceptanceDiagnostics(
-  id: string,
-  block: SdocBlock,
-  lock: SpecLock,
-): Diagnostic[] {
+function missingAcceptanceDiagnostics(id: string, block: SdocBlock, lock: SpecLock): Diagnostic[] {
   if (!id.startsWith("REQ-")) return []
 
   return splitList(block.fields.ACCEPTANCE ?? "")
@@ -117,10 +112,7 @@ function missingAcceptanceDiagnostics(
     )
 }
 
-function unlockedStatusDiagnostics(
-  blocks: SdocBlock[],
-  lock?: SpecLock,
-): Diagnostic[] {
+function unlockedStatusDiagnostics(blocks: SdocBlock[], lock?: SpecLock): Diagnostic[] {
   return blocks
     .filter((block) => block.fields.STATUS === "Approved")
     .filter((block) => {

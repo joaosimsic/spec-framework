@@ -54,7 +54,9 @@ function splitList(value: string): string[] {
 
 function isAmbiguous(statement: string): string[] {
   const lower = statement.toLowerCase()
-  return AMBIGUOUS_TERMS.filter((term) => new RegExp(`\\b${term.replace(".", "\\.")}\\b`).test(lower))
+  return AMBIGUOUS_TERMS.filter((term) =>
+    new RegExp(`\\b${term.replace(".", "\\.")}\\b`).test(lower),
+  )
 }
 
 function validateEars(block: SdocBlock, diagnostics: Diagnostic[]) {
@@ -103,7 +105,13 @@ function validateLinks(block: SdocBlock, diagnostics: Diagnostic[]) {
     for (const item of splitList(value)) {
       if (!prefixes.some((prefix) => item.startsWith(prefix))) {
         diagnostics.push(
-          diag("error", "SDOC-BAD-LINK", `${field} value '${item}' has an invalid prefix`, block, id),
+          diag(
+            "error",
+            "SDOC-BAD-LINK",
+            `${field} value '${item}' has an invalid prefix`,
+            block,
+            id,
+          ),
         )
       }
     }
@@ -111,13 +119,7 @@ function validateLinks(block: SdocBlock, diagnostics: Diagnostic[]) {
 
   if (block.fields.FORMAL === "none" && !block.fields.WAIVER) {
     diagnostics.push(
-      diag(
-        "error",
-        "SDOC-MISSING-WAIVER",
-        "FORMAL: none requires a WAIVER reference",
-        block,
-        id,
-      ),
+      diag("error", "SDOC-MISSING-WAIVER", "FORMAL: none requires a WAIVER reference", block, id),
     )
   }
 }
@@ -173,9 +175,18 @@ export function lintBlocks(blocks: SdocBlock[]): CheckResult {
       )
     }
 
-    if (block.fields.PROVENANCE && !/^(human|code|doc|inferred|assumption):\S+/.test(block.fields.PROVENANCE)) {
+    if (
+      block.fields.PROVENANCE &&
+      !/^(human|code|doc|inferred|assumption):\S+/.test(block.fields.PROVENANCE)
+    ) {
       diagnostics.push(
-        diag("error", "SDOC-BAD-PROVENANCE", "provenance must have a known prefix and a value", block, uid),
+        diag(
+          "error",
+          "SDOC-BAD-PROVENANCE",
+          "provenance must have a known prefix and a value",
+          block,
+          uid,
+        ),
       )
     }
 

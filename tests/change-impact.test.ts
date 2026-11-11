@@ -5,11 +5,7 @@ import { join } from "node:path"
 import { elementContentHash } from "../src/approval/hash"
 import type { SpecLock } from "../src/approval/types"
 import { runChange, type ProposalGit } from "../src/change/change"
-import type {
-  GitProposalState,
-  Proposal,
-  ProposalOperation,
-} from "../src/change/types"
+import type { GitProposalState, Proposal, ProposalOperation } from "../src/change/types"
 import type { Result } from "../src/core/result"
 import { parseSdoc } from "../src/core/sdoc"
 
@@ -140,12 +136,8 @@ describe("change impact report", () => {
       ])
 
       expect(run.code).toBe(0)
-      expect(run.report?.impact.changed.map((element) => element.id)).toEqual([
-        "REQ-SAMPLE-001",
-      ])
-      expect(run.report?.impact.affected.map((element) => element.id)).toEqual([
-        "AC-SAMPLE-001",
-      ])
+      expect(run.report?.impact.changed.map((element) => element.id)).toEqual(["REQ-SAMPLE-001"])
+      expect(run.report?.impact.affected.map((element) => element.id)).toEqual(["AC-SAMPLE-001"])
       expect(run.report?.impact.invalidated_evidence).toEqual(["EVD-SAMPLE-001"])
       expect(run.output).toContain("Renamed behavior (Requirement)")
       expect(run.output).toContain("Sample criterion (Acceptance criterion)")
@@ -166,9 +158,7 @@ describe("change impact report", () => {
         gitRepository: new FakeProposalGit(),
         now: fixedNow,
         json: true,
-        operations: [
-          { kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" },
-        ],
+        operations: [{ kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" }],
       })
 
       expect(run.code).toBe(0)
@@ -195,9 +185,7 @@ describe("change impact report", () => {
         gitRepository: new FakeProposalGit(),
         now: fixedNow,
         technical: true,
-        operations: [
-          { kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" },
-        ],
+        operations: [{ kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" }],
       })
 
       expect(run.code).toBe(0)
@@ -223,13 +211,8 @@ describe("change impact report", () => {
       })
 
       expect(run.code).toBe(0)
-      expect(run.report?.impact.changed.map((element) => element.id)).toEqual([
-        "REQ-SAMPLE-001",
-      ])
-      expect(run.report?.impact.approvals_to_renew).toEqual([
-        "AC-SAMPLE-001",
-        "REQ-SAMPLE-001",
-      ])
+      expect(run.report?.impact.changed.map((element) => element.id)).toEqual(["REQ-SAMPLE-001"])
+      expect(run.report?.impact.approvals_to_renew).toEqual(["AC-SAMPLE-001", "REQ-SAMPLE-001"])
       expect(run.report?.impact.invalidated_evidence).toEqual(["EVD-SAMPLE-001"])
     } finally {
       await rm(target, { recursive: true, force: true })
@@ -244,9 +227,7 @@ describe("change impact report", () => {
       ])
 
       expect(run.code).toBe(0)
-      expect(run.report?.impact.changed.map((element) => element.id)).toEqual([
-        "REQ-SAMPLE-001",
-      ])
+      expect(run.report?.impact.changed.map((element) => element.id)).toEqual(["REQ-SAMPLE-001"])
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -319,9 +300,7 @@ describe("change impact report", () => {
         )
 
         expect(run.code).toBe(0)
-        expect(run.report?.impact.changed.map((element) => element.id)).toEqual(
-          scenario.expected,
-        )
+        expect(run.report?.impact.changed.map((element) => element.id)).toEqual(scenario.expected)
       } finally {
         await rm(target, { recursive: true, force: true })
       }

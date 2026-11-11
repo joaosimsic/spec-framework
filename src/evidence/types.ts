@@ -3,18 +3,10 @@ export const EVIDENCE_VERSION = 1
 export type EvidenceResult = "pass" | "fail" | "incompatible" | "compatible" | "skipped"
 
 export type EvidenceMethod =
-  | "formal"
-  | "test"
-  | "analysis"
-  | "inspection"
-  | "demonstration"
-  | "preflight"
-  | "contract"
+  "formal" | "test" | "analysis" | "inspection" | "demonstration" | "preflight" | "contract"
 
 export type EvidenceFailureCode =
-  | "EVIDENCE-DUPLICATE-ID"
-  | "EVIDENCE-BAD-RECORD"
-  | "EVIDENCE-BAD-HASH"
+  "EVIDENCE-DUPLICATE-ID" | "EVIDENCE-BAD-RECORD" | "EVIDENCE-BAD-HASH"
 
 export interface EvidenceInput {
   path: string

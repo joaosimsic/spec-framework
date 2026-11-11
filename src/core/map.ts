@@ -58,7 +58,9 @@ export async function runMap(target: string, options: MapOptions = {}): Promise<
       return draftFile
     })
     if (writeError !== null || written === null) {
-      return failure(`cannot write ${relative(target, draftFile)}: ${writeError ?? "unknown error"}`)
+      return failure(
+        `cannot write ${relative(target, draftFile)}: ${writeError ?? "unknown error"}`,
+      )
     }
     draftPath = relative(target, written)
   }

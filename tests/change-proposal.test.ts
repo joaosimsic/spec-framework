@@ -133,18 +133,13 @@ describe("runChange", () => {
         author: "tester",
         gitRepository: new FakeProposalGit(),
         now: fixedNow,
-        operations: [
-          { kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" },
-        ],
+        operations: [{ kind: "rename", target: "REQ-SAMPLE-001", title: "Renamed behavior" }],
       })
 
       expect(run.code).toBe(0)
       expect(run.report?.changes).toHaveLength(1)
 
-      const requirement = await readFile(
-        join(target, "spec", "requirements", "core.sdoc"),
-        "utf8",
-      )
+      const requirement = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
       expect(requirement).toContain("TITLE: Renamed behavior")
       expect(requirement).toContain("STATUS: Proposed")
       expect(await Bun.file(join(target, "spec", "spec.lock")).exists()).toBe(false)
@@ -282,10 +277,7 @@ describe("runProposalOperations", () => {
       expect(proposal.operations).toHaveLength(1)
       expect(proposal.status).toBe("proposed")
 
-      const requirement = await readFile(
-        join(target, "spec", "requirements", "core.sdoc"),
-        "utf8",
-      )
+      const requirement = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
       expect(requirement).toContain("TITLE: Follow up title")
     } finally {
       await rm(target, { recursive: true, force: true })

@@ -63,12 +63,12 @@ adapters.
 
 ```ts
 interface SemanticAdapter {
-  id: string;
-  discover(): Promise<SemanticSource[]>;
-  validate(source: SemanticSource): Promise<ValidationResult>;
-  query(query: SemanticQuery): Promise<QueryResult>;
-  exportGraph(options: GraphExportOptions): Promise<GraphExport>;
-  evidence(): Promise<Evidence>;
+  id: string
+  discover(): Promise<SemanticSource[]>
+  validate(source: SemanticSource): Promise<ValidationResult>
+  query(query: SemanticQuery): Promise<QueryResult>
+  exportGraph(options: GraphExportOptions): Promise<GraphExport>
+  evidence(): Promise<Evidence>
 }
 ```
 

@@ -14,10 +14,7 @@ export interface CommandResult {
   stderr: string
 }
 
-export type CommandFailureCode =
-  | "COMMAND_SPAWN_FAILED"
-  | "COMMAND_IO_FAILED"
-  | "COMMAND_TIMEOUT"
+export type CommandFailureCode = "COMMAND_SPAWN_FAILED" | "COMMAND_IO_FAILED" | "COMMAND_TIMEOUT"
 
 export interface CommandFailure {
   code: CommandFailureCode
@@ -83,10 +80,7 @@ export class BunProcessRunner implements ProcessRunner {
     clearTimeout(timeout)
 
     if (timedOut) {
-      return [
-        null,
-        { code: "COMMAND_TIMEOUT", message: `command timed out after ${timeoutMs}ms` },
-      ]
+      return [null, { code: "COMMAND_TIMEOUT", message: `command timed out after ${timeoutMs}ms` }]
     }
     if (ioError) {
       return [null, { code: "COMMAND_IO_FAILED", message: ioError }]

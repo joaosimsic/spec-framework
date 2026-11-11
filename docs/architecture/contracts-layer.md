@@ -19,12 +19,12 @@ Every adapter implements:
 
 ```ts
 interface ContractAdapter {
-  id: string;
-  discover(): Promise<ContractCandidate[]>;
-  validate(contract: Contract): Promise<ValidationResult>;
-  exportDocs(contract: Contract): Promise<DocFragment[]>;
-  compare?(before: Contract, after: Contract): Promise<CompatibilityResult>;
-  evidence(): Promise<Evidence>;
+  id: string
+  discover(): Promise<ContractCandidate[]>
+  validate(contract: Contract): Promise<ValidationResult>
+  exportDocs(contract: Contract): Promise<DocFragment[]>
+  compare?(before: Contract, after: Contract): Promise<CompatibilityResult>
+  evidence(): Promise<Evidence>
 }
 ```
 

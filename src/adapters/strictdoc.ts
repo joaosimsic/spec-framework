@@ -44,16 +44,26 @@ export class StrictDocAdapter implements NativeAdapter {
     })
     await attemptAsync(() => rm(outputDirectory, { recursive: true, force: true }))
     if (commandError) {
-      return this.withEvidence(context, requirementFiles, {
-        ran: true,
-        diagnostics: [this.failure(commandError.code, commandError.message)],
-      }, [this.tool, ...commandArguments])
+      return this.withEvidence(
+        context,
+        requirementFiles,
+        {
+          ran: true,
+          diagnostics: [this.failure(commandError.code, commandError.message)],
+        },
+        [this.tool, ...commandArguments],
+      )
     }
     if (commandResult === null) {
-      return this.withEvidence(context, requirementFiles, {
-        ran: true,
-        diagnostics: [this.failure("REQ-STRICTDOC", "strictdoc produced no result")],
-      }, [this.tool, ...commandArguments])
+      return this.withEvidence(
+        context,
+        requirementFiles,
+        {
+          ran: true,
+          diagnostics: [this.failure("REQ-STRICTDOC", "strictdoc produced no result")],
+        },
+        [this.tool, ...commandArguments],
+      )
     }
 
     return this.withEvidence(
@@ -100,7 +110,11 @@ export class StrictDocAdapter implements NativeAdapter {
       return { ran: true, diagnostics }
     }
     if (exitCode !== 0) {
-      const diagnostic = this.outputFailure(`strictdoc exited with status ${exitCode}`, stdout, stderr)
+      const diagnostic = this.outputFailure(
+        `strictdoc exited with status ${exitCode}`,
+        stdout,
+        stderr,
+      )
       return { ran: true, diagnostics: [diagnostic] }
     }
 
@@ -145,7 +159,11 @@ export class StrictDocAdapter implements NativeAdapter {
     return line.trim()
   }
 
-  private findLocation(lines: string[], line: string, lineIndex: number): {
+  private findLocation(
+    lines: string[],
+    line: string,
+    lineIndex: number,
+  ): {
     file?: string
     line?: number
   } {

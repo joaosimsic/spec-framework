@@ -10,12 +10,7 @@ import { verifySpecLock } from "../approval/verify"
 import { EvidenceCollector, type EvidenceRecord } from "../evidence"
 import { requiredToolsFor, selectAdapter, selectAdapters } from "./adapter-selection"
 import { SpecConfigLoader } from "./config"
-import {
-  BunProcessRunner,
-  ToolResolver,
-  type ProcessRunner,
-  type ToolLocator,
-} from "./runner"
+import { BunProcessRunner, ToolResolver, type ProcessRunner, type ToolLocator } from "./runner"
 import { lintBlocks } from "./lint"
 import { loadRequirementSources } from "./requirements"
 import { getToolStatuses, missingRequiredDiagnostics } from "./doctor"

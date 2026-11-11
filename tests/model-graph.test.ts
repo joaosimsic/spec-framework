@@ -58,10 +58,7 @@ describe("SpecGraphBuilder", () => {
     expect(graph.commit).toBe("a1b2c3d")
     expect(graph.dirty).toBe(false)
     expect(graph.tool_versions).toEqual({ spec: "0.1.0" })
-    expect(graph.elements.map((element) => element.id)).toEqual([
-      "AC-SAMPLE-001",
-      "REQ-SAMPLE-001",
-    ])
+    expect(graph.elements.map((element) => element.id)).toEqual(["AC-SAMPLE-001", "REQ-SAMPLE-001"])
     expect(requirement).toMatchObject({
       id: "REQ-SAMPLE-001",
       kind: "requirement",
@@ -151,8 +148,6 @@ TITLE: Replacement
 REPLACES: REQ-SAMPLE-001
 `)
 
-    expect(graph.elements[0]?.links).toEqual([
-      { type: "replaces", to: "REQ-SAMPLE-001" },
-    ])
+    expect(graph.elements[0]?.links).toEqual([{ type: "replaces", to: "REQ-SAMPLE-001" }])
   })
 })

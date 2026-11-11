@@ -24,10 +24,7 @@ export class GitWorkspaceReader implements WorkspaceMetadataReader {
       workingDirectory: target,
     })
     if (commitError || commitResult === null) {
-      return [
-        null,
-        commitError === null ? "git rev-parse produced no result" : commitError.message,
-      ]
+      return [null, commitError === null ? "git rev-parse produced no result" : commitError.message]
     }
     if (commitResult.exitCode !== 0) {
       return [null, this.commandFailure("rev-parse HEAD", commitResult)]
@@ -42,10 +39,7 @@ export class GitWorkspaceReader implements WorkspaceMetadataReader {
       workingDirectory: target,
     })
     if (statusError || statusResult === null) {
-      return [
-        null,
-        statusError === null ? "git status produced no result" : statusError.message,
-      ]
+      return [null, statusError === null ? "git status produced no result" : statusError.message]
     }
 
     if (statusResult.exitCode !== 0) {

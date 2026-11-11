@@ -127,14 +127,10 @@ describe("runApproval", () => {
         inputs: [],
         command: ["bun", "test"],
       })
-      const run = await runApproval(
-        target,
-        ["REQ-SAMPLE-001", "AC-SAMPLE-001"],
-        {
-          ...approvalOptions(new FakeConfirmation(true), new FakeGitStatus(true)),
-          evidence: [evidence],
-        },
-      )
+      const run = await runApproval(target, ["REQ-SAMPLE-001", "AC-SAMPLE-001"], {
+        ...approvalOptions(new FakeConfirmation(true), new FakeGitStatus(true)),
+        evidence: [evidence],
+      })
 
       expect(run.code).toBe(0)
       expect(run.lock?.elements["REQ-SAMPLE-001"]?.evidence).toEqual(["EVD-SAMPLE-001"])

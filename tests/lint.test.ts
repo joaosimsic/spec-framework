@@ -44,7 +44,9 @@ describe("lintBlocks", () => {
   })
 
   test("rejects non-EARS statements", () => {
-    const result = lint(valid.replace("The sample component shall return a result.", "Return a result."))
+    const result = lint(
+      valid.replace("The sample component shall return a result.", "Return a result."),
+    )
     expect(result.diagnostics.some((item) => item.code === "SDOC-BAD-EARS")).toBe(true)
   })
 
@@ -54,7 +56,9 @@ describe("lintBlocks", () => {
   })
 
   test("rejects duplicate ids", () => {
-    const result = lint(valid.replace("AC-SAMPLE-001\nTITLE: Sample criterion", "REQ-SAMPLE-001\nTITLE: Duplicate"))
+    const result = lint(
+      valid.replace("AC-SAMPLE-001\nTITLE: Sample criterion", "REQ-SAMPLE-001\nTITLE: Duplicate"),
+    )
     expect(result.diagnostics.some((item) => item.code === "SDOC-DUPLICATE-ID")).toBe(true)
   })
 

@@ -123,10 +123,7 @@ export class ProposalStore {
     ]
   }
 
-  private readBaseline(
-    value: unknown,
-    path: string,
-  ): Result<ProposalBaseline, string> {
+  private readBaseline(value: unknown, path: string): Result<ProposalBaseline, string> {
     if (!this.isRecord(value)) return [null, `${path}: baseline must be an object`]
     if (typeof value["commit"] !== "string") {
       return [null, `${path}: baseline.commit must be a string`]
@@ -135,16 +132,10 @@ export class ProposalStore {
       return [null, `${path}: baseline.lock_hash must be a string or null`]
     }
 
-    return [
-      { commit: value["commit"], lock_hash: value["lock_hash"] as string | null },
-      null,
-    ]
+    return [{ commit: value["commit"], lock_hash: value["lock_hash"] as string | null }, null]
   }
 
-  private readOperations(
-    value: unknown,
-    path: string,
-  ): Result<ProposalOperationLog[], string> {
+  private readOperations(value: unknown, path: string): Result<ProposalOperationLog[], string> {
     if (!Array.isArray(value)) return [null, `${path}: operations must be an array`]
 
     const operations: ProposalOperationLog[] = []
@@ -158,10 +149,7 @@ export class ProposalStore {
     return [operations, null]
   }
 
-  private readOperation(
-    value: unknown,
-    path: string,
-  ): Result<ProposalOperationLog, string> {
+  private readOperation(value: unknown, path: string): Result<ProposalOperationLog, string> {
     if (!this.isRecord(value)) return [null, `${path}: operation must be an object`]
     if (typeof value["kind"] !== "string" || !OPERATION_KINDS.has(value["kind"])) {
       return [null, `${path}: invalid operation kind`]
@@ -193,10 +181,7 @@ export class ProposalStore {
     ]
   }
 
-  private readHashes(
-    value: unknown,
-    path: string,
-  ): Result<Record<string, string | null>, string> {
+  private readHashes(value: unknown, path: string): Result<Record<string, string | null>, string> {
     if (!this.isRecord(value)) return [null, `${path}: hashes must be an object`]
 
     const hashes: Record<string, string | null> = {}

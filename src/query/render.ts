@@ -41,9 +41,7 @@ function technicalLines(entry: DisplayEntry): string[] {
   }
   if (entry.technical.links.length > 0) {
     lines.push(
-      `  links: ${entry.technical.links
-        .map((link) => `${link.type} -> ${link.to}`)
-        .join(", ")}`,
+      `  links: ${entry.technical.links.map((link) => `${link.type} -> ${link.to}`).join(", ")}`,
     )
   }
   for (const diagnostic of entry.technical.diagnostics) {

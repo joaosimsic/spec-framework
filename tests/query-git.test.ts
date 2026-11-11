@@ -29,10 +29,7 @@ class FakeProcessRunner implements ProcessRunner {
     const callIndex = this.calls.length - 1
 
     return (
-      this.queuedResults[callIndex] ?? [
-        null,
-        { code: "COMMAND_IO_FAILED", message: "missing" },
-      ]
+      this.queuedResults[callIndex] ?? [null, { code: "COMMAND_IO_FAILED", message: "missing" }]
     )
   }
 }
@@ -62,10 +59,7 @@ describe("GitWorkspaceReader", () => {
   })
 
   test("reports a dirty tree", async () => {
-    const processRunner = new FakeProcessRunner([
-      result("a1b2c3d\n"),
-      result(" M src/file.ts\n"),
-    ])
+    const processRunner = new FakeProcessRunner([result("a1b2c3d\n"), result(" M src/file.ts\n")])
     const [workspace, error] = await new GitWorkspaceReader(
       processRunner,
       new FakeToolLocator(),

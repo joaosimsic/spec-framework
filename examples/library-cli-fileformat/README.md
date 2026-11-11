@@ -25,19 +25,19 @@ flowchart LR
 
 Components:
 
-| ID | Responsibility | Owner |
-|---|---|---|
-| `CMP-CLI` | Parse commands and render results | cli |
-| `CMP-LIB` | Public library operations | library |
-| `CMP-CODEC` | Encode and decode `.kvp` files | format |
+| ID          | Responsibility                    | Owner   |
+| ----------- | --------------------------------- | ------- |
+| `CMP-CLI`   | Parse commands and render results | cli     |
+| `CMP-LIB`   | Public library operations         | library |
+| `CMP-CODEC` | Encode and decode `.kvp` files    | format  |
 
 Data:
 
-| ID | Meaning |
-|---|---|
-| `DAT-ARCHIVE` | Persisted `.kvp` file |
-| `DAT-FILESYSTEM` | Atomic replacement of files |
-| `DAT-EXIT-STATUS` | CLI exit code contract |
+| ID                | Meaning                     |
+| ----------------- | --------------------------- |
+| `DAT-ARCHIVE`     | Persisted `.kvp` file       |
+| `DAT-FILESYSTEM`  | Atomic replacement of files |
+| `DAT-EXIT-STATUS` | CLI exit code contract      |
 
 ## Requirements
 
@@ -137,12 +137,12 @@ commands: [pack, unpack, inspect]
 
 ## Verification
 
-| Evidence | Source | Result |
-|---|---|---|
-| `EVD-FORMAT-001` | Quint + Apalache | pass |
-| `EVD-CLI-001` | Quint + Apalache + CLI conformance | pass |
-| `EVD-API-001` | cargo-semver-checks | compatible |
-| `EVD-CON-FORMAT-001` | JSON Schema validation | pass |
+| Evidence             | Source                             | Result     |
+| -------------------- | ---------------------------------- | ---------- |
+| `EVD-FORMAT-001`     | Quint + Apalache                   | pass       |
+| `EVD-CLI-001`        | Quint + Apalache + CLI conformance | pass       |
+| `EVD-API-001`        | cargo-semver-checks                | compatible |
+| `EVD-CON-FORMAT-001` | JSON Schema validation             | pass       |
 
 ## Audit bundle excerpt
 

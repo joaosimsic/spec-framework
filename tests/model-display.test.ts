@@ -76,12 +76,7 @@ describe("DisplayProjection", () => {
         ],
       },
     ])
-    expect(model.entries.map((entry) => entry.ref)).toEqual([
-      "ref_0",
-      "ref_1",
-      "ref_2",
-      "ref_3",
-    ])
+    expect(model.entries.map((entry) => entry.ref)).toEqual(["ref_0", "ref_1", "ref_2", "ref_3"])
     expect(model.entries[3]?.kindLabel).toBe("Open question")
     expect(model.entries[3]?.label).toBe("What happens if the store is down?")
   })

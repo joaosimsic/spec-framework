@@ -56,8 +56,9 @@ typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
 `move`, and `change-contract` are implemented. Change reports include
 deterministic impact analysis over the graph, invalidated evidence, approvals to
 renew, and open questions. The `spec refactor` alias is implemented and warns
-when no approved baseline exists. Formal source collection is implemented;
-interactive modes, workbench, and plugin remain. Decision record
+when no approved baseline exists. Formal source collection is implemented. The
+scratch-mode entry `spec start` is implemented; mapping review, workbench, and
+plugin remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -69,7 +70,7 @@ interactive modes, workbench, and plugin remain. Decision record
 - typed change impact over the unified SDoc, architecture, formal, and contract
   graph (implemented);
 - formal source collector (implemented);
-- `spec start` and `spec map --review`;
+- `spec start` (implemented) and `spec map --review`;
 - React/Vite workbench for scratch, mapping, and refactor;
 - terminal interactive paths for the same modes;
 - opencode plugin as both a standalone package and a local self-hosting loader;

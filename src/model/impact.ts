@@ -1,17 +1,8 @@
-import type {
-  ImpactApproval,
-  ImpactElement,
-  ImpactLink,
-  ImpactReport,
-} from "./impact-types"
+import type { ImpactApproval, ImpactElement, ImpactLink, ImpactReport } from "./impact-types"
 import type { GraphElement, SpecGraph } from "./types"
 
 export class ImpactAnalyzer {
-  analyze(
-    graph: SpecGraph,
-    changedIds: string[],
-    approvals: ImpactApproval[] = [],
-  ): ImpactReport {
+  analyze(graph: SpecGraph, changedIds: string[], approvals: ImpactApproval[] = []): ImpactReport {
     const byId = new Map(graph.elements.map((element) => [element.id, element] as const))
     const outgoing = this.outgoingLinks(graph.elements)
     const incoming = this.incomingLinks(graph.elements)
@@ -19,16 +10,8 @@ export class ImpactAnalyzer {
     const changed = this.elementsFor(visited, "changed")
     const affected = this.elementsFor(visited, "affected")
     const impactedIds = new Set([...visited.keys(), ...changedIds])
-    const invalidatedEvidence = this.invalidatedEvidence(
-      graph.elements,
-      impactedIds,
-      approvals,
-    )
-    const approvalsToRenew = this.approvalsToRenew(
-      impactedIds,
-      invalidatedEvidence,
-      approvals,
-    )
+    const invalidatedEvidence = this.invalidatedEvidence(graph.elements, impactedIds, approvals)
+    const approvalsToRenew = this.approvalsToRenew(impactedIds, invalidatedEvidence, approvals)
 
     return {
       changed,

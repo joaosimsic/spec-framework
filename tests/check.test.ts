@@ -244,9 +244,7 @@ describe("runCheck", () => {
       }
       const run = await runCheck(dir, { architectureAdapter, requirementsAdapter, formalAdapter })
 
-      expect(run.result.diagnostics.some((item) => item.code === "REQ-UNKNOWN-ADAPTER")).toBe(
-        true,
-      )
+      expect(run.result.diagnostics.some((item) => item.code === "REQ-UNKNOWN-ADAPTER")).toBe(true)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
@@ -549,9 +547,9 @@ describe("runCheck", () => {
         contractAdapters: [contractAdapter],
       })
 
-      expect(
-        run.result.diagnostics.some((item) => item.code === "CONTRACT-UNKNOWN-ADAPTER"),
-      ).toBe(true)
+      expect(run.result.diagnostics.some((item) => item.code === "CONTRACT-UNKNOWN-ADAPTER")).toBe(
+        true,
+      )
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
@@ -682,9 +680,7 @@ describe("runCheck", () => {
         async run() {
           return {
             ran: true,
-            diagnostics: [
-              { level: "error", code: "CONTRACT-RUST-DETECTED", message: "detected" },
-            ],
+            diagnostics: [{ level: "error", code: "CONTRACT-RUST-DETECTED", message: "detected" }],
           }
         },
       }
@@ -732,9 +728,7 @@ describe("runCheck", () => {
         async run() {
           return {
             ran: true,
-            diagnostics: [
-              { level: "error", code: "CONTRACT-RUST-REQUIRED", message: "required" },
-            ],
+            diagnostics: [{ level: "error", code: "CONTRACT-RUST-REQUIRED", message: "required" }],
           }
         },
       }
@@ -856,9 +850,7 @@ describe("runCheck", () => {
         },
       })
 
-      expect(run.result.diagnostics.some((item) => item.code === "IMPL-UNKNOWN-ADAPTER")).toBe(
-        true,
-      )
+      expect(run.result.diagnostics.some((item) => item.code === "IMPL-UNKNOWN-ADAPTER")).toBe(true)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
@@ -914,9 +906,7 @@ describe("runCheck", () => {
         async run() {
           return {
             ran: true,
-            diagnostics: [
-              { level: "error", code: "IMPL-COMPILE-DETECTED", message: "detected" },
-            ],
+            diagnostics: [{ level: "error", code: "IMPL-COMPILE-DETECTED", message: "detected" }],
           }
         },
       }

@@ -46,13 +46,7 @@ export function renderDraftModel(elements: DraftElement[]): string {
     }
   }
 
-  const lines = [
-    "specification {",
-    ...kinds.map((kind) => `  element ${kind}`),
-    "}",
-    "",
-    "model {",
-  ]
+  const lines = ["specification {", ...kinds.map((kind) => `  element ${kind}`), "}", "", "model {"]
   for (const elementLine of elementLines) lines.push(...elementLine)
   if (relationLines.size > 0) {
     lines.push("")

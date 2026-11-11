@@ -11,13 +11,7 @@ import type {
   DraftLink,
 } from "./types"
 
-const MANIFEST_ORDER = [
-  "package.json",
-  "Cargo.toml",
-  "composer.json",
-  "pyproject.toml",
-  "go.mod",
-]
+const MANIFEST_ORDER = ["package.json", "Cargo.toml", "composer.json", "pyproject.toml", "go.mod"]
 
 const MANIFESTS = new Set(MANIFEST_ORDER)
 
@@ -98,8 +92,9 @@ export class GenericDiscovery {
       const current = pending[index]
       if (current === undefined) continue
 
-      const entries = (await readdir(current.directory, { withFileTypes: true }).catch(() => []))
-        .sort((left, right) => left.name.localeCompare(right.name))
+      const entries = (
+        await readdir(current.directory, { withFileTypes: true }).catch(() => [])
+      ).sort((left, right) => left.name.localeCompare(right.name))
 
       const manifests = entries
         .filter((entry) => entry.isFile() && MANIFESTS.has(entry.name))
@@ -129,9 +124,7 @@ export class GenericDiscovery {
       boundaries.push(boundary)
     }
 
-    boundaries.sort((left, right) =>
-      left.relativeDirectory.localeCompare(right.relativeDirectory),
-    )
+    boundaries.sort((left, right) => left.relativeDirectory.localeCompare(right.relativeDirectory))
 
     return { boundaries, findings }
   }
@@ -150,7 +143,9 @@ export class GenericDiscovery {
     const orderedReads = MANIFEST_ORDER.map((name) => ({ name, read: reads.get(name) }))
     const named = orderedReads.find((entry) => entry.read?.name)
     const primaryManifest =
-      named?.name ?? orderedReads.find((entry) => entry.read !== undefined)?.name ?? basename(directory)
+      named?.name ??
+      orderedReads.find((entry) => entry.read !== undefined)?.name ??
+      basename(directory)
     const dependencies: Array<{ name: string; manifest: string }> = []
 
     for (const entry of orderedReads) {
@@ -231,7 +226,8 @@ export class GenericDiscovery {
         ? project.name
         : null
     const poetry = value.tool
-    const poetryProject = this.isRecord(poetry) && this.isRecord(poetry.poetry) ? poetry.poetry : null
+    const poetryProject =
+      this.isRecord(poetry) && this.isRecord(poetry.poetry) ? poetry.poetry : null
     const poetryName =
       poetryProject !== null &&
       typeof poetryProject.name === "string" &&

@@ -1,6 +1,6 @@
 # Adoption
 
-> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, and `spec map --draft` are available. Automatic provisioning is in progress.
+> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, `spec map --draft`, and the `spec start` scratch entry are available. Mapping review and automatic provisioning are in progress.
 
 ## Goal
 
@@ -8,13 +8,14 @@ Adopting the framework must not require rewriting the project, freezing developm
 
 ## Use-case entry points
 
-| Starting point             | Planned entry                 | Design                           |
+| Starting point             | Entry                         | Design                           |
 | -------------------------- | ----------------------------- | -------------------------------- |
 | Empty repository           | `spec start "<goal>"`         | [Scratch](workflow/use-cases.md) |
 | Existing repository        | `spec map --review`           | [Mapping](workflow/use-cases.md) |
 | Approved baseline changing | `spec refactor "<direction>"` | [Refac](workflow/use-cases.md)   |
 
-The interactive workbench and opencode plugin are design only. The implemented
+The `spec start` scratch entry is implemented. `spec map --review`, the
+interactive workbench, and opencode plugin are design only. The implemented
 Phase 1 path remains `spec init`, `spec map --draft`, `spec check`, and
 `spec approve`.
 
@@ -39,7 +40,8 @@ The scaffold includes:
 - `spec/toolchain.lock.json`;
 - project-local agent rules and commands.
 
-Remove the examples and start with the first real feature.
+Remove the examples and start with the first real feature. Commit the scaffold,
+then run `spec start "<goal>"` to open the scratch proposal.
 
 ## Existing project
 

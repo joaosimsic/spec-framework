@@ -10,13 +10,21 @@
   "scripts": {
     "spec": "bun run bin/spec.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
     "ajv": "8.17.1",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
     "likec4": "1.60.0",
-    "typescript": "latest"
+    "prettier": "^3.10.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.72.2"
   },
   "engines": {
     "bun": ">=1.4.0"

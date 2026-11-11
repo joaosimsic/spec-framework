@@ -186,11 +186,14 @@ export class BundlePdfRenderer {
   }
 
   private escape(value: string): string {
-    return value
-      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?")
-      .replaceAll("\\", "\\\\")
-      .replaceAll("(", "\\(")
-      .replaceAll(")", "\\)")
+    return (
+      value
+        // eslint-disable-next-line no-control-regex
+        .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("(", "\\(")
+        .replaceAll(")", "\\)")
+    )
   }
 
   private object(id: number, body: string | Buffer): Buffer {

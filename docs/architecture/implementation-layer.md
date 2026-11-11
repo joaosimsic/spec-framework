@@ -75,12 +75,12 @@ Commands are explicit. There is no shell, no implicit package-manager detection,
 
 Fields:
 
-| Field | Required | Rules |
-|---|---|---|
-| `id` | yes | unique, non-empty; used in diagnostics |
-| `command` | yes | non-empty string array; first element is the executable |
-| `workingDirectory` | no | relative to the project root; must resolve inside it |
-| `timeoutMs` | no | positive integer; defaults to the process runner default |
+| Field              | Required | Rules                                                    |
+| ------------------ | -------- | -------------------------------------------------------- |
+| `id`               | yes      | unique, non-empty; used in diagnostics                   |
+| `command`          | yes      | non-empty string array; first element is the executable  |
+| `workingDirectory` | no       | relative to the project root; must resolve inside it     |
+| `timeoutMs`        | no       | positive integer; defaults to the process runner default |
 
 Enable the adapter in `spec/config.json`:
 
@@ -100,13 +100,13 @@ The configuration file is trusted build input. It has the same trust model as `p
 
 `CompilerAdapter` implements the existing `NativeAdapter` interface:
 
-| Property | Value |
-|---|---|
-| `id` | `compiler` |
-| `tool` | `compiler` |
-| `requiredTools` | empty; executables come from configuration |
-| `detect` | true when `spec/implementation/compile.json` exists |
-| `run` | executes each configured check once |
+| Property        | Value                                               |
+| --------------- | --------------------------------------------------- |
+| `id`            | `compiler`                                          |
+| `tool`          | `compiler`                                          |
+| `requiredTools` | empty; executables come from configuration          |
+| `detect`        | true when `spec/implementation/compile.json` exists |
+| `run`           | executes each configured check once                 |
 
 Execution rules:
 
@@ -120,15 +120,15 @@ Execution rules:
 
 ## Diagnostics
 
-| Code | Meaning |
-|---|---|
-| `IMPL-COMPILE-NO-CONFIG` | adapter is explicitly enabled but `compile.json` is missing |
-| `IMPL-COMPILE-BAD-CONFIG` | invalid JSON, invalid shape, duplicate id, or escaping working directory |
-| `IMPL-COMPILE-NO-CHECKS` | configuration contains no checks |
-| `IMPL-COMPILE-MISSING-TOOL` | configured executable is not available |
-| `IMPL-COMPILE-RUN` | spawn, I/O, or timeout failure; includes the underlying code |
-| `IMPL-COMPILE-FAILED` | non-zero exit; includes check id, exit code, and output tail |
-| `IMPL-UNKNOWN-ADAPTER` | `adapters.implementation` names an unsupported adapter |
+| Code                        | Meaning                                                                  |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `IMPL-COMPILE-NO-CONFIG`    | adapter is explicitly enabled but `compile.json` is missing              |
+| `IMPL-COMPILE-BAD-CONFIG`   | invalid JSON, invalid shape, duplicate id, or escaping working directory |
+| `IMPL-COMPILE-NO-CHECKS`    | configuration contains no checks                                         |
+| `IMPL-COMPILE-MISSING-TOOL` | configured executable is not available                                   |
+| `IMPL-COMPILE-RUN`          | spawn, I/O, or timeout failure; includes the underlying code             |
+| `IMPL-COMPILE-FAILED`       | non-zero exit; includes check id, exit code, and output tail             |
+| `IMPL-UNKNOWN-ADAPTER`      | `adapters.implementation` names an unsupported adapter                   |
 
 All diagnostics point at `spec/implementation/compile.json`. A compiler preflight failure is an error, not a warning. Waiving it is out of scope for the first slice.
 
@@ -148,13 +148,13 @@ Compiler output can vary across toolchain versions, locale, and incremental buil
 
 ## Relationship to other layers
 
-| Layer | Relationship |
-|---|---|
-| Contracts | The compiler remains the source of truth for types. Contract adapters record the public surface and compatibility evidence. A green compile is not a compatibility verdict. |
-| Formal | Compiler preflight is not conformance. Quint typechecking and model checking remain the authority for formal claims. |
-| Discovery | Compiler and package metadata may later inform dependency edges and drift reports. The first slice does not parse source. |
-| LLM review | Advisory only. LLM findings are drafts with provenance, never evidence, and never a pass verdict. |
-| Approval | Compiler failure blocks the affected check. It does not approve or invalidate approved content by itself. |
+| Layer      | Relationship                                                                                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contracts  | The compiler remains the source of truth for types. Contract adapters record the public surface and compatibility evidence. A green compile is not a compatibility verdict. |
+| Formal     | Compiler preflight is not conformance. Quint typechecking and model checking remain the authority for formal claims.                                                        |
+| Discovery  | Compiler and package metadata may later inform dependency edges and drift reports. The first slice does not parse source.                                                   |
+| LLM review | Advisory only. LLM findings are drafts with provenance, never evidence, and never a pass verdict.                                                                           |
+| Approval   | Compiler failure blocks the affected check. It does not approve or invalidate approved content by itself.                                                                   |
 
 ## Security
 
@@ -172,16 +172,16 @@ Host-level sandboxing remains the responsibility of the execution environment, c
 
 ## Planned implementation
 
-| File | Change |
-|---|---|
-| `src/adapters/compiler.ts` | new `CompilerAdapter` |
-| `src/core/config.ts` | add `adapters.implementation` |
-| `src/core/check.ts` | select and run the adapter first in the native phase |
-| `src/core/init.ts` | scaffold `spec/implementation/README.md` |
-| `tests/compiler.test.ts` | adapter behavior and failure fixtures |
-| `tests/config.test.ts` | configuration validation |
-| `tests/check.test.ts` | integration, ordering, unknown adapter, structural skip |
-| `tests/init.test.ts` | scaffold coverage |
+| File                       | Change                                                  |
+| -------------------------- | ------------------------------------------------------- |
+| `src/adapters/compiler.ts` | new `CompilerAdapter`                                   |
+| `src/core/config.ts`       | add `adapters.implementation`                           |
+| `src/core/check.ts`        | select and run the adapter first in the native phase    |
+| `src/core/init.ts`         | scaffold `spec/implementation/README.md`                |
+| `tests/compiler.test.ts`   | adapter behavior and failure fixtures                   |
+| `tests/config.test.ts`     | configuration validation                                |
+| `tests/check.test.ts`      | integration, ordering, unknown adapter, structural skip |
+| `tests/init.test.ts`       | scaffold coverage                                       |
 
 Acceptance criteria:
 

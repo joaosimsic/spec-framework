@@ -28,10 +28,7 @@ class FakeProcessRunner implements ProcessRunner {
     const callIndex = this.calls.length - 1
 
     return (
-      this.queuedResults[callIndex] ?? [
-        null,
-        { code: "COMMAND_IO_FAILED", message: "missing" },
-      ]
+      this.queuedResults[callIndex] ?? [null, { code: "COMMAND_IO_FAILED", message: "missing" }]
     )
   }
 }
@@ -42,11 +39,7 @@ function result(stdout: string, exitCode = 0): Result<CommandResult, CommandFail
 
 describe("GitProposalRepository", () => {
   test("reads the current branch, commit, and clean state", async () => {
-    const processRunner = new FakeProcessRunner([
-      result("main\n"),
-      result("base123\n"),
-      result(""),
-    ])
+    const processRunner = new FakeProcessRunner([result("main\n"), result("base123\n"), result("")])
     const repository = new GitProposalRepository(processRunner, new FakeToolLocator())
 
     const [state, error] = await repository.readState("/sample")
@@ -76,19 +69,10 @@ describe("GitProposalRepository", () => {
     expect(existsError).toBeNull()
     expect(exists).toBe(true)
 
-    const [branch, createError] = await repository.createBranch(
-      "/sample",
-      "spec/change",
-      "base123",
-    )
+    const [branch, createError] = await repository.createBranch("/sample", "spec/change", "base123")
     expect(createError).toBeNull()
     expect(branch).toBe("spec/change")
-    expect(processRunner.calls[2]?.arguments).toEqual([
-      "switch",
-      "-c",
-      "spec/change",
-      "base123",
-    ])
+    expect(processRunner.calls[2]?.arguments).toEqual(["switch", "-c", "spec/change", "base123"])
   })
 
   test("resolves the git author", async () => {

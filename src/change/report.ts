@@ -92,7 +92,7 @@ export class ChangeReportRenderer {
     const previous = change.previous_title === undefined ? "" : ` from '${change.previous_title}'`
     const status =
       change.previous_status === change.status
-        ? change.status ?? "unknown"
+        ? (change.status ?? "unknown")
         : `${change.previous_status ?? "unknown"} -> ${change.status ?? "unknown"}`
 
     return [

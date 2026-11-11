@@ -42,16 +42,26 @@ export class LikeC4Adapter implements NativeAdapter {
       workingDirectory: context.target,
     })
     if (commandError) {
-      return this.withEvidence(context, architectureFiles, {
-        ran: true,
-        diagnostics: [this.failure(commandError.code, commandError.message)],
-      }, [this.tool, ...commandArguments])
+      return this.withEvidence(
+        context,
+        architectureFiles,
+        {
+          ran: true,
+          diagnostics: [this.failure(commandError.code, commandError.message)],
+        },
+        [this.tool, ...commandArguments],
+      )
     }
     if (commandResult === null) {
-      return this.withEvidence(context, architectureFiles, {
-        ran: true,
-        diagnostics: [this.failure("ARCH-LIKEC4", "likec4 produced no result")],
-      }, [this.tool, ...commandArguments])
+      return this.withEvidence(
+        context,
+        architectureFiles,
+        {
+          ran: true,
+          diagnostics: [this.failure("ARCH-LIKEC4", "likec4 produced no result")],
+        },
+        [this.tool, ...commandArguments],
+      )
     }
 
     return this.withEvidence(
@@ -97,9 +107,7 @@ export class LikeC4Adapter implements NativeAdapter {
     if (parseError) {
       return {
         ran: true,
-        diagnostics: [
-          this.outputFailure(`likec4 produced invalid JSON: ${parseError}`, stderr),
-        ],
+        diagnostics: [this.outputFailure(`likec4 produced invalid JSON: ${parseError}`, stderr)],
       }
     }
     if (!this.isPayload(payload)) {

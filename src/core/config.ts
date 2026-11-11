@@ -38,7 +38,10 @@ export class SpecConfigLoader {
   async load(): Promise<Result<SpecConfig, ConfigFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.configPath).exists())
     if (existsError) {
-      return [null, this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`)]
+      return [
+        null,
+        this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`),
+      ]
     }
     if (!exists) {
       return [null, this.failure("SPEC-NO-CONFIG", `missing ${this.configPath}; run spec init`)]
@@ -123,13 +126,10 @@ export class SpecConfigLoader {
     if (!Array.isArray(contracts)) return contracts
 
     return {
-      architecture:
-        typeof value.architecture === "string" ? value.architecture : undefined,
-      requirements:
-        typeof value.requirements === "string" ? value.requirements : undefined,
+      architecture: typeof value.architecture === "string" ? value.architecture : undefined,
+      requirements: typeof value.requirements === "string" ? value.requirements : undefined,
       formal: typeof value.formal === "string" ? value.formal : undefined,
-      implementation:
-        typeof value.implementation === "string" ? value.implementation : undefined,
+      implementation: typeof value.implementation === "string" ? value.implementation : undefined,
       contracts,
     }
   }
@@ -148,7 +148,10 @@ export class SpecConfigLoader {
       return this.failure("SPEC-BAD-CONFIG", "approval must be an object")
     }
     if (typeof value.mode !== "string" || typeof value.humanOnly !== "boolean") {
-      return this.failure("SPEC-BAD-CONFIG", "approval mode must be a string and humanOnly a boolean")
+      return this.failure(
+        "SPEC-BAD-CONFIG",
+        "approval mode must be a string and humanOnly a boolean",
+      )
     }
 
     return { mode: value.mode, humanOnly: value.humanOnly }

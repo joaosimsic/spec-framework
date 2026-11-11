@@ -173,19 +173,14 @@ export class DisplayProjection {
     return graph.elements
       .filter(
         (candidate) =>
-          candidate.kind === "unknown" &&
-          candidate.links.some((link) => link.to === element.id),
+          candidate.kind === "unknown" && candidate.links.some((link) => link.to === element.id),
       )
       .map((candidate) => referencesById.get(candidate.id))
       .filter((reference): reference is DisplayReference => reference !== undefined)
   }
 
   private blockers(findings: GraphFinding[]): string[] {
-    return [
-      ...new Set(
-        findings.map((finding) => BLOCKER_LABELS[finding.code] ?? DEFAULT_BLOCKER),
-      ),
-    ]
+    return [...new Set(findings.map((finding) => BLOCKER_LABELS[finding.code] ?? DEFAULT_BLOCKER))]
   }
 
   private technical(element: GraphElement, findings: GraphFinding[]): DisplayTechnical {
@@ -220,8 +215,7 @@ export class DisplayProjection {
   }
 
   private choice(entry: DisplayEntry): DisplayChoice {
-    const owner =
-      entry.technical.owner === undefined ? "" : ` - owned by ${entry.technical.owner}`
+    const owner = entry.technical.owner === undefined ? "" : ` - owned by ${entry.technical.owner}`
 
     return {
       ref: entry.ref,

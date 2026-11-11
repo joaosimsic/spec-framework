@@ -31,8 +31,9 @@ export async function findFirstFile(
     const current = pending[index]
     if (current === undefined) continue
 
-    const entries = (await readdir(current.directory, { withFileTypes: true }).catch(() => []))
-      .sort((left, right) => left.name.localeCompare(right.name))
+    const entries = (
+      await readdir(current.directory, { withFileTypes: true }).catch(() => [])
+    ).sort((left, right) => left.name.localeCompare(right.name))
 
     for (const entry of entries) {
       if (entry.isFile() && entry.name === fileName) {

@@ -24,8 +24,7 @@ export async function runQuery(target: string, options: QueryOptions = {}): Prom
   if (structuralErrors.length > 0) return failure(messages(structuralErrors))
 
   const workspaceReader: WorkspaceMetadataReader =
-    options.workspaceReader ??
-    new GitWorkspaceReader(options.processRunner, options.toolLocator)
+    options.workspaceReader ?? new GitWorkspaceReader(options.processRunner, options.toolLocator)
   const [workspace, workspaceError] = await workspaceReader.read(target)
   if (workspaceError !== null) return failure(`cannot read workspace: ${workspaceError}`)
   if (workspace === null) return failure("workspace reader returned no metadata")
@@ -77,11 +76,7 @@ export async function runQuery(target: string, options: QueryOptions = {}): Prom
   }
 }
 
-function outputFor(
-  graph: SpecGraph,
-  projection: DisplayProjection,
-  options: QueryOptions,
-): string {
+function outputFor(graph: SpecGraph, projection: DisplayProjection, options: QueryOptions): string {
   if (options.json === true && options.view === "experience") {
     return JSON.stringify(projection.model, null, 2)
   }

@@ -46,9 +46,7 @@ export class EvidenceHasher {
     })
   }
 
-  private static withoutHash(
-    record: EvidenceRecord,
-  ): Omit<EvidenceRecord, "hash" | "input_hash"> {
+  private static withoutHash(record: EvidenceRecord): Omit<EvidenceRecord, "hash" | "input_hash"> {
     return {
       version: record.version,
       id: record.id,

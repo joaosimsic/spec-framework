@@ -79,10 +79,7 @@ export class GitProposalRepository {
     return [author, null]
   }
 
-  private async output(
-    target: string,
-    argumentsList: string[],
-  ): Promise<Result<string, string>> {
+  private async output(target: string, argumentsList: string[]): Promise<Result<string, string>> {
     const [result, runError] = await this.run(target, argumentsList)
     if (runError !== null || result === null) {
       return [null, runError === null ? "git produced no result" : runError]

@@ -123,12 +123,8 @@ architecture-view sections gain content as those collectors are implemented.
     "diagnostics": 0
   },
   "sources": {
-    "architecture": [
-      { "path": "spec/architecture/model.c4", "hash": "sha256:..." }
-    ],
-    "requirements": [
-      { "path": "spec/requirements/core.sdoc", "hash": "sha256:..." }
-    ]
+    "architecture": [{ "path": "spec/architecture/model.c4", "hash": "sha256:..." }],
+    "requirements": [{ "path": "spec/requirements/core.sdoc", "hash": "sha256:..." }]
   },
   "evidence": {
     "EVD-AUTH-EXPIRY-001": {

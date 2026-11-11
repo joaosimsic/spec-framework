@@ -48,7 +48,7 @@ spec change --op <json|file>
 spec change --status
 spec refactor "<direction>" [--op <json|file>]
 spec review
-spec bundle
+spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
 spec approve <ids...>
 spec query --json
 spec semantic validate|graph|query|export
@@ -87,7 +87,8 @@ CI also verifies:
 - `spec check --structural` gives fast feedback without native tools.
 - `spec check` will run compiler preflight before the other native checks (planned).
 - `spec doctor` explains missing capabilities known to the framework; arbitrary compiler commands fail at check time.
-- `spec bundle --allow-dirty` is for local preview only.
+- `spec bundle` writes `spec/audit/audit-<short-commit>` by default; use `--output` for another destination and `--force` to replace an existing bundle directory.
+- `spec bundle --allow-dirty` is for local preview only and marks the manifest as a preview.
 - `spec serve` and `spec mcp` are read-only review aids.
 - Full approval requires a clean tree and full checks.
 

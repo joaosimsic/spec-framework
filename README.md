@@ -1,6 +1,6 @@
 # spec-framework
 
-**Status: Phase 1 skeleton plus the first Phase 1.5 slices.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, a read-only `spec query`, a same-worktree `spec change` proposal engine, human approval with a hash lock, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. The audit bundle is next.
+**Status: Phase 1 skeleton plus the first Phase 1.5 slices.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, a read-only `spec query`, a same-worktree `spec change` proposal engine, human approval with a hash lock, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. `spec bundle` writes a deterministic audit directory with HTML, PDF, manifest, graph, sources, evidence, change report, and the approval lock.
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
@@ -89,6 +89,7 @@ Current skeleton:
 - `spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]` emits the read-only unified graph over SDoc requirement and acceptance records plus stored evidence artifacts. JSON is the identity contract; `--view experience --json` is the display model with opaque refs; default output uses titles and plain-language state; `--technical` reveals identity, provenance, links, and diagnostics. It refuses a dirty tree unless `--allow-dirty` is passed and never writes sources or `spec/spec.lock`.
 - `spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]` requires a clean tree, creates a same-worktree branch `spec/<slug>`, records the base commit, baseline lock hash, author, and typed SDoc operations, and reports the change. The report traces changed links in both directions, lists affected elements, invalidated evidence, approvals to renew, and open questions. `spec change --op <json|file>` adds operations to the active proposal. `spec change --status [--json]` inspects it. It never writes `spec/spec.lock` or approves anything.
 - `spec refactor "<direction>" [--op <json|file>]... [--technical] [--json]` is a thin alias for `spec change --mode refactor`. It warns when no approved baseline exists and never writes `spec/spec.lock` or approves anything.
+- `spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]` runs the full check, refuses a dirty tree unless `--allow-dirty` is passed, and writes `manifest.json`, `graph.json`, `index.html`, `spec.pdf`, `change-report.md`, the approval lock when present, copied sources, and regenerated evidence. The default destination is `spec/audit/audit-<short-commit>`; `--force` replaces only an existing bundle directory. It never writes `spec/spec.lock` or approves anything.
 - `spec approve <ids...>` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records and native evidence into `spec/spec.lock`, writes evidence artifacts under `spec/evidence/`, and sets their status to `Approved`.
 - `spec check` also rejects a stale content or evidence lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked. Structural-only checks skip evidence regeneration.
 
@@ -149,6 +150,7 @@ src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter
 src/model/   unified spec graph, deterministic builder, SDoc collector, display projection, impact analysis
 src/query/   read-only graph query and git workspace metadata
 src/change/  proposal branches, typed SDoc operations, impact analysis, and change reports
+src/bundle/  deterministic audit HTML, PDF, manifest, sources, and evidence
 src/approval/ spec.lock hashing, human approval, and lock verification
 src/evidence/ deterministic evidence records, hashing, collection, and artifact storage
 src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
@@ -164,7 +166,7 @@ Next:
 
 ```
 src/change/     remaining typed operations
-src/bundle/     audit PDF/HTML assembly and manifest
+src/bundle/     native view embedding and richer report sections
 src/evidence/   evidence regeneration from a clean environment
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
 src/query/      MCP interface and coverage queries

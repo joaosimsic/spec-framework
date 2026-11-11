@@ -15,6 +15,7 @@ import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
+import { runBundle } from "./bundle/index"
 import { runQuery, type QueryView } from "./query/index"
 
 const HELP = `spec-framework CLI
@@ -29,6 +30,7 @@ Usage:
   spec change --op <json|file> [--op <json|file>]... [--technical] [--json]
   spec change --status [--technical] [--json]
   spec refactor "<direction>" [--op <json|file>]... [--technical] [--json]
+  spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
@@ -41,6 +43,7 @@ Commands:
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
   refactor  Alias for spec change in refactor mode
+  bundle    Generate the readable audit bundle
   approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
@@ -389,6 +392,71 @@ async function commandRefactor(args: string[]): Promise<number> {
   return commandChange(["change", "--mode", "refactor", ...rest])
 }
 
+interface BundleArguments {
+  allowDirty: boolean
+  output?: string
+  force: boolean
+  json: boolean
+  error?: string
+}
+
+function parseBundleArguments(args: string[]): BundleArguments {
+  let allowDirty = false
+  let output: string | undefined
+  let force = false
+  let json = false
+  let index = args[0] === "bundle" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--allow-dirty") {
+      allowDirty = true
+      index += 1
+      continue
+    }
+    if (argument === "--force") {
+      force = true
+      index += 1
+      continue
+    }
+    if (argument === "--json") {
+      json = true
+      index += 1
+      continue
+    }
+    if (argument === "--output") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { allowDirty, force, json, error: "--output requires a directory" }
+      }
+      output = value
+      index += 2
+      continue
+    }
+
+    return { allowDirty, force, json, error: `unknown bundle option: ${argument}` }
+  }
+
+  return { allowDirty, force, json, output }
+}
+
+async function commandBundle(args: string[]): Promise<number> {
+  const parsed = parseBundleArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  const run = await runBundle(process.cwd(), {
+    allowDirty: parsed.allowDirty,
+    output: parsed.output,
+    force: parsed.force,
+    json: parsed.json,
+  })
+  console.log(run.output)
+  return run.code
+}
+
 function printWarnings(warnings: string[]): void {
   for (const warning of warnings) console.error(`warning: ${warning}`)
 }
@@ -487,6 +555,8 @@ export async function main(args: string[]): Promise<number> {
       return commandChange(args)
     case "refactor":
       return commandRefactor(args)
+    case "bundle":
+      return commandBundle(args)
     case "approve":
       return commandApprove(args)
     case "version":

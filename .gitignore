@@ -4,4 +4,5 @@ result
 node_modules/
 dist/
 spec/evidence/
+spec/audit/
 spec/**/*.gen.*

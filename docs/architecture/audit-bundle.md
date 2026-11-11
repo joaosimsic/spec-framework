@@ -9,6 +9,22 @@ confidence, hashes, and diagnostic codes. Interactive surfaces hide those by
 default; the audit record does not. Human-readable sections may use names, but
 the traceability appendices and manifest preserve identity.
 
+## Implementation status
+
+`spec bundle` implements the first deterministic slice. It runs the full check,
+refuses a dirty tree unless `--allow-dirty`, and writes a versioned directory
+with `manifest.json`, `graph.json`, `index.html`, `spec.pdf`,
+`change-report.md`, `spec.lock` when present, copied sources, and regenerated
+evidence records.
+
+The default destination is `spec/audit/audit-<short-commit>`. `--output`
+overrides it and `--force` replaces an existing bundle directory only.
+
+The HTML and PDF render the same report model. The PDF is a dependency-free,
+deterministic text renderer; native LikeC4 view embedding and StrictDoc/Typst
+PDF assembly remain future work. Evidence is stored as JSON records grouped by
+method, not as raw native validator logs.
+
 ## Outputs
 
 Every bundle produces:
@@ -17,14 +33,14 @@ Every bundle produces:
 - `index.html` — browsable audit surface;
 - `manifest.json` — provenance, hashes, tool versions;
 - `graph.json` — read-only unified graph export;
-- `evidence/` — model-checking logs, traces, contract reports, test results;
+- `evidence/` — regenerated evidence records grouped by method;
 - `change-report.md` — what changed since the approved baseline;
-- `spec.lock` — approved element and evidence hashes.
+- `spec.lock` — approved element and evidence hashes, when an approval lock exists.
 
 The bundle is stored as a versioned directory or archive:
 
 ```text
-audit-2026.11.10-a1b2c3d/
+audit-a1b2c3d4e5f6/
   spec.pdf
   index.html
   manifest.json
@@ -32,14 +48,16 @@ audit-2026.11.10-a1b2c3d/
   change-report.md
   spec.lock
   evidence/
-    likec4/
-    strictdoc/
-    semantic/
-    verification/
-    quint/
+    formal/
+    test/
+    analysis/
+    inspection/
+    demonstration/
+    implementation/
     contracts/
-    conformance/
   sources/
+    config.json
+    toolchain.lock.json
     architecture/
     capabilities/
     requirements/
@@ -47,9 +65,14 @@ audit-2026.11.10-a1b2c3d/
     verification/
     formal/
     contracts/
+    implementation/
 ```
 
 ## Required sections
+
+The first slice renders the sections supported by the current SDoc graph and
+evidence collectors. Capability, architecture-view, semantic, verification, and
+contract sections gain content as those collectors are implemented.
 
 1. Cover: project, version, commit, date, tool versions, approval status.
 2. Scope: what the specification covers and what it does not.
@@ -74,42 +97,59 @@ audit-2026.11.10-a1b2c3d/
 
 ```json
 {
+  "version": 1,
   "spec_version": "0.1.0",
+  "graph_version": 1,
+  "project": {
+    "name": "spec-framework",
+    "adoption": "existing"
+  },
   "git": {
+    "workspace": "single-repo",
     "commit": "a1b2c3d",
-    "dirty": false
+    "dirty": false,
+    "preview": false
   },
   "tools": {
     "spec": "0.1.0",
     "likec4": "1.x",
     "strictdoc": "0.30.1",
-    "semantic": "optional",
-    "quint": "0.30.0",
-    "apalache": "0.44.x"
+    "quint": "0.30.0"
+  },
+  "checks": {
+    "errors": 0,
+    "warnings": 0,
+    "diagnostics": 0
   },
   "sources": {
-    "architecture": ["sha256:..."],
-    "capabilities": ["sha256:..."],
-    "requirements": ["sha256:..."],
-    "semantic": ["sha256:..."],
-    "verification": ["sha256:..."],
-    "formal": ["sha256:..."],
-    "contracts": ["sha256:..."]
+    "architecture": [
+      { "path": "spec/architecture/model.c4", "hash": "sha256:..." }
+    ],
+    "requirements": [
+      { "path": "spec/requirements/core.sdoc", "hash": "sha256:..." }
+    ]
   },
   "evidence": {
     "EVD-AUTH-EXPIRY-001": {
       "kind": "model-check",
       "method": "formal",
       "result": "pass",
+      "tool": "quint",
+      "hash": "sha256:...",
       "input_hash": "sha256:..."
     }
   },
   "approvals": {
     "approved_elements": 12,
-    "approved_capabilities": 2,
-    "approved_verification_cases": 5,
     "approved_evidence": 7,
-    "pending": 3
+    "pending": 3,
+    "approver": "reviewer",
+    "approved_at": "2026-11-10T00:00:00.000Z"
+  },
+  "files": {
+    "graph.json": "sha256:...",
+    "index.html": "sha256:...",
+    "spec.pdf": "sha256:..."
   }
 }
 ```
@@ -119,6 +159,7 @@ audit-2026.11.10-a1b2c3d/
 - Bundle generation fails on a dirty git tree unless `--allow-dirty` is passed for local preview.
 - Tool versions are pinned.
 - Inputs are hashed.
+- The first-slice HTML and PDF outputs are deterministic and contain no generation timestamp.
 - Outputs are deterministic where the underlying renderer permits; nondeterministic sections are identified.
 - CI regenerates the bundle instead of trusting a checked-in artifact.
 - Evidence is regenerated from sources, not copied from a previous run.

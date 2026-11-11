@@ -3,8 +3,8 @@
 ## Bundle
 
 - Can StrictDoc HTML/PDF embed LikeC4 views and Quint literate sections cleanly, or is a Typst/Pandoc assembly step required?
-- Which PDF path is most reproducible: StrictDoc HTML2PDF, LaTeX, or Typst?
-- Should the HTML bundle be a single page, a static site, or StrictDoc's export plus linked views?
+- The first slice uses a dependency-free deterministic text PDF. Which richer renderer should replace it: StrictDoc HTML2PDF, LaTeX, or Typst?
+- Should the HTML bundle stay a single page or grow into a static site or StrictDoc's export plus linked views?
 
 ## Approval
 

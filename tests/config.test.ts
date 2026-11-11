@@ -143,6 +143,48 @@ describe("SpecConfigLoader", () => {
     }
   })
 
+  test("loads the implementation adapter", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(target, "spec"), { recursive: true })
+      await writeFile(
+        join(target, "spec", "config.json"),
+        JSON.stringify({
+          ...validConfig,
+          adapters: { ...validConfig.adapters, implementation: "compiler" },
+        }),
+      )
+
+      const [config, error] = await new SpecConfigLoader(target).load()
+
+      expect(error).toBeNull()
+      expect(config?.adapters.implementation).toBe("compiler")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects a non-string implementation adapter", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(target, "spec"), { recursive: true })
+      await writeFile(
+        join(target, "spec", "config.json"),
+        JSON.stringify({
+          ...validConfig,
+          adapters: { ...validConfig.adapters, implementation: 1 },
+        }),
+      )
+
+      const [config, error] = await new SpecConfigLoader(target).load()
+
+      expect(config).toBeNull()
+      expect(error?.code).toBe("SPEC-BAD-CONFIG")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
   test("rejects non-array contracts", async () => {
     const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
     try {

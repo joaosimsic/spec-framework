@@ -750,4 +750,141 @@ describe("runCheck", () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  test("runs the compiler adapter before other native adapters", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const implementationConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, implementation: "compiler" },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(implementationConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const order: string[] = []
+      const recordingAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          order.push(id)
+          return { ran: true, diagnostics: [] }
+        },
+      })
+      await runCheck(dir, {
+        implementationAdapter: recordingAdapter("compiler"),
+        architectureAdapter: recordingAdapter("likec4"),
+        requirementsAdapter: recordingAdapter("strictdoc"),
+        formalAdapter: recordingAdapter("quint"),
+      })
+
+      expect(order).toEqual(["compiler", "likec4", "strictdoc", "quint"])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects an unknown implementation adapter", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const unknownConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, implementation: "other" },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(unknownConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const run = await runCheck(dir, {
+        implementationAdapter: {
+          id: "compiler",
+          tool: "compiler",
+          async run() {
+            return { ran: false, diagnostics: [] }
+          },
+        },
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "IMPL-UNKNOWN-ADAPTER")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips the compiler adapter for structural checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(dir, "spec", "requirements"), { recursive: true })
+      let called = false
+      const implementationAdapter: NativeAdapter = {
+        id: "compiler",
+        tool: "compiler",
+        async run() {
+          called = true
+          return { ran: true, diagnostics: [] }
+        },
+      }
+
+      await runCheck(dir, { structural: true, implementationAdapter })
+
+      expect(called).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("auto-runs a detected compiler adapter without configuration", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(
+        join(specDir, "config.json"),
+        JSON.stringify({ ...validConfig, adapters: {} }),
+      )
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const silentAdapter = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const implementationAdapter: NativeAdapter = {
+        id: "compiler",
+        tool: "compiler",
+        async detect() {
+          return true
+        },
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              { level: "error", code: "IMPL-COMPILE-DETECTED", message: "detected" },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, {
+        implementationAdapter,
+        architectureAdapter: silentAdapter("likec4"),
+        requirementsAdapter: silentAdapter("strictdoc"),
+        formalAdapter: silentAdapter("quint"),
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "IMPL-COMPILE-DETECTED")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })

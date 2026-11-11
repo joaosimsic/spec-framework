@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { LikeC4Adapter } from "../adapters/likec4"
 import { CliAdapter } from "../adapters/cli"
+import { CompilerAdapter } from "../adapters/compiler"
 import { JsonSchemaAdapter } from "../adapters/json-schema"
 import { QuintAdapter } from "../adapters/quint"
 import { RustAdapter } from "../adapters/rust"
@@ -40,6 +41,7 @@ async function collectFiles(dir: string): Promise<string[]> {
 export interface CheckOptions {
   structural?: boolean
   json?: boolean
+  implementationAdapter?: NativeAdapter
   architectureAdapter?: NativeAdapter
   requirementsAdapter?: NativeAdapter
   formalAdapter?: NativeAdapter
@@ -74,6 +76,19 @@ async function runNativeChecks(
   }
 
   const activeAdapters: NativeAdapter[] = []
+  const implementation = await selectAdapter(target, config.adapters.implementation, [
+    options.implementationAdapter ?? new CompilerAdapter(),
+  ])
+  if (implementation.unknownId !== null) {
+    diagnostics.push({
+      level: "error",
+      code: "IMPL-UNKNOWN-ADAPTER",
+      message: `unsupported implementation adapter '${implementation.unknownId}'`,
+    })
+    return
+  }
+  if (implementation.adapter !== null) activeAdapters.push(implementation.adapter)
+
   const architecture = await selectAdapter(target, config.adapters.architecture, [
     options.architectureAdapter ?? new LikeC4Adapter(),
   ])

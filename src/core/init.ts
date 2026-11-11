@@ -116,6 +116,27 @@ quint verify spec/formal/*.qnt --invariant <property>
 \`\`\`
 `
 
+const implementationReadme = `# Implementation preflight
+
+Build and typecheck commands live in \`compile.json\`. The compiler preflight
+runs before architecture, requirements, formal, and contract adapters.
+
+\`\`\`json
+{
+  "checks": [
+    {
+      "id": "typecheck",
+      "command": ["bun", "run", "typecheck"],
+      "timeoutMs": 120000
+    }
+  ]
+}
+\`\`\`
+
+Commands are explicit argument arrays. The adapter does not use a shell and
+runs only when \`compile.json\` exists or \`adapters.implementation\` is set.
+`
+
 const contractsReadme = `# Contracts
 
 Contract definitions live here. Phase 1 supports JSON Schema, CLI snapshot, and
@@ -211,6 +232,7 @@ export async function initProject(target: string, options: InitOptions = {}) {
     "architecture",
     "requirements",
     "formal",
+    "implementation",
     "contracts",
     "questions",
     "unknowns",
@@ -234,6 +256,7 @@ export async function initProject(target: string, options: InitOptions = {}) {
     "requirements/example.sdoc": requirementTemplate,
     "architecture/model.c4": architectureTemplate,
     "formal/README.md": formalReadme,
+    "implementation/README.md": implementationReadme,
     "contracts/README.md": contractsReadme,
     "contracts/json-schema/example.schema.json": exampleSchema,
     "contracts/json-schema/example.contract.json": exampleSidecar,

@@ -1,6 +1,6 @@
 # spec-framework
 
-**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters are implemented. Adapters activate from detected sources or explicit config. Approval lock, mapping, and the audit bundle are next.
+**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Approval lock, mapping, and the audit bundle are next.
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -70,7 +70,7 @@ Current skeleton:
 - `spec doctor [--json]` reports required and optional tools.
 - `spec doctor --fix` prints the provisioning plan; automatic provisioning is next.
 - `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
-- `spec check` runs every active architecture, requirements, formal, and contract adapter. An adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. Active adapters fail on missing native tools.
+- `spec check` runs every active architecture, requirements, formal, contract, and implementation compiler adapter. An architecture, requirements, formal, or contract adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. The compiler adapter activates when `spec/implementation/compile.json` exists or `adapters.implementation` is set. Active adapters fail on missing native tools.
 
 Run locally:
 
@@ -114,7 +114,7 @@ Full index: [docs/index.md](docs/index.md).
 ```
 bin/         CLI entry point
 src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
-src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, and Rust adapters
+src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
 tests/       unit and integration tests
 docs/        design documents, decisions, and open questions
 examples/    illustrative non-web specification examples

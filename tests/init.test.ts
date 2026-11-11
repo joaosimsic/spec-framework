@@ -17,6 +17,7 @@ describe("initProject", () => {
       expect(created.some((path) => path.endsWith("contracts/cli/version.snapshot.json"))).toBe(
         true,
       )
+      expect(created.some((path) => path.endsWith("implementation/README.md"))).toBe(true)
 
       const run = await runCheck(dir, { structural: true })
       expect(run.code).toBe(0)

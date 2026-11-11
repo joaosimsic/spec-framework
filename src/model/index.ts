@@ -15,6 +15,7 @@ export {
   type ArchitectureSources,
 } from "./architecture"
 export { ContractsGraphSource, loadContractSources, type ContractSources } from "./contracts"
+export { FormalGraphSource, loadFormalSources, type FormalSources } from "./formal"
 export { SpecGraphBuilder } from "./graph"
 export { ImpactAnalyzer } from "./impact"
 export {

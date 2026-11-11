@@ -48,7 +48,7 @@ class FakeWorkspaceReader implements WorkspaceMetadataReader {
   }
 }
 
-async function createTarget(): Promise<string> {
+async function createTarget(formalSource?: string): Promise<string> {
   const target = await mkdtemp(join(tmpdir(), "query-"))
   await mkdir(join(target, "spec", "requirements"), { recursive: true })
   await writeFile(
@@ -62,6 +62,10 @@ async function createTarget(): Promise<string> {
     }),
   )
   await writeFile(join(target, "spec", "requirements", "core.sdoc"), validRequirement)
+  if (formalSource !== undefined) {
+    await mkdir(join(target, "spec", "formal"), { recursive: true })
+    await writeFile(join(target, "spec", "formal", "model.qnt"), formalSource)
+  }
 
   return target
 }
@@ -82,7 +86,7 @@ function parseGraph(output: string): {
     links: Array<{ type: string; to: string }>
   }>
   evidence: Array<{ id: string; kind?: string; method?: string; result?: string; hash?: string }>
-  findings: Array<{ id?: string }>
+  findings: Array<{ id?: string; code?: string; message?: string }>
   tool_versions: Record<string, string>
 } {
   return JSON.parse(output) as {
@@ -97,7 +101,7 @@ function parseGraph(output: string): {
       links: Array<{ type: string; to: string }>
     }>
     evidence: Array<{ id: string; kind?: string; method?: string; result?: string; hash?: string }>
-    findings: Array<{ id?: string }>
+    findings: Array<{ id?: string; code?: string; message?: string }>
     tool_versions: Record<string, string>
   }
 }
@@ -156,6 +160,43 @@ describe("runQuery", () => {
           result: "pass",
           hash: record.hash,
         },
+      ])
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("includes annotated formal modules and properties", async () => {
+    const target = await createTarget(`// MOD-SAMPLE
+module sample {
+  // PROP-SAMPLE-001
+  val sample = true
+}
+`)
+    try {
+      const run = await runQuery(target, { json: true, workspaceReader: reader() })
+      const byKind = await runQuery(target, {
+        kind: "formal_property",
+        json: true,
+        workspaceReader: reader(),
+      })
+
+      expect(run.code).toBe(0)
+      const graph = parseGraph(run.output)
+      expect(graph.elements.find((element) => element.id === "MOD-SAMPLE")?.kind).toBe(
+        "formal_module",
+      )
+      expect(graph.elements.find((element) => element.id === "PROP-SAMPLE-001")).toMatchObject({
+        kind: "formal_property",
+        links: [{ type: "part_of", to: "MOD-SAMPLE" }],
+      })
+      expect(
+        graph.findings.some((finding) =>
+          finding.message?.includes("formalization link does not resolve"),
+        ),
+      ).toBe(false)
+      expect(parseGraph(byKind.output).elements.map((element) => element.id)).toEqual([
+        "PROP-SAMPLE-001",
       ])
     } finally {
       await rm(target, { recursive: true, force: true })

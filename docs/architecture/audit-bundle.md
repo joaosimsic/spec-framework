@@ -71,10 +71,9 @@ audit-a1b2c3d4e5f6/
 
 ## Required sections
 
-The first slice renders the sections supported by the current SDoc,
-architecture, contract, and evidence collectors. Capability, semantic,
-verification, and native architecture-view sections gain content as those
-collectors are implemented.
+The bundle graph includes the current SDoc, architecture, formal, contract, and
+evidence collectors. Capability, semantic, verification, and native
+architecture-view sections gain content as those collectors are implemented.
 
 1. Cover: project, version, commit, date, tool versions, approval status.
 2. Scope: what the specification covers and what it does not.

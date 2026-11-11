@@ -49,26 +49,26 @@ Exit criteria:
 
 Status: in progress. The deterministic graph builder and read-only
 `spec query` identity and experience views are implemented over SDoc records,
-annotated LikeC4 architecture elements, contract sidecars, and evidence. The
-presentation projection with opaque refs is implemented. The proposal engine
-core, same-worktree proposal branches, and typed operations `rename`,
-`deprecate`, `replace`, `split`, `merge`, `extract`, `move`, and
-`change-contract` are implemented. Change reports include deterministic impact
-analysis over the graph, invalidated evidence, approvals to renew, and open
-questions. The `spec refactor` alias is implemented and warns when no approved
-baseline exists. Formal source collection, interactive modes, workbench, and
-plugin remain. Decision record
+annotated LikeC4 architecture elements, annotated Quint modules and properties,
+contract sidecars, and evidence. The presentation projection with opaque refs is
+implemented. The proposal engine core, same-worktree proposal branches, and
+typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
+`move`, and `change-contract` are implemented. Change reports include
+deterministic impact analysis over the graph, invalidated evidence, approvals to
+renew, and open questions. The `spec refactor` alias is implemented and warns
+when no approved baseline exists. Formal source collection is implemented;
+interactive modes, workbench, and plugin remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
-  contract, and evidence collectors implemented);
+  formal, contract, and evidence collectors implemented);
 - presentation projection with names, plain-language state, and opaque refs
   (implemented);
 - proposal engine with typed operations and same-worktree proposal branches
   (all Phase 1.5 operations implemented);
-- typed change impact over the unified SDoc, architecture, and contract graph
-  (implemented);
-- formal source collector;
+- typed change impact over the unified SDoc, architecture, formal, and contract
+  graph (implemented);
+- formal source collector (implemented);
 - `spec start` and `spec map --review`;
 - React/Vite workbench for scratch, mapping, and refactor;
 - terminal interactive paths for the same modes;

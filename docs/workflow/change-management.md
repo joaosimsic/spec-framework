@@ -3,8 +3,9 @@
 > Status: partially implemented. `spec change` creates same-worktree proposal
 > branches, applies typed operations `rename`, `deprecate`, `replace`, `split`,
 > `merge`, `extract`, `move`, and `change-contract`, and reports impact over the
-> SDoc, annotated LikeC4, and contract sidecar graph. `spec refactor` is a thin
-> alias that warns without an approved baseline. The workbench remains design.
+> SDoc, annotated LikeC4, formal source, and contract sidecar graph.
+> `spec refactor` is a thin alias that warns without an approved baseline. The
+> workbench remains design.
 
 ## Principle
 
@@ -126,13 +127,14 @@ The CLI walks links in both directions:
 Any changed input invalidates downstream evidence. The report lists the affected
 chain.
 
-Current implementation walks the SDoc, annotated LikeC4, and contract sidecar
-graph in both directions. Change seeds are typed operation targets and new
-records, plus locked elements whose content hash or `STATUS: Approved` no longer
-matches the current sources. The report lists changed and affected elements
-with names in the default view, invalidated evidence, approvals to renew, and
-open questions. Technical output and JSON keep IDs, distances, and traversal
-links. Evidence hashing and regeneration remain pending.
+Current implementation walks the SDoc, annotated LikeC4, formal source, and
+contract sidecar graph in both directions. Change seeds are typed operation
+targets and new records, plus locked elements whose content hash or
+`STATUS: Approved` no longer matches the current sources. The report lists
+changed and affected elements with names in the default view, invalidated
+evidence, approvals to renew, and open questions. Technical output and JSON keep
+IDs, distances, and traversal links. Evidence hashing and regeneration remain
+pending.
 
 The baseline is explicit: a PR merge-base, a named approved baseline, or `HEAD`
 for pending local work. Without an explicit baseline, the impact report is

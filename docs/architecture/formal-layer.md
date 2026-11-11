@@ -69,6 +69,24 @@ module auth {
 
 The real module must define initialization, environment assumptions, and the properties linked from requirements.
 
+## Source annotations
+
+The unified graph reads annotated `.qnt` sources under `spec/formal`. A module
+and each top-level property or invariant carry an explicit `// <ID>` comment:
+
+```quint
+// MOD-AUTH
+module auth {
+  // PROP-AUTH-EXPIRY
+  val no_expired_session = sessions.forall(s => s != "")
+}
+```
+
+`MOD-*` becomes a formal module, `PROP-*` becomes a formal property, and
+`INV-*` becomes an invariant. Properties link to their module with `part_of`.
+Unannotated declarations stay out of the graph and produce
+`FORMAL-UNANNOTATED` findings instead of guessed IDs.
+
 ## Requirement mapping
 
 ```mermaid

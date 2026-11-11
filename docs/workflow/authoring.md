@@ -1,8 +1,9 @@
 # Authoring workflow
 
 > Status: partially implemented. `spec change` creates proposal branches,
-> applies typed SDoc, architecture, and contract operations, and reports impact.
-> The workbench, plugin, and named-scope approval remain design.
+> applies typed SDoc, architecture, and contract operations, and reports impact
+> across requirements, architecture, formal sources, contracts, evidence, and
+> approvals. The workbench, plugin, and named-scope approval remain design.
 
 ## Principle
 

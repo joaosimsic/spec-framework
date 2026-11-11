@@ -1,11 +1,12 @@
 # Query and agent interface
 
 > Status: partially implemented. `spec query` emits the deterministic identity
-> graph and display model for SDoc records, annotated LikeC4 elements, contract
-> sidecars, and evidence artifacts stored under `spec/evidence/`, with id, kind,
-> and status filters. The display model carries names, plain-language state,
-> blockers, open questions, and opaque refs. The formal collector, the opencode
-> plugin, and MCP remain design. MCP and the broader agent surface are Phase 2.
+> graph and display model for SDoc records, annotated LikeC4 elements, annotated
+> Quint modules and properties, contract sidecars, and evidence artifacts stored
+> under `spec/evidence/`, with id, kind, and status filters. The display model
+> carries names, plain-language state, blockers, open questions, and opaque refs.
+> The opencode plugin and MCP remain design. MCP and the broader agent surface
+> are Phase 2.
 
 ## Purpose
 
@@ -119,6 +120,15 @@ The contract collector reads `spec/contracts/**/*.contract.json` sidecars,
 emits `CON-*` contract elements, and skips IDs already declared by SDoc. The
 requirement `CONTRACTS` link resolves to the contract element.
 
+The formal collector reads `spec/formal/**/*.qnt` sources and emits elements
+that carry an explicit `// <ID>` comment before a module or a top-level `val` or
+`invariant` declaration. `MOD-*` becomes `formal_module`, `PROP-*` becomes
+`formal_property`, and `INV-*` becomes `invariant`. Annotated properties and
+invariants link to their module with `part_of`. Unannotated modules and
+declarations become `FORMAL-UNANNOTATED` findings, duplicate IDs become
+`FORMAL-DUPLICATE-ID`, and wrong ID prefixes become `FORMAL-INVALID-ID`. The
+collector skips IDs already declared by SDoc.
+
 ## Query commands
 
 ```bash
@@ -148,8 +158,8 @@ identity; `--view experience --json` emits the display model with opaque refs
 and a technical payload. Default output uses titles and plain-language state
 without ID prefixes; `--technical` reveals identity, provenance, links, and
 diagnostics. Stored evidence artifacts under `spec/evidence/` appear in the
-graph evidence list; malformed artifacts become findings. Architecture and
-contract sources join the same graph. The query requires a git worktree and
+graph evidence list; malformed artifacts become findings. Architecture, formal,
+and contract sources join the same graph. The query requires a git worktree and
 refuses a dirty tree unless `--allow-dirty` is passed. Impact, coverage, and
 semantic query forms remain design.
 

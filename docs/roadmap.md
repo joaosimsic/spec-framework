@@ -50,9 +50,10 @@ Status: in progress. The deterministic graph builder and read-only
 requirement and acceptance records. The presentation projection with opaque
 refs is implemented. The proposal engine core, same-worktree proposal branches,
 and typed SDoc operations `rename`, `deprecate`, `replace`, `split`, and
-`merge` are implemented. Other source collectors, impact analysis,
-`extract`, `move`, `change-contract`, interactive modes, workbench, and plugin
-remain. Decision record
+`merge` are implemented. Change reports include deterministic impact analysis
+over the graph, invalidated evidence, approvals to renew, and open questions.
+Other source collectors, `extract`, `move`, `change-contract`, interactive
+modes, workbench, and plugin remain. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (initial SDoc collector
@@ -61,7 +62,8 @@ remain. Decision record
   (implemented);
 - proposal engine with typed operations and same-worktree proposal branches
   (core and SDoc operations implemented);
-- impact analysis and the remaining typed operations;
+- typed change impact over the current SDoc graph (implemented);
+- the remaining typed operations;
 - `spec start`, `spec map --review`, and the `spec refactor` alias;
 - React/Vite workbench for scratch, mapping, and refactor;
 - terminal interactive paths for the same modes;

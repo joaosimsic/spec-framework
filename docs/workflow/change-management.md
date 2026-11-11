@@ -1,9 +1,10 @@
 # Change management
 
 > Status: partially implemented. `spec change` creates same-worktree proposal
-> branches and applies typed SDoc operations `rename`, `deprecate`, `replace`,
-> `split`, and `merge`. Impact analysis, `extract`, `move`,
-> `change-contract`, `spec refactor`, and the workbench remain design.
+> branches, applies typed SDoc operations `rename`, `deprecate`, `replace`,
+> `split`, and `merge`, and reports impact over the current SDoc graph.
+> `extract`, `move`, `change-contract`, `spec refactor`, and the workbench
+> remain design.
 
 ## Principle
 
@@ -108,6 +109,14 @@ The CLI walks links in both directions:
 
 Any changed input invalidates downstream evidence. The report lists the affected
 chain.
+
+Current implementation walks the SDoc requirement and acceptance graph in both
+directions. Change seeds are typed operation targets and new records, plus
+locked elements whose content hash or `STATUS: Approved` no longer matches the
+current sources. The report lists changed and affected elements with names in
+the default view, invalidated evidence, approvals to renew, and open questions.
+Technical output and JSON keep IDs, distances, and traversal links. Evidence
+hashing and regeneration remain pending.
 
 The baseline is explicit: a PR merge-base, a named approved baseline, or `HEAD`
 for pending local work. Without an explicit baseline, the impact report is

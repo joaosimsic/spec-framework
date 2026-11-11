@@ -1,8 +1,8 @@
 # Authoring workflow
 
-> Status: partially implemented. `spec change` creates proposal branches and
-> applies typed SDoc operations. The workbench, plugin, named-scope approval,
-> and impact analysis remain design.
+> Status: partially implemented. `spec change` creates proposal branches,
+> applies typed SDoc operations, and reports impact. The workbench, plugin, and
+> named-scope approval remain design.
 
 ## Principle
 

@@ -62,7 +62,8 @@ Named-scope selection is part of the Phase 1.5 design. The current CLI accepts
 element IDs directly.
 
 The workbench and the opencode plugin cannot approve. A query result or chat
-summary is not an approval verdict. See
+summary is not an approval verdict. Change impact reports list approvals to
+renew; they do not approve or renew them. See
 [presentation and internal identity](../ux/presentation.md).
 
 ## Approval command

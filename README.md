@@ -4,7 +4,7 @@
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
 
-The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc requirement and acceptance records, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed SDoc operations (`rename`, `deprecate`, `replace`, `split`, `merge`); impact analysis, `extract`, `move`, `change-contract`, `spec refactor`, scratch and mapping modes, the React/Vite workbench, and the opencode plugin remain documented design. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
+The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc requirement and acceptance records, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed SDoc operations (`rename`, `deprecate`, `replace`, `split`, `merge`), and its change report includes a deterministic impact analysis over the spec graph. `extract`, `move`, `change-contract`, `spec refactor`, scratch and mapping modes, the React/Vite workbench, and the opencode plugin remain documented design. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -87,7 +87,7 @@ Current skeleton:
 - `spec check` runs every active architecture, requirements, formal, contract, and implementation compiler adapter. An architecture, requirements, formal, or contract adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. The compiler adapter activates when `spec/implementation/compile.json` exists or `adapters.implementation` is set. Active adapters fail on missing native tools.
 - `spec map --draft` discovers generic package and Rust workspace boundaries, writes `spec/architecture/draft.gen.c4`, and reports missing owners, low-confidence elements, external dependencies, and unresolved requirement links. It never modifies `spec/architecture/model.c4`.
 - `spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]` emits the read-only unified graph over SDoc requirement and acceptance records. JSON is the identity contract; `--view experience --json` is the display model with opaque refs; default output uses titles and plain-language state; `--technical` reveals identity, provenance, links, and diagnostics. It refuses a dirty tree unless `--allow-dirty` is passed and never writes sources or `spec/spec.lock`.
-- `spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]` requires a clean tree, creates a same-worktree branch `spec/<slug>`, records the base commit, baseline lock hash, author, and typed SDoc operations, and reports the change. `spec change --op <json|file>` adds operations to the active proposal. `spec change --status [--json]` inspects it. It never writes `spec/spec.lock` or approves anything.
+- `spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]` requires a clean tree, creates a same-worktree branch `spec/<slug>`, records the base commit, baseline lock hash, author, and typed SDoc operations, and reports the change. The report traces changed links in both directions, lists affected elements, invalidated evidence, approvals to renew, and open questions. `spec change --op <json|file>` adds operations to the active proposal. `spec change --status [--json]` inspects it. It never writes `spec/spec.lock` or approves anything.
 - `spec approve <ids...>` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records into `spec/spec.lock`, and sets their status to `Approved`.
 - `spec check` also rejects a stale lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked.
 
@@ -145,9 +145,9 @@ Full index: [docs/index.md](docs/index.md).
 ```
 bin/         CLI entry point
 src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
-src/model/   unified spec graph, deterministic builder, SDoc collector, display projection
+src/model/   unified spec graph, deterministic builder, SDoc collector, display projection, impact analysis
 src/query/   read-only graph query and git workspace metadata
-src/change/  proposal branches, typed SDoc operations, and change reports
+src/change/  proposal branches, typed SDoc operations, impact analysis, and change reports
 src/approval/ spec.lock hashing, human approval, and lock verification
 src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
 tests/       unit and integration tests
@@ -161,11 +161,11 @@ spec/        self-hosted specification scaffold
 Next:
 
 ```
-src/change/     impact analysis, remaining typed operations, and refactor alias
+src/change/     remaining typed operations and refactor alias
 src/bundle/     audit PDF/HTML assembly, manifest, hashes
 src/evidence/   evidence artifact hashing and regeneration
 src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
-src/query/      MCP interface and impact/coverage queries
+src/query/      MCP interface and coverage queries
 src/explorer/   read-only local review surface
 src/workbench/  React/Vite proposal workbench and local API
 src/workspace/  multi-repo composition and branch contexts

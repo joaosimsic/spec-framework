@@ -182,6 +182,8 @@ describe("SdocOperationApplier", () => {
       expect(applied?.changes).toHaveLength(3)
 
       const text = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
+      expect(text).toContain("[REQUIREMENT]\nUID: REQ-SAMPLE-004")
+      expect(text).toContain("[REQUIREMENT]\nUID: REQ-SAMPLE-005")
       expect(text).toContain("REPLACES: REQ-SAMPLE-001")
       expect(text.match(/UID: REQ-SAMPLE-00[45]/g)).toHaveLength(2)
     } finally {

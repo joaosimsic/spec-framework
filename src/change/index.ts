@@ -9,6 +9,8 @@ export {
 } from "./change"
 export { ProposalOperationParser } from "./operation-parser"
 export { GitProposalRepository } from "./git"
+export { ProposalImpactAnalyzer, type ProposalImpactResult } from "./impact"
+export { ImpactReportRenderer } from "./impact-report"
 export { SdocOperationApplier, type OperationApplication } from "./operations"
 export { ProposalStore } from "./store"
 export {

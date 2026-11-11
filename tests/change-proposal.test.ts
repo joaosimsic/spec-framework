@@ -160,7 +160,21 @@ describe("runChange", () => {
   test("records an existing lock hash in the baseline", async () => {
     const target = await createTarget()
     try {
-      await writeFile(join(target, "spec", "spec.lock"), '{"version":1}\n')
+      await writeFile(
+        join(target, "spec", "spec.lock"),
+        `${JSON.stringify(
+          {
+            version: 1,
+            approved_at: "2026-11-11T12:00:00.000Z",
+            approver: "tester",
+            dirty: false,
+            elements: {},
+            evidence: {},
+          },
+          null,
+          2,
+        )}\n`,
+      )
 
       await runChange(target, "Locked change", {
         author: "tester",

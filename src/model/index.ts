@@ -10,6 +10,15 @@ export {
 } from "./display-types"
 export { DisplayProjection } from "./display"
 export { SpecGraphBuilder } from "./graph"
+export { ImpactAnalyzer } from "./impact"
+export {
+  type ImpactApproval,
+  type ImpactDirection,
+  type ImpactElement,
+  type ImpactLink,
+  type ImpactReport,
+  type ImpactState,
+} from "./impact-types"
 export { RequirementsGraphSource } from "./requirements"
 export {
   GRAPH_VERSION,

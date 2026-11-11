@@ -4,7 +4,7 @@ import type { SdocBlock } from "../core/types"
 
 const BLOCK_START = /^\[([A-Z_]+)\]\s*$/
 const FIELD = /^([A-Z][A-Z0-9_]*):\s*(.*)$/
-const BLOCK_KIND = "REQUIREMENT"
+const BLOCK_KIND = "[REQUIREMENT]"
 const FIELD_ORDER = [
   "UID",
   "TITLE",

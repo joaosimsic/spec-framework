@@ -1,3 +1,5 @@
+import type { ImpactReport } from "../model"
+
 export const PROPOSAL_VERSION = 1
 
 export type ProposalMode = "scratch" | "mapping" | "refactor"
@@ -66,4 +68,5 @@ export interface ChangeReport {
   proposal: Proposal
   operations: ProposalOperationLog[]
   changes: ChangeEntry[]
+  impact: ImpactReport
 }

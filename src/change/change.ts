@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
-import { specLockPath } from "../approval/lock"
+import { SpecLockLoader, specLockPath } from "../approval/lock"
+import type { SpecLock } from "../approval/types"
 import { SpecConfigLoader } from "../core/config"
 import { attemptAsync, type Result } from "../core/result"
 import type { ToolLocator, ProcessRunner } from "../core/runner"
 import { GitProposalRepository } from "./git"
+import { ProposalImpactAnalyzer } from "./impact"
 import { SdocOperationApplier, type OperationApplication } from "./operations"
 import { ChangeReportRenderer } from "./report"
 import { ProposalStore } from "./store"
@@ -92,6 +94,9 @@ export async function runChange(
   if (lockError !== null) return changeFailure(lockError)
   if (lockHash === undefined) return changeFailure("lock hash failed")
 
+  const [lock, lockLoadError] = await loadApprovalLock(target)
+  if (lockLoadError !== null) return changeFailure(lockLoadError)
+
   const [author, authorError] = await resolveAuthor(git, options.author, target)
   if (authorError !== null) return changeFailure(authorError)
   if (author === null) return changeFailure("proposal author unavailable")
@@ -133,6 +138,14 @@ export async function runChange(
     status: "proposed",
     operations: applied.logs,
   }
+  const [impact, impactError] = await new ProposalImpactAnalyzer(target).analyze(
+    completed,
+    applied.logs,
+    lock,
+  )
+  if (impactError !== null) return changeFailure(impactError)
+  if (impact === null) return changeFailure("impact analysis failed")
+
   const [, completeError] = await store.save(completed)
   if (completeError !== null) return changeFailure(completeError)
 
@@ -140,6 +153,7 @@ export async function runChange(
     proposal: completed,
     operations: applied.logs,
     changes: applied.changes,
+    impact: impact.impact,
   }
   const output = options.json
     ? JSON.stringify(report, null, 2)
@@ -171,6 +185,9 @@ export async function runProposalOperations(
     return changeFailure(`proposal '${proposal.branch}' is not editable`)
   }
 
+  const [lock, lockLoadError] = await loadApprovalLock(target)
+  if (lockLoadError !== null) return changeFailure(lockLoadError)
+
   const [applied, applyError] = await new SdocOperationApplier(target, options.now).apply(
     operations,
   )
@@ -182,6 +199,14 @@ export async function runProposalOperations(
     status: "proposed",
     operations: [...proposal.operations, ...applied.logs],
   }
+  const [impact, impactError] = await new ProposalImpactAnalyzer(target).analyze(
+    completed,
+    completed.operations,
+    lock,
+  )
+  if (impactError !== null) return changeFailure(impactError)
+  if (impact === null) return changeFailure("impact analysis failed")
+
   const [, saveError] = await store.save(completed)
   if (saveError !== null) return changeFailure(saveError)
 
@@ -189,6 +214,7 @@ export async function runProposalOperations(
     proposal: completed,
     operations: applied.logs,
     changes: applied.changes,
+    impact: impact.impact,
   }
   const output = options.json
     ? JSON.stringify(report, null, 2)
@@ -245,6 +271,14 @@ async function readLockHash(target: string): Promise<Result<string | null, strin
   }
 
   return [`sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`, null]
+}
+
+async function loadApprovalLock(target: string): Promise<Result<SpecLock | null, string>> {
+  const [lock, lockError] = await new SpecLockLoader(target).load()
+  if (lockError === null) return [lock, null]
+  if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
+
+  return [null, lockError.message]
 }
 
 function changeFailure(message: string): ChangeRun {

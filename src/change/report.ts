@@ -1,3 +1,4 @@
+import { ImpactReportRenderer } from "./impact-report"
 import type { ChangeEntry, ChangeReport, Proposal, ProposalOperationLog } from "./types"
 
 const ACTION_LABELS = {
@@ -25,6 +26,9 @@ export class ChangeReportRenderer {
       lines.push(`operations: ${report.operations.length}`)
     }
 
+    lines.push("")
+    lines.push(...ImpactReportRenderer.human(report.impact))
+
     return lines.join("\n")
   }
 
@@ -49,6 +53,8 @@ export class ChangeReportRenderer {
     for (const operation of report.operations) {
       lines.push(this.operationLine(operation))
     }
+
+    lines.push(...ImpactReportRenderer.technical(report.impact))
 
     return lines.join("\n")
   }

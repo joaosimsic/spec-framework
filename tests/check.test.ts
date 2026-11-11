@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { NativeAdapter } from "../src/adapters/types"
 import { runCheck } from "../src/core/check"
+import { EvidenceFactory } from "../src/evidence"
 
 const validConfig = {
   version: 1,
@@ -113,6 +114,52 @@ describe("runCheck", () => {
       const run = await runCheck(dir, { architectureAdapter: adapter, formalAdapter })
 
       expect(run.result.diagnostics.some((item) => item.code === "ARCH-TEST")).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("collects evidence from native adapters", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const evidence = new EvidenceFactory().create({
+        id: "EVD-CHECK-001",
+        kind: "architecture",
+        method: "analysis",
+        tool: "fake",
+        result: "pass",
+        inputs: [],
+      })
+      const adapter: NativeAdapter = {
+        id: "likec4",
+        tool: "fake",
+        requiredTools: [],
+        async run() {
+          return { ran: true, diagnostics: [], evidence: [evidence] }
+        },
+      }
+      const inactive = (id: string): NativeAdapter => ({
+        id,
+        tool: id,
+        requiredTools: [],
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      })
+      const run = await runCheck(dir, {
+        architectureAdapter: adapter,
+        requirementsAdapter: inactive("strictdoc"),
+        formalAdapter: inactive("quint"),
+        contractAdapters: [],
+      })
+
+      expect(run.evidence).toEqual([evidence])
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

@@ -65,6 +65,17 @@ describe("CliAdapter", () => {
         expect(processRunner.calls[0]?.executable).toBe("/bin/fake")
         expect(processRunner.calls[0]?.arguments).toEqual(snapshotCommand.slice(1))
         expect(processRunner.calls[0]?.workingDirectory).toBe(target)
+        expect(run.evidence?.[0]?.id).toBe("EVD-CLI-VERSION")
+        expect(run.evidence?.[0]?.result).toBe("pass")
+    })
+
+    test("uses an explicit snapshot evidence id", async () => {
+        const { target, contractDirectory } = await createCliTarget()
+        await writeSnapshot(contractDirectory, "version.snapshot.json", { id: "EVD-CLI-VERSION-001", command: ["mytool", "--version"], exitCode: 0, stdoutIncludes: [] })
+        const success: Result<CommandResult, CommandFailure> = [{ exitCode: 0, stdout: "", stderr: "" }, null]
+        const { run } = await runAdapter(target, [success])
+
+        expect(run.evidence?.[0]?.id).toBe("EVD-CLI-VERSION-001")
     })
 
     test("reports an exit code mismatch", async () => {

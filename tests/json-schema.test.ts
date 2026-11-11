@@ -66,6 +66,9 @@ describe("JsonSchemaAdapter", () => {
         const run = await runAdapter(target)
         expect(run.ran).toBe(true)
         expect(run.diagnostics).toEqual([])
+        expect(run.evidence?.[0]?.id).toBe("EVD-CON-EXAMPLE-001")
+        expect(run.evidence?.[0]?.result).toBe("pass")
+        expect(run.evidence?.[0]?.inputs).toHaveLength(3)
     })
 
     test("rejects schema that fails ajv meta-validation", async () => {

@@ -98,6 +98,8 @@ describe("CompilerAdapter", () => {
         workingDirectory: target,
         timeoutMs: 120000,
       })
+      expect(run.evidence?.[0]?.id).toBe("EVD-IMPL-TYPECHECK")
+      expect(run.evidence?.[0]?.result).toBe("pass")
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -135,6 +137,7 @@ describe("CompilerAdapter", () => {
       expect(run.diagnostics[0]?.message).toContain("typecheck failed with exit code 1")
       expect(run.diagnostics[0]?.message).toContain("error: bad type")
       expect(run.diagnostics[0]?.message.length).toBeLessThan(600)
+      expect(run.evidence?.[0]?.result).toBe("fail")
     } finally {
       await rm(target, { recursive: true, force: true })
     }

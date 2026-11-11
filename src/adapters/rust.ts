@@ -3,6 +3,7 @@ import { readdir } from "node:fs/promises"
 import { basename, isAbsolute, join, relative, resolve } from "node:path"
 import { attempt, attemptAsync, type Result } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 type Compatibility = "none" | "backward" | "forward" | "full"
@@ -63,11 +64,52 @@ export class RustAdapter implements NativeAdapter {
         }
 
         const diagnostics: Diagnostic[] = []
+        const evidence: EvidenceRecord[] = []
         for (const contractFile of contractFiles) {
-            diagnostics.push(...(await this.checkContract(context, contractFile)))
+            const contractDiagnostics = await this.checkContract(context, contractFile)
+            diagnostics.push(...contractDiagnostics)
+            evidence.push(await this.evidenceRecord(context, contractFile, contractDiagnostics))
         }
 
-        return { ran: true, diagnostics }
+        return { ran: true, diagnostics, evidence }
+    }
+
+    private async evidenceRecord(
+        context: AdapterContext,
+        contractFile: string,
+        diagnostics: Diagnostic[],
+    ): Promise<EvidenceRecord> {
+        const contractBaseName = basename(contractFile).slice(0, -".contract.json".length)
+        const baselinePath = join(
+            context.target,
+            "spec",
+            "contracts",
+            ".baselines",
+            `${contractBaseName}.rust-public-api.sha256`,
+        )
+        const inputs = await new EvidenceFactory().inputs(context.target, [contractFile, baselinePath])
+        const incompatible = diagnostics.some((diagnostic) => diagnostic.code === "CONTRACT-RUST-INCOMPATIBLE")
+        const failed = diagnostics.some((diagnostic) => diagnostic.level === "error")
+        const contractId = (await this.readContractId(contractFile)) ?? `RUST-${contractBaseName.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`
+
+        return new EvidenceFactory().create({
+            id: `EVD-${contractId}`,
+            kind: "rust-public-api",
+            method: "contract",
+            tool: this.tool,
+            result: incompatible ? "incompatible" : failed ? "fail" : "pass",
+            inputs,
+            ...(failed ? { details: diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n") } : {}),
+        })
+    }
+
+    private async readContractId(contractFile: string): Promise<string | null> {
+        const [text, readError] = await attemptAsync(() => Bun.file(contractFile).text())
+        if (readError !== null || text === null) return null
+        const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
+        if (parseError !== null || !this.isRecord(parsed)) return null
+
+        return typeof parsed["id"] === "string" && parsed["id"].trim() !== "" ? parsed["id"] : null
     }
 
     private async checkContract(

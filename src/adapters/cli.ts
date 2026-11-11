@@ -2,9 +2,11 @@ import { readdir } from "node:fs/promises"
 import { basename, join } from "node:path"
 import { attempt, attemptAsync } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 interface SnapshotSpec {
+    id?: string
     command: string[]
     exitCode: number
     stdoutIncludes: string[]
@@ -31,33 +33,58 @@ export class CliAdapter implements NativeAdapter {
         if (snapshotPaths.length === 0) return { ran: true, diagnostics: [this.failure("CONTRACT-CLI-NO-SOURCES", "no CLI snapshots found under spec/contracts/cli")] }
 
         const diagnostics: Diagnostic[] = []
+        const evidence: EvidenceRecord[] = []
         for (const snapshotPath of snapshotPaths) {
-            const snapshot = await this.readSnapshot(snapshotPath, diagnostics)
-            if (snapshot === null) continue
-            const commandName = snapshot.command[0]
-            if (commandName === undefined) {
-                diagnostics.push({ ...this.failure("CONTRACT-CLI-BAD-SNAPSHOT", `invalid CLI snapshot shape in ${basename(snapshotPath)}`), file: snapshotPath })
+            const snapshotDiagnostics: Diagnostic[] = []
+            const snapshot = await this.readSnapshot(snapshotPath, snapshotDiagnostics)
+            diagnostics.push(...snapshotDiagnostics)
+            if (snapshot === null) {
+                evidence.push(await this.evidenceRecord(context, snapshotPath, snapshotDiagnostics, [], undefined))
                 continue
             }
-            const executable = await context.toolLocator.resolve(commandName)
-            if (executable === null) {
-                diagnostics.push({ ...this.failure("CONTRACT-CLI-MISSING-TOOL", `command '${commandName}' is not available`), file: snapshotPath })
-                continue
-            }
-            const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: snapshot.command.slice(1), workingDirectory: context.target })
-            if (commandError) {
-                diagnostics.push({ ...this.failure(commandError.code, commandError.message), file: snapshotPath })
-                continue
-            }
-            if (commandResult === null) {
-                diagnostics.push({ ...this.failure("CONTRACT-CLI-INCOMPATIBLE", "cli probe produced no result"), file: snapshotPath })
-                continue
-            }
-            const probeDiagnostic = this.checkProbe(snapshot, snapshotPath, commandResult.exitCode, commandResult.stdout, commandResult.stderr)
-            if (probeDiagnostic !== null) diagnostics.push(probeDiagnostic)
+            diagnostics.push(...(await this.checkSnapshot(context, snapshot, snapshotPath)))
+            evidence.push(await this.evidenceRecord(context, snapshotPath, diagnostics.filter((diagnostic) => diagnostic.file === snapshotPath), snapshot.command, snapshot.id))
         }
 
-        return { ran: true, diagnostics }
+        return { ran: true, diagnostics, evidence }
+    }
+
+    private async checkSnapshot(context: AdapterContext, snapshot: SnapshotSpec, snapshotPath: string): Promise<Diagnostic[]> {
+        const commandName = snapshot.command[0]
+        if (commandName === undefined) {
+            return [{ ...this.failure("CONTRACT-CLI-BAD-SNAPSHOT", `invalid CLI snapshot shape in ${basename(snapshotPath)}`), file: snapshotPath }]
+        }
+        const executable = await context.toolLocator.resolve(commandName)
+        if (executable === null) {
+            return [{ ...this.failure("CONTRACT-CLI-MISSING-TOOL", `command '${commandName}' is not available`), file: snapshotPath }]
+        }
+        const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: snapshot.command.slice(1), workingDirectory: context.target })
+        if (commandError) {
+            return [{ ...this.failure(commandError.code, commandError.message), file: snapshotPath }]
+        }
+        if (commandResult === null) {
+            return [{ ...this.failure("CONTRACT-CLI-INCOMPATIBLE", "cli probe produced no result"), file: snapshotPath }]
+        }
+        const probeDiagnostic = this.checkProbe(snapshot, snapshotPath, commandResult.exitCode, commandResult.stdout, commandResult.stderr)
+
+        return probeDiagnostic === null ? [] : [probeDiagnostic]
+    }
+
+    private async evidenceRecord(context: AdapterContext, snapshotPath: string, diagnostics: Diagnostic[], command: string[], explicitId: string | undefined): Promise<EvidenceRecord> {
+        const inputs = await new EvidenceFactory().inputs(context.target, [snapshotPath])
+        const failed = diagnostics.some((diagnostic) => diagnostic.level === "error")
+        const snapshotName = basename(snapshotPath, ".snapshot.json").toUpperCase().replace(/[^A-Z0-9]+/g, "-")
+
+        return new EvidenceFactory().create({
+            id: explicitId ?? `EVD-CLI-${snapshotName}`,
+            kind: "cli",
+            method: "contract",
+            tool: this.tool,
+            result: failed ? "fail" : "pass",
+            inputs,
+            ...(command.length === 0 ? {} : { command }),
+            ...(failed ? { details: diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n") } : {}),
+        })
     }
 
     private checkProbe(snapshot: SnapshotSpec, snapshotPath: string, exitCode: number, stdout: string, stderr: string): Diagnostic | null {
@@ -124,6 +151,7 @@ export class CliAdapter implements NativeAdapter {
 
     private isSnapshotSpec(value: unknown): value is SnapshotSpec {
         if (!this.isRecord(value)) return false
+        if (value["id"] !== undefined && (typeof value["id"] !== "string" || value["id"].trim() === "")) return false
         if (!this.isStringList(value["command"])) return false
         if (value["command"].length === 0) return false
         if (typeof value["exitCode"] !== "number" || !Number.isInteger(value["exitCode"])) return false

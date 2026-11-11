@@ -3,6 +3,7 @@ import { SpecConfigLoader } from "../core/config"
 import { lintBlocks } from "../core/lint"
 import { loadRequirementSources } from "../core/requirements"
 import type { Diagnostic } from "../core/types"
+import { EvidenceStore } from "../evidence"
 import { DisplayProjection, RequirementsGraphSource, SpecGraphBuilder } from "../model/index"
 import type { GraphElement, SpecGraph } from "../model/types"
 import { GitWorkspaceReader } from "./git"
@@ -34,6 +35,22 @@ export async function runQuery(target: string, options: QueryOptions = {}): Prom
 
   const builder = new SpecGraphBuilder()
   builder.add(new RequirementsGraphSource().collect(sources.blocks))
+  const storedEvidence = await new EvidenceStore(target).loadAll()
+  builder.add({
+    elements: [],
+    evidence: storedEvidence.records.map((record) => ({
+      id: record.id,
+      kind: record.kind,
+      method: record.method,
+      result: record.result,
+      hash: record.hash,
+    })),
+    findings: storedEvidence.failures.map((failure) => ({
+      level: "warning",
+      code: failure.code,
+      message: failure.message,
+    })),
+  })
 
   const [built, buildError] = builder.build(
     workspace,

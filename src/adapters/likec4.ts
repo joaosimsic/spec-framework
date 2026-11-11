@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { attempt } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 interface LikeC4ErrorPayload {
@@ -32,19 +33,63 @@ export class LikeC4Adapter implements NativeAdapter {
     const executable = await context.toolLocator.resolve(this.tool)
     if (executable === null) return { ran: false, diagnostics: [] }
 
+    const architectureDirectory = join(context.target, "spec", "architecture")
+    const architectureFiles = await this.collectModelFiles(architectureDirectory)
+    const commandArguments = ["validate", "--json", architectureDirectory]
     const [commandResult, commandError] = await context.processRunner.run({
       executable,
-      arguments: ["validate", "--json", join(context.target, "spec", "architecture")],
+      arguments: commandArguments,
       workingDirectory: context.target,
     })
     if (commandError) {
-      return { ran: true, diagnostics: [this.failure(commandError.code, commandError.message)] }
+      return this.withEvidence(context, architectureFiles, {
+        ran: true,
+        diagnostics: [this.failure(commandError.code, commandError.message)],
+      }, [this.tool, ...commandArguments])
     }
     if (commandResult === null) {
-      return { ran: true, diagnostics: [this.failure("ARCH-LIKEC4", "likec4 produced no result")] }
+      return this.withEvidence(context, architectureFiles, {
+        ran: true,
+        diagnostics: [this.failure("ARCH-LIKEC4", "likec4 produced no result")],
+      }, [this.tool, ...commandArguments])
     }
 
-    return this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode)
+    return this.withEvidence(
+      context,
+      architectureFiles,
+      this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode),
+      [this.tool, ...commandArguments],
+    )
+  }
+
+  private async withEvidence(
+    context: AdapterContext,
+    architectureFiles: string[],
+    run: AdapterRun,
+    command: string[],
+  ): Promise<AdapterRun> {
+    const inputs = await new EvidenceFactory().inputs(context.target, architectureFiles)
+    const failed = run.diagnostics.some((diagnostic) => diagnostic.level === "error")
+
+    return {
+      ...run,
+      evidence: [
+        new EvidenceFactory().create({
+          id: "EVD-ARCH-LIKEC4",
+          kind: "architecture",
+          method: "analysis",
+          tool: this.tool,
+          result: failed ? "fail" : "pass",
+          inputs,
+          command,
+          ...(failed ? { details: this.diagnosticDetails(run.diagnostics) } : {}),
+        }),
+      ],
+    }
+  }
+
+  private diagnosticDetails(diagnostics: Diagnostic[]): string {
+    return diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n")
   }
 
   private parseResult(stdout: string, stderr: string, exitCode: number): AdapterRun {

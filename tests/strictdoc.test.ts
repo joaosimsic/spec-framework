@@ -53,6 +53,16 @@ describe("StrictDocAdapter", () => {
     expect(processRunner.calls[0]?.arguments).toContain("--no-parallelization")
   })
 
+  test("records requirements evidence", async () => {
+    const { run } = await runAdapter(
+      "Export completed. Documentation tree can be found at: /tmp/sdoc-json",
+    )
+
+    expect(run.evidence).toHaveLength(1)
+    expect(run.evidence?.[0]?.id).toBe("EVD-REQ-STRICTDOC")
+    expect(run.evidence?.[0]?.result).toBe("pass")
+  })
+
   test("maps semantic errors to diagnostics", async () => {
     const { run } = await runAdapter(
       [

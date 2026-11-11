@@ -463,6 +463,7 @@ async function commandApprove(args: string[]): Promise<number> {
     allowDirty: parsed.allowDirty,
     confirmation: new TerminalApprovalConfirmation(),
     gitStatus: new GitCleanlinessReader(),
+    evidence: check.evidence,
   })
   console.log(run.output)
   return run.code

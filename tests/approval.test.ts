@@ -9,6 +9,7 @@ import { elementContentHash } from "../src/approval/hash"
 import { specLockPath } from "../src/approval/lock"
 import { parseSdoc } from "../src/core/sdoc"
 import type { Result } from "../src/core/result"
+import { EvidenceFactory } from "../src/evidence"
 
 const proposedRequirement = `[DOCUMENT]
 TITLE: Sample requirements
@@ -109,6 +110,44 @@ describe("runApproval", () => {
 
       const lockText = await readFile(specLockPath(target), "utf8")
       expect(JSON.parse(lockText)).toEqual(run.lock)
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("records evidence hashes and writes artifacts", async () => {
+    const target = await createTarget()
+    try {
+      const evidence = new EvidenceFactory().create({
+        id: "EVD-SAMPLE-001",
+        kind: "sample",
+        method: "test",
+        tool: "bun",
+        result: "pass",
+        inputs: [],
+        command: ["bun", "test"],
+      })
+      const run = await runApproval(
+        target,
+        ["REQ-SAMPLE-001", "AC-SAMPLE-001"],
+        {
+          ...approvalOptions(new FakeConfirmation(true), new FakeGitStatus(true)),
+          evidence: [evidence],
+        },
+      )
+
+      expect(run.code).toBe(0)
+      expect(run.lock?.elements["REQ-SAMPLE-001"]?.evidence).toEqual(["EVD-SAMPLE-001"])
+      expect(run.lock?.evidence["EVD-SAMPLE-001"]).toEqual({
+        hash: evidence.hash,
+        tool: "bun",
+        result: "pass",
+      })
+      const artifact = await readFile(
+        join(target, "spec", "evidence", "EVD-SAMPLE-001.json"),
+        "utf8",
+      )
+      expect(JSON.parse(artifact)).toEqual(evidence)
     } finally {
       await rm(target, { recursive: true, force: true })
     }

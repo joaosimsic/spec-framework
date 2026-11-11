@@ -22,12 +22,12 @@ Build one end-to-end path:
 - `spec init`, `spec init --existing`;
 - `spec doctor`, `spec doctor --fix`;
 - structural checks over SDoc;
-- human approval: `spec approve` hash-locks proposed SDoc requirement and acceptance records; evidence hashes pending;
-- LikeC4 adapter: validation; views and MCP pending;
-- StrictDoc adapter: validation done; traceability, HTML/PDF pending;
-- Quint adapter: typecheck plus Apalache verify wired into `spec check`; evidence bundle pending;
+- human approval: `spec approve` hash-locks proposed SDoc requirement and acceptance records plus native evidence; approval writes evidence artifacts under `spec/evidence/`;
+- LikeC4 adapter: validation with hashed evidence; views and MCP pending;
+- StrictDoc adapter: validation with hashed evidence; traceability, HTML/PDF pending;
+- Quint adapter: typecheck plus Apalache verify wired into `spec check` with per-module evidence; audit bundle pending;
 - contract adapters: JSON Schema, CLI snapshots, and Rust public API wired into `spec check` with compatibility evidence;
-- compiler preflight adapter: configured build/typecheck commands with deterministic diagnostics; evidence hashing pending;
+- compiler preflight adapter: configured build/typecheck commands with deterministic diagnostics and hashed evidence;
 - generic and Rust discovery and `spec map --draft`;
 - `spec check`, `spec change`, `spec bundle`, `spec approve`;
 - agent skill, commands, permissions;
@@ -38,6 +38,7 @@ Exit criteria:
 - existing repo initialized without source changes;
 - one requirement flows to a Quint property, model check, evidence, approval, and bundle;
 - one contract adapter produces compatibility evidence;
+- evidence is hashed into `spec.lock` and stored deterministically under `spec/evidence/`;
 - audit bundle is reproducible PDF + HTML;
 - approval invalidation works;
 - default agent cannot edit approved specs;

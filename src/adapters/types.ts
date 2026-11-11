@@ -1,5 +1,6 @@
 import type { ProcessRunner, ToolLocator } from "../core/runner"
 import type { Diagnostic } from "../core/types"
+import type { EvidenceRecord } from "../evidence"
 
 export interface AdapterContext {
   target: string
@@ -10,6 +11,7 @@ export interface AdapterContext {
 export interface AdapterRun {
   ran: boolean
   diagnostics: Diagnostic[]
+  evidence?: EvidenceRecord[]
 }
 
 export interface NativeAdapter {

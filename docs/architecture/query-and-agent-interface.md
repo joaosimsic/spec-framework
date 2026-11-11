@@ -1,11 +1,12 @@
 # Query and agent interface
 
 > Status: partially implemented. `spec query` emits the deterministic identity
-> graph and display model for SDoc requirement and acceptance records, with id,
-> kind, and status filters. The display model carries names, plain-language
-> state, blockers, open questions, and opaque refs. Architecture, formal,
-> contract, and evidence collectors, the opencode plugin, and MCP remain design.
-> MCP and the broader agent surface are Phase 2.
+> graph and display model for SDoc requirement and acceptance records plus
+> evidence artifacts stored under `spec/evidence/`, with id, kind, and status
+> filters. The display model carries names, plain-language state, blockers, open
+> questions, and opaque refs. Architecture, formal, and contract collectors, the
+> opencode plugin, and MCP remain design. MCP and the broader agent surface are
+> Phase 2.
 
 ## Purpose
 
@@ -76,7 +77,15 @@ technical payload.
       "links": [{ "type": "derives_from", "to": "CAP-SESSION-MANAGEMENT" }]
     }
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "EVD-AUTH-EXPIRY-001",
+      "kind": "model-check",
+      "method": "formal",
+      "result": "pass",
+      "hash": "sha256:..."
+    }
+  ],
   "findings": [],
   "tool_versions": {}
 }
@@ -129,9 +138,10 @@ spec query --allow-dirty
 identity; `--view experience --json` emits the display model with opaque refs
 and a technical payload. Default output uses titles and plain-language state
 without ID prefixes; `--technical` reveals identity, provenance, links, and
-diagnostics. The query requires a git worktree and refuses a dirty tree unless
-`--allow-dirty` is passed. Impact, coverage, and semantic query forms remain
-design.
+diagnostics. Stored evidence artifacts under `spec/evidence/` appear in the
+graph evidence list; malformed artifacts become findings. The query requires a
+git worktree and refuses a dirty tree unless `--allow-dirty` is passed. Impact,
+coverage, and semantic query forms remain design.
 
 ## MCP surface
 

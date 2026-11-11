@@ -115,6 +115,8 @@ describe("RustAdapter", () => {
             expect(processRunner.calls[1]?.executable).toBe("/bin/cargo-semver-checks")
             expect(processRunner.calls[1]?.arguments).toContain("--baseline-rev")
             expect(processRunner.calls[1]?.arguments).toContain("v1.0.0")
+            expect(run.evidence?.[0]?.id).toBe("EVD-CON-API-001")
+            expect(run.evidence?.[0]?.result).toBe("pass")
         } finally {
             await rm(target, { recursive: true, force: true })
         }

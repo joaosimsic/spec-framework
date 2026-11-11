@@ -142,7 +142,7 @@ The adapter is deterministic only relative to its inputs:
 - bounded timeout;
 - project source state.
 
-The first slice records command, exit code, and bounded output in diagnostics. Evidence hashing and storage in `spec.lock` follow when the evidence bundle lands. Until then, the preflight is a gate, not an audit artifact.
+The adapter records command, input hashes, result, and bounded failure output as evidence. `spec approve` hashes that evidence into `spec.lock` and stores the full record under `spec/evidence/`. `spec check` reports changed or missing approved evidence when native checks regenerate the snapshot.
 
 Compiler output can vary across toolchain versions, locale, and incremental build state. The adapter must not normalize away actionable errors. It must keep the command and tool version in the eventual evidence record so a reviewer can reproduce the verdict.
 
@@ -199,4 +199,4 @@ Acceptance criteria:
 - Should compile failures be waivable, and under what scope and expiry?
 - How should diagnostics be normalized across languages without hiding actionable detail?
 - Should `spec doctor` resolve arbitrary configured executables, or leave that to `spec check`?
-- When should compiler evidence move from diagnostics into the hashed evidence bundle?
+- When should compiler evidence be regenerated automatically by the audit bundle rather than by approval?

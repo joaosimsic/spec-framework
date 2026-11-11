@@ -1,9 +1,14 @@
 import type { Diagnostic, SdocBlock } from "../core/types"
+import type { EvidenceRecord } from "../evidence"
 import { elementContentHash } from "./hash"
 import { SpecLockLoader } from "./lock"
 import type { SpecLock } from "./types"
 
-export async function verifySpecLock(target: string, blocks: SdocBlock[]): Promise<Diagnostic[]> {
+export async function verifySpecLock(
+  target: string,
+  blocks: SdocBlock[],
+  evidence?: EvidenceRecord[],
+): Promise<Diagnostic[]> {
   const [lock, lockError] = await new SpecLockLoader(target).load()
   if (lockError !== null) {
     if (lockError.code === "SPEC-LOCK-NOT-FOUND") return unlockedStatusDiagnostics(blocks)
@@ -14,6 +19,35 @@ export async function verifySpecLock(target: string, blocks: SdocBlock[]): Promi
   const byId = indexBlocks(blocks)
   const diagnostics = verifyLockedElements(lock, byId)
   diagnostics.push(...unlockedStatusDiagnostics(blocks, lock))
+  if (evidence !== undefined) diagnostics.push(...verifyEvidence(lock, evidence))
+
+  return diagnostics
+}
+
+function verifyEvidence(lock: SpecLock, evidence: EvidenceRecord[]): Diagnostic[] {
+  const byId = new Map(evidence.map((record) => [record.id, record] as const))
+  const diagnostics: Diagnostic[] = []
+
+  for (const [id, locked] of Object.entries(lock.evidence)) {
+    const current = byId.get(id)
+    if (current === undefined) {
+      diagnostics.push({
+        level: "error",
+        code: "APPROVAL-EVIDENCE-MISSING",
+        message: `approved evidence '${id}' was not regenerated`,
+        id,
+      })
+      continue
+    }
+    if (current.hash !== locked.hash) {
+      diagnostics.push({
+        level: "error",
+        code: "APPROVAL-EVIDENCE-MISMATCH",
+        message: `approved evidence changed for '${id}'`,
+        id,
+      })
+    }
+  }
 
   return diagnostics
 }

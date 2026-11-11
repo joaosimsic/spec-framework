@@ -7,6 +7,7 @@ import { RustAdapter } from "../adapters/rust"
 import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
 import { verifySpecLock } from "../approval/verify"
+import { EvidenceCollector, type EvidenceRecord } from "../evidence"
 import { requiredToolsFor, selectAdapter, selectAdapters } from "./adapter-selection"
 import { SpecConfigLoader } from "./config"
 import {
@@ -37,17 +38,18 @@ export interface CheckRun {
   result: CheckResult
   output: string
   code: number
+  evidence: EvidenceRecord[]
 }
 
 async function runNativeChecks(
   target: string,
   options: CheckOptions,
   diagnostics: Diagnostic[],
-): Promise<void> {
+): Promise<EvidenceRecord[]> {
   const [config, configError] = await new SpecConfigLoader(target).load()
   if (configError) {
     diagnostics.push({ level: "error", code: configError.code, message: configError.message })
-    return
+    return []
   }
   if (config === null) {
     diagnostics.push({
@@ -55,7 +57,7 @@ async function runNativeChecks(
       code: "SPEC-BAD-CONFIG",
       message: "config loader returned no configuration",
     })
-    return
+    return []
   }
 
   const activeAdapters: NativeAdapter[] = []
@@ -68,7 +70,7 @@ async function runNativeChecks(
       code: "IMPL-UNKNOWN-ADAPTER",
       message: `unsupported implementation adapter '${implementation.unknownId}'`,
     })
-    return
+    return []
   }
   if (implementation.adapter !== null) activeAdapters.push(implementation.adapter)
 
@@ -81,7 +83,7 @@ async function runNativeChecks(
       code: "ARCH-UNKNOWN-ADAPTER",
       message: `unsupported architecture adapter '${architecture.unknownId}'`,
     })
-    return
+    return []
   }
   if (architecture.adapter !== null) activeAdapters.push(architecture.adapter)
 
@@ -94,7 +96,7 @@ async function runNativeChecks(
       code: "REQ-UNKNOWN-ADAPTER",
       message: `unsupported requirements adapter '${requirements.unknownId}'`,
     })
-    return
+    return []
   }
   if (requirements.adapter !== null) activeAdapters.push(requirements.adapter)
 
@@ -107,7 +109,7 @@ async function runNativeChecks(
       code: "FORMAL-UNKNOWN-ADAPTER",
       message: `unsupported formal adapter '${formal.unknownId}'`,
     })
-    return
+    return []
   }
   if (formal.adapter !== null) activeAdapters.push(formal.adapter)
 
@@ -134,10 +136,24 @@ async function runNativeChecks(
     processRunner: options.processRunner ?? new BunProcessRunner(),
     toolLocator: options.toolLocator ?? new ToolResolver(target),
   }
+  const records: EvidenceRecord[] = []
   for (const adapter of activeAdapters) {
     const adapterRun = await adapter.run(context)
     diagnostics.push(...adapterRun.diagnostics)
+    records.push(...(adapterRun.evidence ?? []))
   }
+
+  const [evidence, evidenceError] = new EvidenceCollector().collect(records)
+  if (evidenceError !== null) {
+    diagnostics.push({
+      level: "error",
+      code: evidenceError.code,
+      message: evidenceError.message,
+    })
+    return []
+  }
+
+  return evidence ?? []
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {
@@ -148,12 +164,12 @@ export async function runCheck(target: string, options: CheckOptions = {}): Prom
   const structural = lintBlocks(blocks)
   diagnostics.push(...structural.diagnostics)
 
-  if (options.verifyApprovals !== false) {
-    diagnostics.push(...(await verifySpecLock(target, blocks)))
-  }
+  const evidence = options.structural ? [] : await runNativeChecks(target, options, diagnostics)
 
-  if (!options.structural) {
-    await runNativeChecks(target, options, diagnostics)
+  if (options.verifyApprovals !== false) {
+    diagnostics.push(
+      ...(await verifySpecLock(target, blocks, options.structural ? undefined : evidence)),
+    )
   }
 
   const errors = diagnostics.filter((item) => item.level === "error").length
@@ -162,6 +178,7 @@ export async function runCheck(target: string, options: CheckOptions = {}): Prom
   if (options.json) {
     return {
       result: { diagnostics, errors, warnings },
+      evidence,
       output: JSON.stringify({ diagnostics, errors, warnings }, null, 2),
       code: errors > 0 ? 1 : 0,
     }
@@ -178,6 +195,7 @@ export async function runCheck(target: string, options: CheckOptions = {}): Prom
 
   return {
     result: { diagnostics, errors, warnings },
+    evidence,
     output: lines.join("\n"),
     code: errors > 0 ? 1 : 0,
   }

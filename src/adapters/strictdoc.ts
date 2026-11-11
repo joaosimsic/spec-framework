@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { attemptAsync } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 export class StrictDocAdapter implements NativeAdapter {
@@ -26,29 +27,71 @@ export class StrictDocAdapter implements NativeAdapter {
 
     const outputDirectory = join(tmpdir(), `strictdoc-${process.pid}-${Date.now()}`)
     const requirementsDirectory = join(context.target, "spec", "requirements")
+    const requirementFiles = await this.collectRequirementFiles(requirementsDirectory)
+    const commandArguments = [
+      "export",
+      requirementsDirectory,
+      "--output-dir",
+      outputDirectory,
+      "--formats",
+      "json",
+      "--no-parallelization",
+    ]
     const [commandResult, commandError] = await context.processRunner.run({
       executable,
-      arguments: [
-        "export",
-        requirementsDirectory,
-        "--output-dir",
-        outputDirectory,
-        "--formats",
-        "json",
-        "--no-parallelization",
-      ],
+      arguments: commandArguments,
       workingDirectory: context.target,
     })
     await attemptAsync(() => rm(outputDirectory, { recursive: true, force: true }))
     if (commandError) {
-      return { ran: true, diagnostics: [this.failure(commandError.code, commandError.message)] }
+      return this.withEvidence(context, requirementFiles, {
+        ran: true,
+        diagnostics: [this.failure(commandError.code, commandError.message)],
+      }, [this.tool, ...commandArguments])
     }
     if (commandResult === null) {
-      const diagnostic = this.failure("REQ-STRICTDOC", "strictdoc produced no result")
-      return { ran: true, diagnostics: [diagnostic] }
+      return this.withEvidence(context, requirementFiles, {
+        ran: true,
+        diagnostics: [this.failure("REQ-STRICTDOC", "strictdoc produced no result")],
+      }, [this.tool, ...commandArguments])
     }
 
-    return this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode)
+    return this.withEvidence(
+      context,
+      requirementFiles,
+      this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode),
+      [this.tool, ...commandArguments],
+    )
+  }
+
+  private async withEvidence(
+    context: AdapterContext,
+    requirementFiles: string[],
+    run: AdapterRun,
+    command: string[],
+  ): Promise<AdapterRun> {
+    const inputs = await new EvidenceFactory().inputs(context.target, requirementFiles)
+    const failed = run.diagnostics.some((diagnostic) => diagnostic.level === "error")
+
+    return {
+      ...run,
+      evidence: [
+        new EvidenceFactory().create({
+          id: "EVD-REQ-STRICTDOC",
+          kind: "requirements",
+          method: "analysis",
+          tool: this.tool,
+          result: failed ? "fail" : "pass",
+          inputs,
+          command,
+          ...(failed ? { details: this.diagnosticDetails(run.diagnostics) } : {}),
+        }),
+      ],
+    }
+  }
+
+  private diagnosticDetails(diagnostics: Diagnostic[]): string {
+    return diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n")
   }
 
   private parseResult(stdout: string, stderr: string, exitCode: number): AdapterRun {

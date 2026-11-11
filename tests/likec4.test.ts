@@ -54,6 +54,27 @@ describe("LikeC4Adapter", () => {
     expect(processRunner.calls[0]?.arguments).not.toContain("--no-layout")
   })
 
+  test("records passing architecture evidence", async () => {
+    const { run } = await runAdapter(
+      JSON.stringify({ valid: true, errors: [], stats: { totalFiles: 1 } }),
+    )
+
+    expect(run.evidence).toHaveLength(1)
+    expect(run.evidence?.[0]?.id).toBe("EVD-ARCH-LIKEC4")
+    expect(run.evidence?.[0]?.result).toBe("pass")
+    expect(run.evidence?.[0]?.hash).toStartWith("sha256:")
+  })
+
+  test("records failing architecture evidence", async () => {
+    const { run } = await runAdapter(
+      JSON.stringify({ valid: false, errors: [{ message: "Unknown element" }] }),
+      1,
+    )
+
+    expect(run.evidence?.[0]?.id).toBe("EVD-ARCH-LIKEC4")
+    expect(run.evidence?.[0]?.result).toBe("fail")
+  })
+
   test("maps validation errors to diagnostics", async () => {
     const { run } = await runAdapter(
       JSON.stringify({

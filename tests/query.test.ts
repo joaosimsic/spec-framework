@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { Result } from "../src/core/result"
+import { EvidenceFactory, EvidenceStore } from "../src/evidence"
 import type { GraphWorkspace } from "../src/model/types"
 import { runQuery } from "../src/query/index"
 import type { WorkspaceMetadataReader } from "../src/query/types"
@@ -80,6 +81,7 @@ function parseGraph(output: string): {
     status?: string
     links: Array<{ type: string; to: string }>
   }>
+  evidence: Array<{ id: string; kind?: string; method?: string; result?: string; hash?: string }>
   findings: Array<{ id?: string }>
   tool_versions: Record<string, string>
 } {
@@ -94,6 +96,7 @@ function parseGraph(output: string): {
       status?: string
       links: Array<{ type: string; to: string }>
     }>
+    evidence: Array<{ id: string; kind?: string; method?: string; result?: string; hash?: string }>
     findings: Array<{ id?: string }>
     tool_versions: Record<string, string>
   }
@@ -123,6 +126,37 @@ describe("runQuery", () => {
         to: "CAP-SAMPLE",
       })
       expect(typeof graph.tool_versions.spec).toBe("string")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("includes stored evidence artifacts", async () => {
+    const target = await createTarget()
+    try {
+      const record = new EvidenceFactory().create({
+        id: "EVD-SAMPLE-001",
+        kind: "sample",
+        method: "test",
+        tool: "bun",
+        result: "pass",
+        inputs: [],
+        command: ["bun", "test"],
+      })
+      await new EvidenceStore(target).writeAll([record])
+      const run = await runQuery(target, { json: true, workspaceReader: reader() })
+
+      expect(run.code).toBe(0)
+      const graph = parseGraph(run.output)
+      expect(graph.evidence).toEqual([
+        {
+          id: "EVD-SAMPLE-001",
+          kind: "sample",
+          method: "test",
+          result: "pass",
+          hash: record.hash,
+        },
+      ])
     } finally {
       await rm(target, { recursive: true, force: true })
     }

@@ -1,12 +1,18 @@
 import { readdir } from "node:fs/promises"
-import { basename, join } from "node:path"
+import { basename, join, relative } from "node:path"
 import { attempt, attemptAsync } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory, type EvidenceRecord, type EvidenceResult } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 interface VerifyManifest {
     maxSteps: number
     invariants: Map<string, string[]>
+}
+
+interface QuintRun {
+    diagnostics: Diagnostic[]
+    evidence: EvidenceRecord[]
 }
 
 export class QuintAdapter implements NativeAdapter {
@@ -28,59 +34,126 @@ export class QuintAdapter implements NativeAdapter {
         const quintFiles = await this.collectQuintFiles(formalDirectory)
         if (quintFiles.length === 0) return { ran: true, diagnostics: [this.failure("FORMAL-QUINT-NO-SOURCES", "no Quint sources found under spec/formal")] }
 
-        const typecheckDiagnostics = await this.typecheckFiles(context, executable, quintFiles)
+        const typecheckRun = await this.typecheckFiles(context, executable, quintFiles)
 
         const verifyManifest = await this.readVerifyManifest(context.target)
-        const verifyDiagnostics = await this.verifyFiles(context, executable, quintFiles, verifyManifest)
+        const verifyRun = await this.verifyFiles(context, executable, quintFiles, verifyManifest)
 
-        return { ran: true, diagnostics: [...typecheckDiagnostics, ...verifyDiagnostics] }
+        return {
+            ran: true,
+            diagnostics: [...typecheckRun.diagnostics, ...verifyRun.diagnostics],
+            evidence: [...typecheckRun.evidence, ...verifyRun.evidence],
+        }
     }
 
-    private async typecheckFiles(context: AdapterContext, executable: string, quintFiles: string[]): Promise<Diagnostic[]> {
+    private async typecheckFiles(context: AdapterContext, executable: string, quintFiles: string[]): Promise<QuintRun> {
         const diagnostics: Diagnostic[] = []
+        const evidence: EvidenceRecord[] = []
         for (const filePath of quintFiles) {
-            const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: ["typecheck", filePath], workingDirectory: context.target })
+            const commandArguments = ["typecheck", filePath]
+            const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: commandArguments, workingDirectory: context.target })
             if (commandError) {
-                diagnostics.push(this.failure(commandError.code, commandError.message))
+                const diagnostic = this.failure(commandError.code, commandError.message)
+                diagnostics.push(diagnostic)
+                evidence.push(await this.evidenceRecord(context, filePath, "TYPECHECK", "typecheck", "fail", diagnostic.message, [this.tool, "typecheck", relative(context.target, filePath)]))
                 continue
             }
             if (commandResult === null) {
-                diagnostics.push(this.failure("FORMAL-QUINT-TYPECHECK", "quint typecheck produced no result"))
+                const diagnostic = this.failure("FORMAL-QUINT-TYPECHECK", "quint typecheck produced no result")
+                diagnostics.push(diagnostic)
+                evidence.push(await this.evidenceRecord(context, filePath, "TYPECHECK", "typecheck", "fail", diagnostic.message, [this.tool, "typecheck", relative(context.target, filePath)]))
                 continue
             }
             const typecheckDiagnostic = this.parseTypecheckResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode, filePath)
             if (typecheckDiagnostic !== null) diagnostics.push(typecheckDiagnostic)
+            evidence.push(await this.evidenceRecord(context, filePath, "TYPECHECK", "typecheck", typecheckDiagnostic === null ? "pass" : "fail", typecheckDiagnostic?.message, [this.tool, "typecheck", relative(context.target, filePath)]))
         }
-        return diagnostics
+        return { diagnostics, evidence }
     }
 
-    private async verifyFiles(context: AdapterContext, executable: string, quintFiles: string[], verifyManifest: VerifyManifest): Promise<Diagnostic[]> {
+    private async verifyFiles(context: AdapterContext, executable: string, quintFiles: string[], verifyManifest: VerifyManifest): Promise<QuintRun> {
         const diagnostics: Diagnostic[] = []
+        const evidence: EvidenceRecord[] = []
         for (const filePath of quintFiles) {
             const baseName = basename(filePath)
             const invariantNames = verifyManifest.invariants.get(baseName) ?? []
             if (invariantNames.length === 0) {
                 diagnostics.push({ level: "warning", code: "FORMAL-QUINT-SKIPPED-VERIFY", message: `no invariant mapping for ${baseName}; add spec/formal/quint.json entry`, file: filePath })
+                evidence.push(await this.evidenceRecord(context, filePath, "VERIFY", "model-check", "skipped", `no invariant mapping for ${baseName}`, [this.tool, "verify", relative(context.target, filePath)]))
                 continue
             }
-            const verifyDiagnostic = await this.verifySingle(context, executable, filePath, invariantNames, verifyManifest.maxSteps)
-            if (verifyDiagnostic !== null) diagnostics.push(verifyDiagnostic)
+            const verifyRun = await this.verifySingle(context, executable, filePath, invariantNames, verifyManifest.maxSteps)
+            diagnostics.push(...verifyRun.diagnostics)
+            evidence.push(...verifyRun.evidence)
         }
-        return diagnostics
+        return { diagnostics, evidence }
     }
 
-    private async verifySingle(context: AdapterContext, executable: string, filePath: string, invariantNames: string[], maxSteps: number): Promise<Diagnostic | null> {
+    private async verifySingle(context: AdapterContext, executable: string, filePath: string, invariantNames: string[], maxSteps: number): Promise<QuintRun> {
+        const commandArguments = ["verify", filePath, "--invariant", invariantNames.join(","), "--max-steps", String(maxSteps)]
+        const canonicalCommand = [this.tool, "verify", relative(context.target, filePath), "--invariant", invariantNames.join(","), "--max-steps", String(maxSteps)]
         const javaExecutable = await context.toolLocator.resolve("java")
-        if (javaExecutable === null) return this.failure("FORMAL-QUINT-MISSING-BACKEND", "quint verify requires java; install a Java runtime and ensure java is on PATH")
-        const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: ["verify", filePath, "--invariant", invariantNames.join(","), "--max-steps", String(maxSteps)], workingDirectory: context.target, timeoutMs: 300_000 })
-        if (commandError) return this.failure(commandError.code, commandError.message)
-        if (commandResult === null) return this.failure("FORMAL-QUINT-VERIFY", "quint verify produced no result")
+        if (javaExecutable === null) {
+            const diagnostic = this.failure("FORMAL-QUINT-MISSING-BACKEND", "quint verify requires java; install a Java runtime and ensure java is on PATH")
+            return { diagnostics: [diagnostic], evidence: await this.invariantEvidence(context, filePath, invariantNames, "fail", diagnostic.message, canonicalCommand) }
+        }
+        const [commandResult, commandError] = await context.processRunner.run({ executable, arguments: commandArguments, workingDirectory: context.target, timeoutMs: 300_000 })
+        if (commandError) {
+            const diagnostic = this.failure(commandError.code, commandError.message)
+            return { diagnostics: [diagnostic], evidence: await this.invariantEvidence(context, filePath, invariantNames, "fail", diagnostic.message, canonicalCommand) }
+        }
+        if (commandResult === null) {
+            const diagnostic = this.failure("FORMAL-QUINT-VERIFY", "quint verify produced no result")
+            return { diagnostics: [diagnostic], evidence: await this.invariantEvidence(context, filePath, invariantNames, "fail", diagnostic.message, canonicalCommand) }
+        }
         const combinedOutput = `${commandResult.stdout}\n${commandResult.stderr}`.toLowerCase()
         const verifyFailed = commandResult.exitCode !== 0 || combinedOutput.includes("error") || combinedOutput.includes("fail") || combinedOutput.includes("violation")
-        if (!verifyFailed) return null
+        if (!verifyFailed) {
+            return { diagnostics: [], evidence: await this.invariantEvidence(context, filePath, invariantNames, "pass", undefined, canonicalCommand) }
+        }
         const tailOutput = this.truncatedTail(commandResult.stdout, commandResult.stderr)
         const message = tailOutput === "" ? `quint verify failed for ${filePath}` : tailOutput
-        return { level: "error", code: "FORMAL-QUINT-VERIFY", message, file: filePath }
+        const diagnostic = { level: "error" as const, code: "FORMAL-QUINT-VERIFY", message, file: filePath }
+        return { diagnostics: [diagnostic], evidence: await this.invariantEvidence(context, filePath, invariantNames, "fail", message, canonicalCommand) }
+    }
+
+    private async invariantEvidence(
+        context: AdapterContext,
+        filePath: string,
+        invariantNames: string[],
+        result: EvidenceResult,
+        details: string | undefined,
+        command: string[],
+    ): Promise<EvidenceRecord[]> {
+        const records: EvidenceRecord[] = []
+        for (const invariantName of invariantNames) {
+            records.push(await this.evidenceRecord(context, filePath, invariantName, "model-check", result, details, command))
+        }
+        return records
+    }
+
+    private async evidenceRecord(
+        context: AdapterContext,
+        filePath: string,
+        suffix: string,
+        kind: string,
+        result: EvidenceResult,
+        details: string | undefined,
+        command: string[],
+    ): Promise<EvidenceRecord> {
+        const moduleName = basename(filePath, ".qnt").toUpperCase().replace(/[^A-Z0-9]+/g, "-")
+        const evidenceSuffix = suffix.toUpperCase().replace(/[^A-Z0-9]+/g, "-")
+        const inputs = await new EvidenceFactory().inputs(context.target, [filePath, join(context.target, "spec", "formal", "quint.json")])
+        return new EvidenceFactory().create({
+            id: `EVD-QUINT-${moduleName}-${evidenceSuffix}`,
+            kind,
+            method: "formal",
+            tool: this.tool,
+            result,
+            inputs,
+            command,
+            ...(details === undefined ? {} : { details }),
+        })
     }
 
     private parseTypecheckResult(stdout: string, stderr: string, exitCode: number, filePath: string): Diagnostic | null {

@@ -49,6 +49,11 @@ describe("QuintAdapter", () => {
         expect(run.diagnostics).toEqual([])
         expect(processRunner.calls[0]?.arguments).toContain("typecheck")
         expect(processRunner.calls[0]?.arguments).toContain(quintFile)
+        expect(run.evidence?.map((record) => record.id)).toEqual([
+            "EVD-QUINT-EXAMPLE-TYPECHECK",
+            "EVD-QUINT-EXAMPLE-NONEGATIVE",
+        ])
+        expect(run.evidence?.every((record) => record.result === "pass")).toBe(true)
     })
 
     test("maps typecheck failure to a diagnostic", async () => {
@@ -60,6 +65,7 @@ describe("QuintAdapter", () => {
         expect(run.diagnostics).toHaveLength(1)
         expect(run.diagnostics[0]?.code).toBe("FORMAL-QUINT-TYPECHECK")
         expect(run.diagnostics[0]?.file).toBe(quintFile)
+        expect(run.evidence?.find((record) => record.id === "EVD-QUINT-EXAMPLE-TYPECHECK")?.result).toBe("fail")
     })
 
     test("emits no-sources when formal dir has no quint files", async () => {

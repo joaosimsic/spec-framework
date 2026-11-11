@@ -1,17 +1,19 @@
 import { loadRequirementSources } from "../core/requirements"
 import type { SdocBlock } from "../core/types"
+import { EvidenceStore, type EvidenceRecord } from "../evidence"
 import type { ApprovalConfirmation } from "./confirmation"
 import { GitCleanlinessReader, type GitStatusReader } from "./git"
 import { elementContentHash } from "./hash"
 import { SpecLockLoader, SpecLockWriter, specLockPath } from "./lock"
 import { SdocStatusWriter } from "./status"
-import { SPEC_LOCK_VERSION, type SpecLock } from "./types"
+import { SPEC_LOCK_VERSION, type SpecLock, type SpecLockEvidence } from "./types"
 
 export interface ApprovalOptions {
   approver: string
   confirmation: ApprovalConfirmation
   allowDirty?: boolean
   gitStatus?: GitStatusReader
+  evidence?: EvidenceRecord[]
   now?: () => Date
 }
 
@@ -67,6 +69,13 @@ export async function runApproval(
   )
   if (!confirmed) return failure("approval cancelled")
 
+  const [evidencePaths, evidenceError] = await new EvidenceStore(target).writeAll(
+    options.evidence ?? [],
+  )
+  if (evidenceError !== null || evidencePaths === null) {
+    return failure(evidenceError?.message ?? "cannot write evidence artifacts")
+  }
+
   const [writtenFiles, statusError] = await new SdocStatusWriter(target).write(
     requestedIds,
     "Approved",
@@ -81,6 +90,7 @@ export async function runApproval(
     options.approver.trim(),
     timestamp,
     dirty,
+    options.evidence ?? [],
   )
   const [lockPath, writeError] = await new SpecLockWriter(target).write(lock)
   if (writeError !== null || lockPath === null) {
@@ -89,6 +99,7 @@ export async function runApproval(
 
   const lines = requested.map((id) => `approved ${id}`)
   lines.push(`lock: ${lockPath}`)
+  if (evidencePaths.length > 0) lines.push(`evidence: ${evidencePaths.length} artifact(s)`)
   if (writtenFiles !== null && writtenFiles.length > 0) {
     lines.push(`updated status in ${writtenFiles.length} file(s)`)
   }
@@ -189,6 +200,7 @@ function buildLock(
   approver: string,
   approvedAt: string,
   dirty: boolean,
+  evidence: EvidenceRecord[],
 ): SpecLock {
   const elements = { ...(existingLock?.elements ?? {}) }
 
@@ -197,7 +209,7 @@ function buildLock(
     if (block === undefined) continue
     elements[id] = {
       content_hash: elementContentHash(block),
-      evidence: existingLock?.elements[id]?.evidence ?? [],
+      evidence: splitList(block.fields.EVIDENCE ?? ""),
     }
   }
 
@@ -207,8 +219,25 @@ function buildLock(
     approver,
     dirty,
     elements,
-    evidence: { ...(existingLock?.evidence ?? {}) },
+    evidence: {
+      ...(existingLock?.evidence ?? {}),
+      ...evidenceEntries(evidence),
+    },
   }
+}
+
+function evidenceEntries(evidence: EvidenceRecord[]): Record<string, SpecLockEvidence> {
+  const entries: Record<string, SpecLockEvidence> = {}
+
+  for (const record of evidence) {
+    entries[record.id] = {
+      hash: record.hash,
+      tool: record.tool,
+      result: record.result,
+    }
+  }
+
+  return entries
 }
 
 function splitList(value: string): string[] {

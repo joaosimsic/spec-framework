@@ -5,6 +5,7 @@ import { readdir } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
 import { attempt, attemptAsync } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 type Compatibility = "none" | "backward" | "forward" | "full"
@@ -30,33 +31,55 @@ export class JsonSchemaAdapter implements NativeAdapter {
         if (schemaFiles.length === 0) return { ran: true, diagnostics: [this.failure("CONTRACT-JSONSCHEMA-NO-SOURCES", "no JSON Schema contracts found under spec/contracts")] }
 
         const diagnostics: Diagnostic[] = []
+        const evidence: EvidenceRecord[] = []
         for (const filePath of schemaFiles) {
-            const [fileText, readError] = await attemptAsync(() => Bun.file(filePath).text())
-            if (readError) {
-                diagnostics.push({ level: "error", code: "CONTRACT-JSONSCHEMA-READ", message: readError, file: filePath })
-                continue
-            }
-            if (fileText === null) {
-                diagnostics.push({ level: "error", code: "CONTRACT-JSONSCHEMA-READ", message: `unreadable schema file ${filePath}`, file: filePath })
-                continue
-            }
-
-            const schemaDiagnostic = this.validateSchemaFile(validator, filePath, fileText)
-            if (schemaDiagnostic !== null) {
-                diagnostics.push(schemaDiagnostic)
-                continue
-            }
-
-            const sidecarDiagnostic = await this.validateSidecar(filePath)
-            if (sidecarDiagnostic !== null) {
-                diagnostics.push(sidecarDiagnostic)
-                continue
-            }
-
-            const baselineDiagnostic = await this.checkBaseline(context.target, filePath, fileText)
-            if (baselineDiagnostic !== null) diagnostics.push(baselineDiagnostic)
+            const schemaDiagnostics = await this.checkSchema(validator, context.target, filePath)
+            diagnostics.push(...schemaDiagnostics)
+            evidence.push(await this.evidenceRecord(context, filePath, schemaDiagnostics))
         }
-        return { ran: true, diagnostics }
+        return { ran: true, diagnostics, evidence }
+    }
+
+    private async checkSchema(validator: Ajv, target: string, filePath: string): Promise<Diagnostic[]> {
+        const diagnostics: Diagnostic[] = []
+        const [fileText, readError] = await attemptAsync(() => Bun.file(filePath).text())
+        if (readError) {
+            return [{ level: "error", code: "CONTRACT-JSONSCHEMA-READ", message: readError, file: filePath }]
+        }
+        if (fileText === null) {
+            return [{ level: "error", code: "CONTRACT-JSONSCHEMA-READ", message: `unreadable schema file ${filePath}`, file: filePath }]
+        }
+
+        const schemaDiagnostic = this.validateSchemaFile(validator, filePath, fileText)
+        if (schemaDiagnostic !== null) return [schemaDiagnostic]
+
+        const sidecarDiagnostic = await this.validateSidecar(filePath)
+        if (sidecarDiagnostic !== null) return [sidecarDiagnostic]
+
+        const baselineDiagnostic = await this.checkBaseline(target, filePath, fileText)
+        if (baselineDiagnostic !== null) diagnostics.push(baselineDiagnostic)
+
+        return diagnostics
+    }
+
+    private async evidenceRecord(context: AdapterContext, filePath: string, diagnostics: Diagnostic[]): Promise<EvidenceRecord> {
+        const schemaBaseName = basename(filePath)
+        const contractBaseName = schemaBaseName.slice(0, -".schema.json".length)
+        const sidecarPath = join(dirname(filePath), `${contractBaseName}.contract.json`)
+        const baselinePath = join(context.target, "spec", "contracts", ".baselines", `${contractBaseName}.sha256`)
+        const inputs = await new EvidenceFactory().inputs(context.target, [filePath, sidecarPath, baselinePath])
+        const failed = diagnostics.some((diagnostic) => diagnostic.level === "error")
+        const contractId = (await this.readContractId(sidecarPath)) ?? `CON-${contractBaseName.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`
+
+        return new EvidenceFactory().create({
+            id: `EVD-${contractId}`,
+            kind: "json-schema",
+            method: "contract",
+            tool: this.tool,
+            result: failed ? "fail" : "pass",
+            inputs,
+            ...(failed ? { details: diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n") } : {}),
+        })
     }
 
     private validateSchemaFile(validator: Ajv, filePath: string, text: string): Diagnostic | null {
@@ -69,6 +92,15 @@ export class JsonSchemaAdapter implements NativeAdapter {
         if (compiledSchema === null) return { level: "error", code: "CONTRACT-JSONSCHEMA", message: `ajv could not compile schema ${filePath}`, file: filePath }
 
         return null
+    }
+
+    private async readContractId(sidecarPath: string): Promise<string | null> {
+        const [text, readError] = await attemptAsync(() => Bun.file(sidecarPath).text())
+        if (readError !== null || text === null) return null
+        const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
+        if (parseError !== null || !this.isRecord(parsed)) return null
+
+        return typeof parsed["id"] === "string" && parsed["id"].trim() !== "" ? parsed["id"] : null
     }
 
     private async validateSidecar(schemaFilePath: string): Promise<Diagnostic | null> {

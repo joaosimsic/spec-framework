@@ -1,6 +1,7 @@
 import { isAbsolute, join, relative, resolve, sep } from "node:path"
 import { attempt, attemptAsync, type Result } from "../core/result"
 import type { Diagnostic } from "../core/types"
+import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
 
 interface CompileCheck {
@@ -193,11 +194,38 @@ export class CompilerAdapter implements NativeAdapter {
     }
 
     const diagnostics: Diagnostic[] = []
+    const evidence: EvidenceRecord[] = []
     for (const check of config.checks) {
-      diagnostics.push(...(await this.runCheck(context, check, configPath)))
+      const checkDiagnostics = await this.runCheck(context, check, configPath)
+      diagnostics.push(...checkDiagnostics)
+      evidence.push(await this.evidenceRecord(context, check, checkDiagnostics))
     }
 
-    return { ran: true, diagnostics }
+    return { ran: true, diagnostics, evidence }
+  }
+
+  private async evidenceRecord(
+    context: AdapterContext,
+    check: CompileCheck,
+    diagnostics: Diagnostic[],
+  ): Promise<EvidenceRecord> {
+    const inputs = await new EvidenceFactory().inputs(context.target, [
+      join(context.target, "spec", "implementation", "compile.json"),
+      join(context.target, "spec", "toolchain.lock.json"),
+    ])
+    const failed = diagnostics.some((diagnostic) => diagnostic.level === "error")
+    const checkId = check.id.toUpperCase().replace(/[^A-Z0-9]+/g, "-")
+
+    return new EvidenceFactory().create({
+      id: `EVD-IMPL-${checkId}`,
+      kind: "implementation",
+      method: "preflight",
+      tool: check.command[0] ?? this.tool,
+      result: failed ? "fail" : "pass",
+      inputs,
+      command: [...check.command],
+      ...(failed ? { details: diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n") } : {}),
+    })
   }
 
   private async runCheck(

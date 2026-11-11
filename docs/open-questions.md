@@ -79,7 +79,7 @@
 - Should compiler failures be waivable, and under what scope and expiry?
 - How should diagnostics be normalized across languages without hiding actionable detail?
 - Should `spec doctor` resolve arbitrary configured executables, or leave that to `spec check`?
-- When should compiler evidence move from diagnostics into the hashed evidence bundle?
+- When should the audit bundle regenerate compiler evidence instead of approval?
 - Should the adapter accept multiple named implementation adapters later?
 
 ## Agent workflow

@@ -1,7 +1,8 @@
 # Approval
 
 > Status: implemented for SDoc requirement and acceptance records, stored at
-> `spec/spec.lock`. Evidence hashing and the approval audit trail are pending.
+> `spec/spec.lock`. Native adapter evidence is hashed into the lock and written
+> under `spec/evidence/`. The approval audit trail is pending.
 
 ## Principle
 
@@ -83,13 +84,14 @@ Requirements:
 - all are `proposed`;
 - structural and native checks pass for the scope;
 - every requirement has acceptance criteria and formalization or waiver;
-- evidence hashes match the current sources;
+- evidence hashes match the current sources when native checks regenerate evidence;
 - approver identity is available;
 - the git tree is clean, or the approval records the dirty state explicitly.
 
 On success:
 
-- hashes are written to `spec/spec.lock`;
+- content and evidence hashes are written to `spec/spec.lock`;
+- evidence artifacts are written under `spec/evidence/`;
 - status becomes `approved`;
 - an approval record is appended to the audit trail;
 - the bundle approval page is updated.
@@ -134,7 +136,7 @@ Missing evidence blocks approval. A waiver is the only exception.
 Approval is invalid when:
 
 - content hash changes;
-- evidence hash changes;
+- evidence hash changes or approved evidence is not regenerated;
 - linked capability or requirement derivation changes;
 - linked semantic constraint fails or its ontology changes;
 - linked verification case loses evidence;

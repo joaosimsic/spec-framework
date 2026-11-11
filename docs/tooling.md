@@ -74,7 +74,7 @@ CI also verifies:
 
 ```text
 spec/
-  config.yaml
+  config.json
   architecture/
   requirements/
   formal/

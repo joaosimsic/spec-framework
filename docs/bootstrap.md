@@ -1,6 +1,6 @@
 # Bootstrap
 
-> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. Automatic provisioning and native adapters are the next Phase 1 milestones.
+> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. The LikeC4 validation adapter is implemented; automatic provisioning and the remaining native adapters are the next Phase 1 milestones.
 
 ## Default
 
@@ -22,7 +22,7 @@ spec doctor --fix
 spec check
 ```
 
-1. `spec init` detects the project type, writes `spec.config.yaml`, and scaffolds the full profile.
+1. `spec init` detects the project type, writes `spec/config.json`, and scaffolds the full profile.
 2. `spec doctor --fix` resolves missing pinned tools using the best available runner.
 3. `spec check` runs structural checks, native validators, formal verification, and contract checks.
 

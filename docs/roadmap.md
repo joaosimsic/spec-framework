@@ -14,7 +14,7 @@ Exit criteria: docs complete, repository public, decisions recorded.
 
 ## Phase 1 — Full-stack vertical slice
 
-Status: in progress. Core CLI, `spec init`, `spec doctor`, and structural checks are implemented.
+Status: in progress. Core CLI, `spec init`, `spec doctor`, structural checks, and the LikeC4 validation adapter are implemented.
 
 Build one end-to-end path:
 
@@ -22,7 +22,7 @@ Build one end-to-end path:
 - `spec init`, `spec init --existing`;
 - `spec doctor`, `spec doctor --fix`;
 - structural checks over SDoc;
-- LikeC4 adapter: validation, views, MCP;
+- LikeC4 adapter: validation; views and MCP pending;
 - StrictDoc adapter: validation, traceability, HTML/PDF;
 - Quint adapter: typecheck, Apalache verify, evidence;
 - contract adapters: JSON Schema, CLI, Rust public API;

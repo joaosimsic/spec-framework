@@ -1,5 +1,15 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
+import { LikeC4Adapter } from "../adapters/likec4"
+import type { NativeAdapter } from "../adapters/types"
+import { SpecConfigLoader } from "./config"
+import {
+  BunProcessRunner,
+  ToolResolver,
+  type ProcessRunner,
+  type ToolLocator,
+} from "./runner"
+import { attemptAsync } from "./result"
 import { lintBlocks } from "./lint"
 import { parseSdoc, requirementBlocks } from "./sdoc"
 import { getToolStatuses, missingRequiredDiagnostics } from "./doctor"
@@ -24,12 +34,54 @@ async function collectFiles(dir: string): Promise<string[]> {
 export interface CheckOptions {
   structural?: boolean
   json?: boolean
+  architectureAdapter?: NativeAdapter
+  processRunner?: ProcessRunner
+  toolLocator?: ToolLocator
 }
 
 export interface CheckRun {
   result: CheckResult
   output: string
   code: number
+}
+
+async function runNativeChecks(
+  target: string,
+  options: CheckOptions,
+  diagnostics: Diagnostic[],
+): Promise<void> {
+  const [config, configError] = await new SpecConfigLoader(target).load()
+  if (configError) {
+    diagnostics.push({ level: "error", code: configError.code, message: configError.message })
+    return
+  }
+  if (config === null) {
+    diagnostics.push({
+      level: "error",
+      code: "SPEC-BAD-CONFIG",
+      message: "config loader returned no configuration",
+    })
+    return
+  }
+
+  diagnostics.push(...missingRequiredDiagnostics(getToolStatuses(target)))
+
+  const adapter = options.architectureAdapter ?? new LikeC4Adapter()
+  if (config.adapters.architecture !== adapter.id) {
+    diagnostics.push({
+      level: "error",
+      code: "ARCH-UNKNOWN-ADAPTER",
+      message: `unsupported architecture adapter '${config.adapters.architecture}'`,
+    })
+    return
+  }
+
+  const adapterRun = await adapter.run({
+    target,
+    processRunner: options.processRunner ?? new BunProcessRunner(),
+    toolLocator: options.toolLocator ?? new ToolResolver(target),
+  })
+  diagnostics.push(...adapterRun.diagnostics)
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {
@@ -47,7 +99,26 @@ export async function runCheck(target: string, options: CheckOptions = {}): Prom
 
   const blocks = []
   for (const file of files) {
-    const text = await Bun.file(file).text()
+    const [text, readError] = await attemptAsync(() => Bun.file(file).text())
+    if (readError) {
+      diagnostics.push({
+        level: "error",
+        code: "SPEC-READ-FAILED",
+        message: `cannot read ${file}: ${readError}`,
+        file,
+      })
+      continue
+    }
+    if (text === null) {
+      diagnostics.push({
+        level: "error",
+        code: "SPEC-READ-FAILED",
+        message: `cannot read ${file}`,
+        file,
+      })
+      continue
+    }
+
     blocks.push(...requirementBlocks(parseSdoc(file, text)))
   }
 
@@ -55,7 +126,7 @@ export async function runCheck(target: string, options: CheckOptions = {}): Prom
   diagnostics.push(...structural.diagnostics)
 
   if (!options.structural) {
-    diagnostics.push(...missingRequiredDiagnostics(getToolStatuses()))
+    await runNativeChecks(target, options, diagnostics)
   }
 
   const errors = diagnostics.filter((item) => item.level === "error").length

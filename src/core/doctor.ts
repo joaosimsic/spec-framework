@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 import type { Diagnostic } from "./types"
 
 export interface ToolStatus {
@@ -26,10 +28,12 @@ const TOOLS = [
   { name: "podman", command: "podman", required: false, install: "install Podman" },
 ]
 
-export function getToolStatuses(): ToolStatus[] {
+export function getToolStatuses(target = process.cwd()): ToolStatus[] {
   return TOOLS.map((tool) => ({
     ...tool,
-    present: Bun.which(tool.command) !== null,
+    present:
+      existsSync(join(target, "node_modules", ".bin", tool.command)) ||
+      Bun.which(tool.command) !== null,
   }))
 }
 

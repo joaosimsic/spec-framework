@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "likec4": "1.60.0",
     "typescript": "latest"
   },
   "engines": {

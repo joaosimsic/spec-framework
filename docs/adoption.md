@@ -16,7 +16,7 @@ spec check
 
 The scaffold includes:
 
-- `spec.config.yaml`;
+- `spec/config.json`;
 - `spec/architecture/` with a LikeC4 starter model;
 - `spec/requirements/` with a StrictDoc grammar and one example requirement;
 - `spec/formal/` with a Quint module skeleton;

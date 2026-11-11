@@ -1,5 +1,7 @@
 {
   "schema": 1,
-  "status": "unprovisioned",
-  "tools": {}
+  "status": "partial",
+  "tools": {
+    "likec4": "1.60.0"
+  }
 }

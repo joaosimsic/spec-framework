@@ -1,6 +1,6 @@
 # Documentation index
 
-`spec-framework` is currently a design. Read in this order for the full argument.
+`spec-framework` is an implemented Phase 1 skeleton with complete design documentation. Read in this order for the full argument.
 
 ## Orientation
 

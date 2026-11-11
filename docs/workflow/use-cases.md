@@ -1,8 +1,10 @@
 # Use-case modes
 
-> Status: design. `spec start`, `spec map --review`, the workbench, and the
-> opencode plugin are not implemented. The mode model is accepted in decision
-> record [0011](../design-decisions/0011-interactive-use-case-modes.md).
+> Status: partially implemented. `spec change` provides the shared proposal
+> engine with same-worktree branches and typed SDoc operations. `spec start`,
+> `spec map --review`, `spec refactor`, the workbench, and the opencode plugin
+> are not implemented. The mode model is accepted in decision record
+> [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
 

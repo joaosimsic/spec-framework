@@ -19,6 +19,20 @@ const LINK_PREFIXES = {
   FORMAL: ["PROP-", "INV-", "none"],
   EVIDENCE: ["EVD-"],
   WAIVER: ["WVR-"],
+  REPLACES: [
+    "REQ-",
+    "AC-",
+    "CMP-",
+    "CAP-",
+    "VOBJ-",
+    "VER-",
+    "PROP-",
+    "CON-",
+    "EVD-",
+    "UNK-",
+    "WVR-",
+    "DEC-",
+  ],
 }
 
 function diag(

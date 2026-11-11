@@ -1,5 +1,9 @@
 # Authoring workflow
 
+> Status: partially implemented. `spec change` creates proposal branches and
+> applies typed SDoc operations. The workbench, plugin, named-scope approval,
+> and impact analysis remain design.
+
 ## Principle
 
 The agent drafts. Deterministic tools validate. The human approves. Code follows the approved specification.

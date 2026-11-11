@@ -94,7 +94,8 @@ Rules:
 The initial SDoc collector emits these link types: `derives_from` for
 `CAPABILITY`, `acceptance` for `ACCEPTANCE`, `component` for `COMPONENT`,
 `formalization` for `FORMAL`, `contract` for `CONTRACTS`, `verification` for
-`VERIFICATION`, `evidence` for `EVIDENCE`, and `waiver` for `WAIVER`. The
+`VERIFICATION`, `evidence` for `EVIDENCE`, `waiver` for `WAIVER`, and
+`replaces` for `REPLACES`. The
 collector skips `FORMAL: none` and `CAPABILITY: infrastructure`. Links that do
 not resolve become `GRAPH-UNRESOLVED-LINK` findings; the graph does not invent
 missing elements. The relation vocabulary is interim until the full cross-layer

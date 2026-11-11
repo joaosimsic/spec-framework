@@ -1,5 +1,10 @@
 # Change management
 
+> Status: partially implemented. `spec change` creates same-worktree proposal
+> branches and applies typed SDoc operations `rename`, `deprecate`, `replace`,
+> `split`, and `merge`. Impact analysis, `extract`, `move`,
+> `change-contract`, `spec refactor`, and the workbench remain design.
+
 ## Principle
 
 Every change is a proposal against an approved baseline. The change report explains impact before code changes.
@@ -81,6 +86,10 @@ Refactoring uses typed operations, not free-form edits:
 | `deprecate`       | Retire an element without deleting it                          |
 | `replace`         | Introduce a replacement with explicit deprecation              |
 | `change-contract` | Change a boundary and record compatibility impact              |
+
+`rename`, `deprecate`, `replace`, `split`, and `merge` apply to SDoc records
+today. `extract`, `move`, and `change-contract` remain design because they need
+architecture and contract source writers.
 
 The workbench simulates the before and after graph. The proposal cannot be
 implemented until a human approves the changed scope.

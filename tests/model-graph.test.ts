@@ -143,4 +143,16 @@ UID: REQ-SAMPLE-001
     expect(requirement).not.toHaveProperty("owner")
     expect(requirement).not.toHaveProperty("provenance")
   })
+
+  test("maps replaces fields to replacement links", () => {
+    const graph = buildGraph(`[REQUIREMENT]
+UID: REQ-SAMPLE-002
+TITLE: Replacement
+REPLACES: REQ-SAMPLE-001
+`)
+
+    expect(graph.elements[0]?.links).toEqual([
+      { type: "replaces", to: "REQ-SAMPLE-001" },
+    ])
+  })
 })

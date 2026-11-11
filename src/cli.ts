@@ -2,6 +2,15 @@ import pkg from "../package.json"
 import { runApproval } from "./approval/approve"
 import { TerminalApprovalConfirmation } from "./approval/confirmation"
 import { GitApproverResolver, GitCleanlinessReader } from "./approval/git"
+import {
+  ProposalOperationParser,
+  runChange,
+  runChangeStatus,
+  runProposalOperations,
+  type ProposalMode,
+  type ProposalOperation,
+} from "./change/index"
+import { attemptAsync } from "./core/result"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
@@ -16,6 +25,9 @@ Usage:
   spec check [--structural] [--json]
   spec map [--draft] [--json]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
+  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
+  spec change --op <json|file> [--op <json|file>]... [--technical] [--json]
+  spec change --status [--technical] [--json]
   spec approve <ids...> [--approver <name>] [--allow-dirty]
   spec version
   spec help
@@ -26,6 +38,7 @@ Commands:
   check     Run structural checks, then native checks
   map       Discover draft architecture from the repository
   query     Read the unified spec graph
+  change    Create or inspect a same-worktree proposal
   approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
@@ -217,6 +230,151 @@ async function commandQuery(args: string[]): Promise<number> {
   return run.code
 }
 
+interface ChangeArguments {
+  direction?: string
+  status: boolean
+  mode?: ProposalMode
+  operations: ProposalOperation[]
+  technical: boolean
+  json: boolean
+  error?: string
+}
+
+async function readOperationSource(
+  value: string,
+): Promise<[ProposalOperation[] | null, string | null]> {
+  const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
+  if (existsError === null && exists === true) {
+    const [text, readError] = await attemptAsync(() => Bun.file(value).text())
+    if (readError !== null || text === null) {
+      return [null, readError === null ? `cannot read ${value}` : readError]
+    }
+
+    return ProposalOperationParser.parseJson(text)
+  }
+
+  return ProposalOperationParser.parseJson(value)
+}
+
+async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
+  let direction: string | undefined
+  let status = false
+  let mode: ProposalMode | undefined
+  const operations: ProposalOperation[] = []
+  let technical = false
+  let json = false
+  let index = args[0] === "change" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--json") {
+      json = true
+      index += 1
+      continue
+    }
+    if (argument === "--status") {
+      status = true
+      index += 1
+      continue
+    }
+    if (argument === "--technical") {
+      technical = true
+      index += 1
+      continue
+    }
+    if (argument === "--mode") {
+      const value = args[index + 1]
+      if (value !== "scratch" && value !== "mapping" && value !== "refactor") {
+        return {
+          status,
+          operations,
+          technical,
+          json,
+          error: "--mode requires scratch, mapping, or refactor",
+        }
+      }
+      mode = value
+      index += 2
+      continue
+    }
+    if (argument === "--op") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { status, operations, technical, json, error: "--op requires JSON or a file path" }
+      }
+      const [parsed, parseError] = await readOperationSource(value)
+      if (parseError !== null || parsed === null) {
+        return {
+          status,
+          operations,
+          technical,
+          json,
+          error: parseError ?? "cannot parse operations",
+        }
+      }
+      operations.push(...parsed)
+      index += 2
+      continue
+    }
+    if (argument.startsWith("-")) {
+      return { status, operations, technical, json, error: `unknown change option: ${argument}` }
+    }
+    if (direction !== undefined) {
+      return { status, operations, technical, json, error: "change accepts one direction" }
+    }
+    direction = argument
+    index += 1
+  }
+
+  if (status && direction !== undefined) {
+    return { status, operations, technical, json, error: "--status does not accept a direction" }
+  }
+
+  return { direction, status, mode, operations, technical, json }
+}
+
+async function commandChange(args: string[]): Promise<number> {
+  const parsed = await parseChangeArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  if (parsed.status) {
+    const run = await runChangeStatus(process.cwd(), {
+      technical: parsed.technical,
+      json: parsed.json,
+    })
+    console.log(run.output)
+    return run.code
+  }
+
+  if (parsed.direction === undefined && parsed.operations.length > 0) {
+    const run = await runProposalOperations(process.cwd(), parsed.operations, {
+      technical: parsed.technical,
+      json: parsed.json,
+    })
+    console.log(run.output)
+    return run.code
+  }
+
+  if (parsed.direction === undefined) {
+    console.error('usage: spec change "<direction>" [--op <json|file>]...')
+    console.error("       spec change --op <json|file> [--op <json|file>]...")
+    console.error("       spec change --status [--json]")
+    return 2
+  }
+
+  const run = await runChange(process.cwd(), parsed.direction, {
+    mode: parsed.mode,
+    operations: parsed.operations,
+    technical: parsed.technical,
+    json: parsed.json,
+  })
+  console.log(run.output)
+  return run.code
+}
+
 interface ApproveArguments {
   ids: string[]
   approver?: string
@@ -306,6 +464,8 @@ export async function main(args: string[]): Promise<number> {
       return commandMap(args)
     case "query":
       return commandQuery(args)
+    case "change":
+      return commandChange(args)
     case "approve":
       return commandApprove(args)
     case "version":

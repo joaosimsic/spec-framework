@@ -43,7 +43,9 @@ spec init [--existing]
 spec doctor [--fix]
 spec check [--structural]
 spec map [--draft|--check]
-spec change "<direction>"
+spec change "<direction>" [--op <json|file>]
+spec change --op <json|file>
+spec change --status
 spec review
 spec bundle
 spec approve <ids...>

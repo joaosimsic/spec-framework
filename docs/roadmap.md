@@ -27,7 +27,7 @@ Build one end-to-end path:
 - Quint adapter: typecheck plus Apalache verify wired into `spec check`; evidence bundle pending;
 - contract adapters: JSON Schema, CLI snapshots, and Rust public API wired into `spec check` with compatibility evidence;
 - compiler preflight adapter: configured build/typecheck commands with deterministic diagnostics; evidence hashing pending;
-- generic and Rust discovery; `spec map --draft`;
+- generic and Rust discovery and `spec map --draft`;
 - `spec check`, `spec change`, `spec bundle`, `spec approve`;
 - agent skill, commands, permissions;
 - self-hosting: spec-framework specifies and maps itself.

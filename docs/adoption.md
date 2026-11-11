@@ -1,6 +1,6 @@
 # Adoption
 
-> Implementation status: `spec init`, `spec doctor`, and structural checks are available. Mapping, native adapters, and automatic provisioning are in progress.
+> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, and `spec map --draft` are available. Automatic provisioning is in progress.
 
 ## Goal
 

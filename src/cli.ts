@@ -2,6 +2,7 @@ import pkg from "../package.json"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
+import { runMap } from "./core/map"
 
 const HELP = `spec-framework CLI
 
@@ -9,6 +10,7 @@ Usage:
   spec init [--existing] [--force]
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
+  spec map [--draft] [--json]
   spec version
   spec help
 
@@ -16,6 +18,7 @@ Commands:
   init      Create the full-stack spec scaffold
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
+  map       Discover draft architecture from the repository
   version   Print the CLI version
   help      Show this help
 `
@@ -81,6 +84,15 @@ async function commandCheck(args: string[]): Promise<number> {
   return run.code
 }
 
+async function commandMap(args: string[]): Promise<number> {
+  const run = await runMap(process.cwd(), {
+    draft: hasFlag(args, "--draft"),
+    json: hasFlag(args, "--json"),
+  })
+  console.log(run.output)
+  return run.code
+}
+
 export async function main(args: string[]): Promise<number> {
   const [command = "help", ...rest] = withoutFlags(args)
 
@@ -91,6 +103,8 @@ export async function main(args: string[]): Promise<number> {
       return commandDoctor(args)
     case "check":
       return commandCheck(args)
+    case "map":
+      return commandMap(args)
     case "version":
       console.log(pkg.version)
       return 0

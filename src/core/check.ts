@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { LikeC4Adapter } from "../adapters/likec4"
+import { QuintAdapter } from "../adapters/quint"
 import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
 import { SpecConfigLoader } from "./config"
@@ -37,6 +38,7 @@ export interface CheckOptions {
   json?: boolean
   architectureAdapter?: NativeAdapter
   requirementsAdapter?: NativeAdapter
+  formalAdapter?: NativeAdapter
   processRunner?: ProcessRunner
   toolLocator?: ToolLocator
 }
@@ -101,6 +103,26 @@ async function runNativeChecks(
     toolLocator: options.toolLocator ?? new ToolResolver(target),
   })
   diagnostics.push(...requirementsRun.diagnostics)
+
+  const formalAdapter = options.formalAdapter ?? new QuintAdapter()
+  if (config.adapters.formal === undefined) {
+    return
+  }
+  if (config.adapters.formal !== formalAdapter.id) {
+    diagnostics.push({
+      level: "error",
+      code: "FORMAL-UNKNOWN-ADAPTER",
+      message: `unsupported formal adapter '${config.adapters.formal}'`,
+    })
+    return
+  }
+
+  const formalRun = await formalAdapter.run({
+    target,
+    processRunner: options.processRunner ?? new BunProcessRunner(),
+    toolLocator: options.toolLocator ?? new ToolResolver(target),
+  })
+  diagnostics.push(...formalRun.diagnostics)
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {

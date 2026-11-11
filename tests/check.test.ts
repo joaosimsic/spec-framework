@@ -103,7 +103,14 @@ describe("runCheck", () => {
           }
         },
       }
-      const run = await runCheck(dir, { architectureAdapter: adapter })
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, { architectureAdapter: adapter, formalAdapter })
 
       expect(run.result.diagnostics.some((item) => item.code === "ARCH-TEST")).toBe(true)
     } finally {
@@ -143,7 +150,14 @@ describe("runCheck", () => {
           }
         },
       }
-      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter })
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter, formalAdapter })
 
       expect(run.result.diagnostics.some((item) => item.code === "REQ-TEST")).toBe(true)
     } finally {
@@ -174,7 +188,14 @@ describe("runCheck", () => {
           return { ran: true, diagnostics: [] }
         },
       }
-      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter })
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter, formalAdapter })
 
       expect(run.result.diagnostics.some((item) => item.code === "REQ-UNKNOWN-ADAPTER")).toBe(
         true,
@@ -220,6 +241,179 @@ describe("runCheck", () => {
       expect(output.errors).toBeGreaterThan(0)
       expect(output.warnings).toBe(0)
       expect(output.diagnostics.length).toBeGreaterThan(0)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("runs the formal adapter for native checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const architectureAdapter: NativeAdapter = {
+        id: "likec4",
+        tool: "likec4",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const requirementsAdapter: NativeAdapter = {
+        id: "strictdoc",
+        tool: "strictdoc",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              {
+                level: "error",
+                code: "FORMAL-TEST",
+                message: "formal failed",
+              },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter,
+        requirementsAdapter,
+        formalAdapter,
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "FORMAL-TEST")).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects an unknown formal adapter", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const unknownConfig = {
+        ...validConfig,
+        adapters: { ...validConfig.adapters, formal: "other" },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(unknownConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const architectureAdapter: NativeAdapter = {
+        id: "likec4",
+        tool: "likec4",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const requirementsAdapter: NativeAdapter = {
+        id: "strictdoc",
+        tool: "strictdoc",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter,
+        requirementsAdapter,
+        formalAdapter,
+      })
+
+      expect(run.result.diagnostics.some((item) => item.code === "FORMAL-UNKNOWN-ADAPTER")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips the formal adapter for structural checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      await mkdir(join(dir, "spec", "requirements"), { recursive: true })
+      let called = false
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          called = true
+          return { ran: true, diagnostics: [] }
+        },
+      }
+
+      await runCheck(dir, { structural: true, formalAdapter })
+
+      expect(called).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips formal checks when the config has no formal key", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      const noFormalConfig = {
+        ...validConfig,
+        adapters: {
+          architecture: "likec4",
+          requirements: "strictdoc",
+        },
+      }
+      await writeFile(join(specDir, "config.json"), JSON.stringify(noFormalConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const architectureAdapter: NativeAdapter = {
+        id: "likec4",
+        tool: "likec4",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const requirementsAdapter: NativeAdapter = {
+        id: "strictdoc",
+        tool: "strictdoc",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      let called = false
+      const formalAdapter: NativeAdapter = {
+        id: "quint",
+        tool: "quint",
+        async run() {
+          called = true
+          return { ran: true, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, {
+        architectureAdapter,
+        requirementsAdapter,
+        formalAdapter,
+      })
+
+      expect(called).toBe(false)
+      expect(run.result.diagnostics.some((item) => item.code.startsWith("FORMAL-"))).toBe(false)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

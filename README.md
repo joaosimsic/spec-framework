@@ -1,6 +1,6 @@
 # spec-framework
 
-**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, and the LikeC4 architecture adapter are implemented. StrictDoc, Quint, contract adapters, approval lock, mapping, and the audit bundle are next.
+**Status: Phase 1 skeleton.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, the LikeC4 architecture adapter, the StrictDoc requirements adapter, and the Quint formal adapter (typecheck plus verify) are implemented. Contract adapters, approval lock, mapping, and the audit bundle are next.
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
@@ -70,7 +70,7 @@ Current skeleton:
 - `spec doctor [--json]` reports required and optional tools.
 - `spec doctor --fix` prints the provisioning plan; automatic provisioning is next.
 - `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
-- `spec check` additionally runs the configured architecture adapter and fails on missing native tools.
+- `spec check` additionally runs the configured architecture, requirements, and formal adapters and fails on missing native tools.
 
 Run locally:
 

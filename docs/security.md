@@ -8,6 +8,7 @@ The framework treats the specification as executable input to agents and CI. Tha
 |---|---|---|
 | Human direction | Human decisions | Pasted external text |
 | Spec sources | Approved, hash-locked content | Draft proposals |
+| Build commands | Reviewed `compile.json` | Unreviewed commands from drafts |
 | Agent | Draft generation | Approval, verification verdicts |
 | Validators | Deterministic tools | LLM self-report |
 | CI | Pinned toolchain and evidence | Network-fetched mutable dependencies |
@@ -60,6 +61,20 @@ Mitigations:
 - each adapter has a conformance test fixture;
 - CI runs adapters against known-good and known-bad fixtures;
 - the framework reports which adapter produced each piece of evidence.
+
+### Malicious build commands
+
+`spec/implementation/compile.json` names commands that `spec check` will execute. A malicious or compromised spec source could point them at destructive code.
+
+Mitigations:
+
+- treat `compile.json` as trusted build configuration, like `package.json` scripts;
+- require explicit argument arrays and never invoke a shell;
+- constrain the working directory to the project root;
+- enforce a timeout per command;
+- bound diagnostic output;
+- review changes to `compile.json` with the same scrutiny as build scripts;
+- leave host-level sandboxing to the execution environment.
 
 ### Secrets in specs
 

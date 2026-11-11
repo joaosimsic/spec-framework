@@ -26,6 +26,7 @@
 | [Requirements layer](architecture/requirements-layer.md) | How are requirements structured and traced? |
 | [Formal layer](architecture/formal-layer.md) | How is behavior made executable and checked? |
 | [Contracts layer](architecture/contracts-layer.md) | How are non-web interfaces specified? |
+| [Implementation layer](architecture/implementation-layer.md) | How is compiler output used as a deterministic preflight? |
 | [Audit bundle](architecture/audit-bundle.md) | What does the final readable artifact contain? |
 
 ## Workflow
@@ -59,3 +60,4 @@
 - [0005 Pluggable contracts](design-decisions/0005-pluggable-contracts.md)
 - [0006 Human approval with hash lock](design-decisions/0006-human-approval-hash-lock.md)
 - [0007 No custom specification schema](design-decisions/0007-no-custom-schema.md)
+- [0008 Compiler preflight adapter](design-decisions/0008-compiler-preflight.md)

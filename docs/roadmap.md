@@ -26,6 +26,7 @@ Build one end-to-end path:
 - StrictDoc adapter: validation done; traceability, HTML/PDF pending;
 - Quint adapter: typecheck plus Apalache verify wired into `spec check`; evidence bundle pending;
 - contract adapters: JSON Schema, CLI snapshots, and Rust public API wired into `spec check` with compatibility evidence;
+- compiler preflight adapter: configured build and typecheck commands, deterministic diagnostics (planned);
 - generic and Rust discovery; `spec map --draft`;
 - `spec check`, `spec change`, `spec bundle`, `spec approve`;
 - agent skill, commands, permissions;
@@ -79,6 +80,7 @@ Exit criteria:
 | StrictDoc embedding of LikeC4/Quint | Phase 1 spike; Typst/Pandoc fallback |
 | Full-stack CI cost | cache, parallelize, structural preflight |
 | LLM formal quality | mandatory checker loop; human review |
+| Compiler preflight mistaken for conformance | explicit scope; separate evidence from formal and contract checks |
 | Non-Rust conformance | generic trace adapter; explicit waivers until supported |
 | Self-hosting exposes gaps | intentional; fix before external adoption |
 

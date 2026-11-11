@@ -9,6 +9,7 @@ flowchart TB
         B[StrictDoc requirements]
         C[Quint formal models]
         D[Contract adapters]
+        I[Implementation sources]
     end
     subgraph Deterministic checks
         L[spec-lint]
@@ -16,6 +17,7 @@ flowchart TB
         S[strictdoc export/check]
         Q[quint typecheck/verify]
         P[adapter checks]
+        X[compiler/build preflight]
     end
     subgraph Outputs
         E[Evidence]
@@ -27,10 +29,12 @@ flowchart TB
     B --> S
     C --> Q
     D --> P
+    I --> X
     V --> L
     S --> L
     Q --> L
     P --> L
+    X --> L
     L --> E
     E --> K
     E --> U
@@ -38,6 +42,7 @@ flowchart TB
     B --> U
     C --> U
     D --> U
+    I --> U
     L --> R
 ```
 
@@ -48,6 +53,7 @@ flowchart TB
 | Systems, components, relations | LikeC4 model | Architecture linter and human review |
 | Requirements, acceptance criteria, traceability | StrictDoc documents | StrictDoc validation and spec-lint |
 | Behavior, invariants, temporal properties | Quint modules | Quint type checker and model checker |
+| Implementation syntax, types, and build state | Compiler or build tool | Compiler preflight adapter |
 | Language APIs | Language toolchain output | Contract adapter |
 | Data formats | JSON Schema, CUE, CDDL, or Protobuf | Contract adapter |
 | CLI behavior | Help snapshots and contract tests | Contract adapter |
@@ -81,8 +87,8 @@ flowchart LR
 
 ## Pipeline
 
-1. **Collect** sources: LikeC4 export, StrictDoc JSON export, Quint metadata, adapter output.
-2. **Validate** each source with its native tool.
+1. **Collect** sources: LikeC4 export, StrictDoc JSON export, Quint metadata, compiler output, adapter output.
+2. **Validate** each source with its native tool, starting with compiler preflight.
 3. **Link** entities by ID and check cross-layer rules.
 4. **Verify** formal properties and conformance tests; store evidence.
 5. **Gate** on unapproved changes, unanswered questions, expired waivers, missing links.
@@ -96,6 +102,7 @@ flowchart LR
 | LikeC4 validation | Requirement drafting |
 | StrictDoc grammar and traceability | Architecture proposals |
 | Quint type checking and model checking | Formal model drafting |
+| Compiler and build preflight | Source review and requirement mapping |
 | Contract adapters | Contract drafting |
 | ID and coverage lint | Rationale text |
 | Audit bundle rendering | Change summaries |
@@ -106,6 +113,7 @@ The probabilistic side accelerates authoring. It never provides a pass verdict.
 ## Failure behavior
 
 - A missing native tool fails the pipeline; no silent skip.
+- A failing compiler preflight fails the pipeline; it is not a conformance verdict.
 - A missing optional adapter is reported as a gap.
 - A failing formal property blocks approval of the linked requirement.
 - An unapproved content change invalidates prior approval.

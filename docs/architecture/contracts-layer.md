@@ -68,6 +68,18 @@ Rust contracts live in `spec/contracts/rust/*.contract.json` and declare `id`, `
 
 The language compiler remains the source of truth for types. The framework records the surface and its compatibility evidence.
 
+## Compiler overlap
+
+The compiler preflight adapter is separate from the contracts layer. Preflight answers whether the implementation builds and typechecks under a configured command. It does not extract a public surface, declare a compatibility policy, or approve a contract.
+
+Contract adapters consume compiler-derived artifacts where possible:
+
+- rustdoc JSON and `cargo public-api` for Rust;
+- compiler or API-extractor reports for TypeScript;
+- tool reports for PHP.
+
+A green compiler preflight is never compatibility evidence. A public API change can compile cleanly and still break consumers.
+
 ## Data and file formats
 
 JSON Schema is the default data contract because it is language-neutral and widely supported.

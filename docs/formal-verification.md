@@ -97,6 +97,12 @@ Additional tools such as a specialized model or agent can be used, but no output
 
 Model evidence and conformance evidence are separate. The audit bundle shows both.
 
+## Preflight is not conformance
+
+Compiler and build preflight belongs to the implementation layer, not to formal verification. A successful typecheck or build proves that the implementation is well-formed for a specific toolchain. It does not prove that an implementation follows a Quint trace, satisfies a requirement, or preserves a temporal property.
+
+Preflight evidence and formal evidence stay separate in the audit bundle.
+
 ## Tool selection
 
 | Problem | Default | Alternative |

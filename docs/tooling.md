@@ -9,6 +9,7 @@
 | Requirements | StrictDoc | SDoc validation, traceability, HTML/PDF |
 | Formal | Quint | Typecheck, simulator, model checking |
 | Model checker | Apalache (or TLC) | Invoked by Quint |
+| Implementation preflight | project compiler or build tool | Configured commands; no shell; planned |
 | Contracts | adapters | JSON Schema, CLI, Rust public API in Phase 1 |
 | PDF | StrictDoc HTML2PDF | Fallback: Typst/Pandoc assembly |
 | Provisioning | `spec doctor --fix` | Nix, container, or local runners |
@@ -66,7 +67,8 @@ CI also verifies:
 ## Local development
 
 - `spec check --structural` gives fast feedback without native tools.
-- `spec doctor` explains missing capabilities.
+- `spec check` will run compiler preflight before the other native checks (planned).
+- `spec doctor` explains missing capabilities known to the framework; arbitrary compiler commands fail at check time.
 - `spec bundle --allow-dirty` is for local preview only.
 - Full approval requires a clean tree and full checks.
 
@@ -79,6 +81,7 @@ spec/
   requirements/
   formal/
   contracts/
+  implementation/  optional compile.json preflight commands
   evidence/        generated, ignored by default
   questions/
   unknowns/
@@ -97,6 +100,8 @@ Phase 1 targets Linux. macOS support follows once provisioning is stable. Window
 ## Failure policy
 
 - Missing required tool: fail the affected check.
+- Missing configured compiler or build executable: fail.
+- Compiler preflight failure: fail.
 - Native validator failure: fail.
 - Formal property failure: fail and attach counterexample.
 - Contract incompatibility: fail and attach diff.

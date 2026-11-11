@@ -32,6 +32,15 @@
 - How should CLI contracts represent streaming and interactive behavior?
 - How should hardware contracts be represented before a SystemRDL adapter exists?
 
+## Implementation preflight
+
+- Should `spec init --existing` detect package scripts, or only scaffold the configuration README?
+- Should compiler failures be waivable, and under what scope and expiry?
+- How should diagnostics be normalized across languages without hiding actionable detail?
+- Should `spec doctor` resolve arbitrary configured executables, or leave that to `spec check`?
+- When should compiler evidence move from diagnostics into the hashed evidence bundle?
+- Should the adapter accept multiple named implementation adapters later?
+
 ## Agent workflow
 
 - Should a unified spec MCP server replace separate LikeC4/StrictDoc/Quint access?

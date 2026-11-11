@@ -16,6 +16,7 @@ import {
   type Proposal,
   type ProposalMode,
   type ProposalOperation,
+  type ProposalStatus,
 } from "./types"
 
 export interface ProposalGit {
@@ -37,6 +38,10 @@ export interface ChangeOptions {
   gitRepository?: ProposalGit
 }
 
+export interface OpenProposalOptions extends ChangeOptions {
+  status?: ProposalStatus
+}
+
 export interface ChangeRun {
   report: ChangeReport | null
   output: string
@@ -48,6 +53,11 @@ export interface ChangeStatusRun {
   proposal: Proposal | null
   output: string
   code: number
+}
+
+export interface OpenedProposal {
+  proposal: Proposal
+  lock: SpecLock | null
 }
 
 class ProposalNaming {
@@ -63,44 +73,44 @@ class ProposalNaming {
   }
 }
 
-export async function runChange(
+export async function openProposal(
   target: string,
   direction: string,
-  options: ChangeOptions = {},
-): Promise<ChangeRun> {
+  options: OpenProposalOptions = {},
+): Promise<Result<OpenedProposal, string>> {
   const trimmed = direction.trim()
-  if (trimmed === "") return changeFailure("direction is required")
+  if (trimmed === "") return [null, "direction is required"]
 
   const [config, configError] = await new SpecConfigLoader(target).load()
-  if (configError !== null) return changeFailure(configError.message)
-  if (config === null) return changeFailure("config loader returned no configuration")
+  if (configError !== null) return [null, configError.message]
+  if (config === null) return [null, "config loader returned no configuration"]
 
   const git =
     options.gitRepository ?? new GitProposalRepository(options.processRunner, options.toolLocator)
   const [state, stateError] = await git.readState(target)
-  if (stateError !== null) return changeFailure(`cannot read workspace: ${stateError}`)
-  if (state === null) return changeFailure("workspace reader returned no metadata")
-  if (!state.clean) return changeFailure("git tree is dirty; commit or stash changes first")
+  if (stateError !== null) return [null, `cannot read workspace: ${stateError}`]
+  if (state === null) return [null, "workspace reader returned no metadata"]
+  if (!state.clean) return [null, "git tree is dirty; commit or stash changes first"]
   if (state.branch.startsWith("spec/")) {
-    return changeFailure(`active proposal already exists on branch '${state.branch}'`)
+    return [null, `active proposal already exists on branch '${state.branch}'`]
   }
 
   const slug = ProposalNaming.slug(trimmed)
   const branch = `spec/${slug}`
   const [exists, existsError] = await git.branchExists(target, branch)
-  if (existsError !== null) return changeFailure(`cannot check branch '${branch}': ${existsError}`)
-  if (exists === true) return changeFailure(`proposal branch '${branch}' already exists`)
+  if (existsError !== null) return [null, `cannot check branch '${branch}': ${existsError}`]
+  if (exists === true) return [null, `proposal branch '${branch}' already exists`]
 
   const [lockHash, lockError] = await readLockHash(target)
-  if (lockError !== null) return changeFailure(lockError)
-  if (lockHash === undefined) return changeFailure("lock hash failed")
+  if (lockError !== null) return [null, lockError]
+  if (lockHash === undefined) return [null, "lock hash failed"]
 
   const [lock, lockLoadError] = await loadApprovalLock(target)
-  if (lockLoadError !== null) return changeFailure(lockLoadError)
+  if (lockLoadError !== null) return [null, lockLoadError]
 
   const [author, authorError] = await resolveAuthor(git, options.author, target)
-  if (authorError !== null) return changeFailure(authorError)
-  if (author === null) return changeFailure("proposal author unavailable")
+  if (authorError !== null) return [null, authorError]
+  if (author === null) return [null, "proposal author unavailable"]
 
   const timestamp = (options.now ?? (() => new Date()))()
   const proposal: Proposal = {
@@ -108,7 +118,7 @@ export async function runChange(
     id: `prop-${slug}`,
     direction: trimmed,
     mode: options.mode ?? (lockHash === null ? "mapping" : "refactor"),
-    status: "draft",
+    status: options.status ?? "draft",
     branch,
     base_commit: state.commit,
     baseline: { commit: state.commit, lock_hash: lockHash },
@@ -118,13 +128,27 @@ export async function runChange(
   }
 
   const [, createError] = await git.createBranch(target, branch, state.commit)
-  if (createError !== null) return changeFailure(`cannot create '${branch}': ${createError}`)
+  if (createError !== null) return [null, `cannot create '${branch}': ${createError}`]
 
   const store = new ProposalStore(target)
   const [saved, saveError] = await store.save(proposal)
-  if (saveError !== null) return changeFailure(saveError)
-  if (saved === null) return changeFailure("proposal was not saved")
+  if (saveError !== null) return [null, saveError]
+  if (saved === null) return [null, "proposal was not saved"]
 
+  return [{ proposal, lock }, null]
+}
+
+export async function runChange(
+  target: string,
+  direction: string,
+  options: ChangeOptions = {},
+): Promise<ChangeRun> {
+  const [opened, openError] = await openProposal(target, direction, options)
+  if (openError !== null) return changeFailure(openError)
+  if (opened === null) return changeFailure("proposal was not opened")
+
+  const { proposal, lock } = opened
+  const store = new ProposalStore(target)
   const operations = options.operations ?? []
   const emptyApplication: OperationApplication = { logs: [], changes: [] }
   const [applied, applyError] =

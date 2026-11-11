@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review`, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens a mapping proposal and prints the confidence queue. Interactive curation actions, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
 
 ## Commands
 

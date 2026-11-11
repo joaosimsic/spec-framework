@@ -1,8 +1,8 @@
 # Brownfield mapping
 
-> Status: `spec map --draft` is implemented. Interactive mapping review
-> (`spec map --review`), the workbench, and drift checks are design only. See
-> [use-case modes](workflow/use-cases.md).
+> Status: `spec map --draft` and the `spec map --review` entry are implemented.
+> Interactive curation actions, the workbench, and drift checks are design only.
+> See [use-case modes](workflow/use-cases.md).
 
 ## Principle
 

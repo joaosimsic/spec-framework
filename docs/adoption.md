@@ -1,6 +1,6 @@
 # Adoption
 
-> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, `spec map --draft`, and the `spec start` scratch entry are available. Mapping review and automatic provisioning are in progress.
+> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, `spec map --draft`, the `spec map --review` mapping entry, and the `spec start` scratch entry are available. Interactive mapping curation and automatic provisioning are in progress.
 
 ## Goal
 
@@ -14,10 +14,10 @@ Adopting the framework must not require rewriting the project, freezing developm
 | Existing repository        | `spec map --review`           | [Mapping](workflow/use-cases.md) |
 | Approved baseline changing | `spec refactor "<direction>"` | [Refac](workflow/use-cases.md)   |
 
-The `spec start` scratch entry is implemented. `spec map --review`, the
-interactive workbench, and opencode plugin are design only. The implemented
-Phase 1 path remains `spec init`, `spec map --draft`, `spec check`, and
-`spec approve`.
+The `spec start` scratch entry and the `spec map --review` mapping entry are
+implemented. Interactive mapping curation, the interactive workbench, and the
+opencode plugin are design only. The implemented Phase 1 path remains
+`spec init`, `spec map --draft`, `spec check`, and `spec approve`.
 
 ## Greenfield
 

@@ -16,6 +16,7 @@ import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
+import { runMapReview } from "./core/map-review"
 import { runBundle } from "./bundle/index"
 import { runQuery, type QueryView } from "./query/index"
 
@@ -25,7 +26,7 @@ Usage:
   spec init [--existing] [--force]
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
-  spec map [--draft] [--json]
+  spec map [--draft] [--review [--technical]] [--json]
   spec start "<goal>" [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--technical] [--json]
@@ -41,7 +42,7 @@ Commands:
   init      Create the full-stack spec scaffold
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
-  map       Discover draft architecture from the repository
+  map       Discover draft architecture or open a mapping review
   start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
@@ -114,8 +115,26 @@ async function commandCheck(args: string[]): Promise<number> {
 }
 
 async function commandMap(args: string[]): Promise<number> {
+  const review = hasFlag(args, "--review")
+  const draft = hasFlag(args, "--draft")
+
+  if (review) {
+    if (draft) {
+      console.error("map: --review cannot be combined with --draft")
+      return 2
+    }
+
+    const run = await runMapReview(process.cwd(), {
+      json: hasFlag(args, "--json"),
+      technical: hasFlag(args, "--technical"),
+    })
+    printWarnings(run.warnings)
+    console.log(run.output)
+    return run.code
+  }
+
   const run = await runMap(process.cwd(), {
-    draft: hasFlag(args, "--draft"),
+    draft,
     json: hasFlag(args, "--json"),
   })
   console.log(run.output)

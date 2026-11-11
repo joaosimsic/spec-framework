@@ -4,9 +4,11 @@
 > engine with same-worktree branches, typed cross-source operations, and impact
 > reports. `spec refactor` is a thin alias that defaults to refactor mode and
 > warns when no approved baseline exists. `spec start` opens a scratch-mode
-> proposal for a greenfield repository. `spec map --review`, the workbench, and
-> the opencode plugin are not implemented. The mode model is accepted in
-> decision record [0011](../design-decisions/0011-interactive-use-case-modes.md).
+> proposal for a greenfield repository. `spec map --review` opens a mapping
+> proposal and prints the confidence queue. Interactive mapping curation, the
+> workbench, and the opencode plugin are not implemented. The mode model is
+> accepted in decision record
+> [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
 

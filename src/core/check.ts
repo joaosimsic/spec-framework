@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { LikeC4Adapter } from "../adapters/likec4"
+import { StrictDocAdapter } from "../adapters/strictdoc"
 import type { NativeAdapter } from "../adapters/types"
 import { SpecConfigLoader } from "./config"
 import {
@@ -35,6 +36,7 @@ export interface CheckOptions {
   structural?: boolean
   json?: boolean
   architectureAdapter?: NativeAdapter
+  requirementsAdapter?: NativeAdapter
   processRunner?: ProcessRunner
   toolLocator?: ToolLocator
 }
@@ -82,6 +84,23 @@ async function runNativeChecks(
     toolLocator: options.toolLocator ?? new ToolResolver(target),
   })
   diagnostics.push(...adapterRun.diagnostics)
+
+  const requirementsAdapter = options.requirementsAdapter ?? new StrictDocAdapter()
+  if (config.adapters.requirements !== requirementsAdapter.id) {
+    diagnostics.push({
+      level: "error",
+      code: "REQ-UNKNOWN-ADAPTER",
+      message: `unsupported requirements adapter '${config.adapters.requirements}'`,
+    })
+    return
+  }
+
+  const requirementsRun = await requirementsAdapter.run({
+    target,
+    processRunner: options.processRunner ?? new BunProcessRunner(),
+    toolLocator: options.toolLocator ?? new ToolResolver(target),
+  })
+  diagnostics.push(...requirementsRun.diagnostics)
 }
 
 export async function runCheck(target: string, options: CheckOptions = {}): Promise<CheckRun> {

@@ -1,0 +1,147 @@
+import { rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { attemptAsync } from "../core/result"
+import type { Diagnostic } from "../core/types"
+import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
+
+export class StrictDocAdapter implements NativeAdapter {
+  readonly id = "strictdoc"
+  readonly tool = "strictdoc"
+
+  async run(context: AdapterContext): Promise<AdapterRun> {
+    const executable = await context.toolLocator.resolve(this.tool)
+    if (executable === null) {
+      return { ran: false, diagnostics: [] }
+    }
+
+    const outputDirectory = join(tmpdir(), `strictdoc-${process.pid}-${Date.now()}`)
+    const requirementsDirectory = join(context.target, "spec", "requirements")
+    const [commandResult, commandError] = await context.processRunner.run({
+      executable,
+      arguments: [
+        "export",
+        requirementsDirectory,
+        "--output-dir",
+        outputDirectory,
+        "--formats",
+        "json",
+        "--no-parallelization",
+      ],
+      workingDirectory: context.target,
+    })
+    await attemptAsync(() => rm(outputDirectory, { recursive: true, force: true }))
+    if (commandError) {
+      return { ran: true, diagnostics: [this.failure(commandError.code, commandError.message)] }
+    }
+    if (commandResult === null) {
+      const diagnostic = this.failure("REQ-STRICTDOC", "strictdoc produced no result")
+      return { ran: true, diagnostics: [diagnostic] }
+    }
+
+    return this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode)
+  }
+
+  private parseResult(stdout: string, stderr: string, exitCode: number): AdapterRun {
+    const diagnostics = this.collectErrors(stdout)
+    if (diagnostics.length > 0) {
+      return { ran: true, diagnostics }
+    }
+    if (exitCode !== 0) {
+      const diagnostic = this.outputFailure(`strictdoc exited with status ${exitCode}`, stdout, stderr)
+      return { ran: true, diagnostics: [diagnostic] }
+    }
+
+    return { ran: true, diagnostics: [] }
+  }
+
+  private collectErrors(stdout: string): Diagnostic[] {
+    const lines = stdout.split("\n")
+    const diagnostics: Diagnostic[] = []
+    lines.forEach((line, lineIndex) => {
+      const diagnostic = this.parseErrorLine(lines, line, lineIndex)
+      if (diagnostic !== null) {
+        diagnostics.push(diagnostic)
+      }
+    })
+
+    return diagnostics
+  }
+
+  private parseErrorLine(lines: string[], line: string, lineIndex: number): Diagnostic | null {
+    if (!line.startsWith("error:")) {
+      return null
+    }
+
+    const location = this.findLocation(lines, line, lineIndex)
+
+    return {
+      level: "error",
+      code: "REQ-STRICTDOC",
+      message: this.buildMessage(lines, line, lineIndex),
+      file: location.file,
+      line: location.line,
+    }
+  }
+
+  private buildMessage(lines: string[], line: string, lineIndex: number): string {
+    const detail = (lines[lineIndex + 1] ?? "").trim()
+    if (detail.startsWith("Semantic error:") || detail.startsWith("Error:")) {
+      return `${line.trim()} ${detail}`
+    }
+
+    return line.trim()
+  }
+
+  private findLocation(lines: string[], line: string, lineIndex: number): {
+    file?: string
+    line?: number
+  } {
+    const window = lines.slice(lineIndex, lineIndex + 5)
+    const locationLine = window.find((candidate) => candidate.startsWith("Location:"))
+    if (locationLine !== undefined) {
+      const location = this.parseLocationLine(locationLine)
+      if (location !== null) {
+        return location
+      }
+    }
+
+    return { file: this.parseFileFromError(line), line: undefined }
+  }
+
+  private parseLocationLine(locationLine: string): { file?: string; line?: number } | null {
+    const locationPattern = /^Location:\s*(.+):(\d+):(\d+)\s*$/
+    const match = locationPattern.exec(locationLine)
+    if (match === null) {
+      return null
+    }
+
+    return { file: match[1], line: this.parseLineNumber(match[2]) }
+  }
+
+  private parseFileFromError(line: string): string | undefined {
+    const filePattern = /could not parse file:\s*(\S+)/i
+    const match = filePattern.exec(line)
+
+    return match?.[1]?.replace(/\.$/, "")
+  }
+
+  private parseLineNumber(text: string | undefined): number | undefined {
+    if (text === undefined) {
+      return undefined
+    }
+    const parsed = Number.parseInt(text, 10)
+
+    return Number.isNaN(parsed) ? undefined : parsed
+  }
+
+  private outputFailure(message: string, stdout: string, stderr: string): Diagnostic {
+    const combined = `${stdout}\n${stderr}`.trim().slice(-500).trim()
+
+    return this.failure("REQ-STRICTDOC-OUTPUT", combined ? `${message}: ${combined}` : message)
+  }
+
+  private failure(code: string, message: string): Diagnostic {
+    return { level: "error", code, message }
+  }
+}

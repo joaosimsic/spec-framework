@@ -111,7 +111,80 @@ describe("runCheck", () => {
     }
   })
 
-  test("skips the architecture adapter for structural checks", async () => {
+  test("runs the requirements adapter for native checks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const architectureAdapter: NativeAdapter = {
+        id: "likec4",
+        tool: "likec4",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const requirementsAdapter: NativeAdapter = {
+        id: "strictdoc",
+        tool: "strictdoc",
+        async run() {
+          return {
+            ran: true,
+            diagnostics: [
+              {
+                level: "error",
+                code: "REQ-TEST",
+                message: "requirements failed",
+              },
+            ],
+          }
+        },
+      }
+      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter })
+
+      expect(run.result.diagnostics.some((item) => item.code === "REQ-TEST")).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects an unknown requirements adapter", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const specDir = join(dir, "spec")
+      const requirementsDir = join(specDir, "requirements")
+      await mkdir(requirementsDir, { recursive: true })
+      await writeFile(join(specDir, "config.json"), JSON.stringify(validConfig))
+      await writeFile(join(requirementsDir, "core.sdoc"), validRequirement)
+
+      const architectureAdapter: NativeAdapter = {
+        id: "likec4",
+        tool: "likec4",
+        async run() {
+          return { ran: false, diagnostics: [] }
+        },
+      }
+      const requirementsAdapter: NativeAdapter = {
+        id: "other",
+        tool: "other",
+        async run() {
+          return { ran: true, diagnostics: [] }
+        },
+      }
+      const run = await runCheck(dir, { architectureAdapter, requirementsAdapter })
+
+      expect(run.result.diagnostics.some((item) => item.code === "REQ-UNKNOWN-ADAPTER")).toBe(
+        true,
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("skips the requirements adapter for structural checks", async () => {
     const dir = await mkdtemp(join(tmpdir(), "spec-framework-"))
     try {
       await mkdir(join(dir, "spec", "requirements"), { recursive: true })

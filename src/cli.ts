@@ -22,6 +22,8 @@ import { CurationParser } from "./discovery/curation-parser"
 import type { CurationAction } from "./discovery/curation-types"
 import { runBundle } from "./bundle/index"
 import { runQuery, type QueryView } from "./query/index"
+import { WorkbenchServer } from "./workbench/index"
+import { join } from "node:path"
 
 const HELP = `spec-framework CLI
 
@@ -37,6 +39,7 @@ Usage:
   spec change --status [--technical] [--json]
   spec refactor "<direction>" [--op <json|file>]... [--simulate] [--technical] [--json]
   spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
+  spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]...
   spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]
   spec version
   spec help
@@ -51,6 +54,7 @@ Commands:
   change    Create or inspect a same-worktree proposal
   refactor  Alias for spec change in refactor mode
   bundle    Generate the readable audit bundle
+  workbench Start the local proposal workbench
   approve   Hash-lock proposed elements after human confirmation
   version   Print the CLI version
   help      Show this help
@@ -688,6 +692,99 @@ async function commandBundle(args: string[]): Promise<number> {
   return run.code
 }
 
+interface WorkbenchArguments {
+  host: string
+  port: number
+  allowedOrigins: string[]
+  error?: string
+}
+
+function parseWorkbenchArguments(args: string[]): WorkbenchArguments {
+  let host = "127.0.0.1"
+  let port = 4173
+  const allowedOrigins: string[] = []
+  let index = args[0] === "workbench" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--host") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { host, port, allowedOrigins, error: "--host requires a value" }
+      }
+      host = value
+      index += 2
+      continue
+    }
+    if (argument === "--port") {
+      const value = args[index + 1]
+      const parsed = value === undefined ? Number.NaN : Number(value)
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+        return { host, port, allowedOrigins, error: "--port requires a valid port" }
+      }
+      port = parsed
+      index += 2
+      continue
+    }
+    if (argument === "--allowed-origin") {
+      const value = args[index + 1]
+      if (value === undefined || value.startsWith("-")) {
+        return { host, port, allowedOrigins, error: "--allowed-origin requires a value" }
+      }
+      allowedOrigins.push(value)
+      index += 2
+      continue
+    }
+
+    return { host, port, allowedOrigins, error: `unknown workbench option: ${argument}` }
+  }
+
+  return { host, port, allowedOrigins }
+}
+
+async function commandWorkbench(args: string[]): Promise<number> {
+  const parsed = parseWorkbenchArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  const assets = join(import.meta.dir, "workbench", "web", "dist", "index.html")
+  const [assetReady, assetError] = await attemptAsync(() => Bun.file(assets).exists())
+  if (assetError !== null) {
+    console.error(`workbench: cannot read assets: ${assetError}`)
+    return 1
+  }
+  if (assetReady !== true) {
+    console.error("workbench: assets are not built; run bun run build:workbench")
+  }
+
+  const server = new WorkbenchServer({
+    target: process.cwd(),
+    host: parsed.host,
+    port: parsed.port,
+    allowedOrigins: parsed.allowedOrigins,
+  })
+  const [handle, startError] = await server.start()
+  if (startError !== null || handle === null) {
+    console.error(`workbench: ${startError ?? "server did not start"}`)
+    return 1
+  }
+
+  console.log(`workbench: ${handle.url}`)
+  console.log("workbench: press Ctrl-C to stop")
+
+  return new Promise<number>((resolve) => {
+    const stop = (): void => {
+      handle.close()
+      resolve(0)
+    }
+
+    process.once("SIGINT", stop)
+    process.once("SIGTERM", stop)
+  })
+}
+
 function printWarnings(warnings: string[]): void {
   for (const warning of warnings) console.error(`warning: ${warning}`)
 }
@@ -824,6 +921,8 @@ export async function main(args: string[]): Promise<number> {
       return commandRefactor(args)
     case "bundle":
       return commandBundle(args)
+    case "workbench":
+      return commandWorkbench(args)
     case "approve":
       return commandApprove(args)
     case "version":

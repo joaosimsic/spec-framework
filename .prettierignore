@@ -1,5 +1,6 @@
 node_modules
 dist
+src/workbench/web/dist
 coverage
 spec/audit
 spec/evidence

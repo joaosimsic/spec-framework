@@ -9,6 +9,7 @@ export {
 } from "./change"
 export {
   START_REPORT_VERSION,
+  ScratchBriefingFactory,
   runStart,
   type ScratchBriefing,
   type StartOptions,

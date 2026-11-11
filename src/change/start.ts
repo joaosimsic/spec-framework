@@ -53,7 +53,7 @@ export interface StartRun {
   code: number
 }
 
-class ScratchBriefingFactory {
+export class ScratchBriefingFactory {
   static build(direction: string): ScratchBriefing {
     return {
       version: START_REPORT_VERSION,

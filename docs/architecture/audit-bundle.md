@@ -15,7 +15,8 @@ the traceability appendices and manifest preserve identity.
 refuses a dirty tree unless `--allow-dirty`, and writes a versioned directory
 with `manifest.json`, `graph.json`, `index.html`, `spec.pdf`,
 `change-report.md`, `spec.lock` when present, copied sources, and regenerated
-evidence records.
+evidence records. `graph.json` includes SDoc records, annotated LikeC4 elements,
+contract sidecars, and evidence.
 
 The default destination is `spec/audit/audit-<short-commit>`. `--output`
 overrides it and `--force` replaces an existing bundle directory only.
@@ -70,9 +71,10 @@ audit-a1b2c3d4e5f6/
 
 ## Required sections
 
-The first slice renders the sections supported by the current SDoc graph and
-evidence collectors. Capability, architecture-view, semantic, verification, and
-contract sections gain content as those collectors are implemented.
+The first slice renders the sections supported by the current SDoc,
+architecture, contract, and evidence collectors. Capability, semantic,
+verification, and native architecture-view sections gain content as those
+collectors are implemented.
 
 1. Cover: project, version, commit, date, tool versions, approval status.
 2. Scope: what the specification covers and what it does not.

@@ -4,7 +4,7 @@ import { lintBlocks } from "../core/lint"
 import { loadRequirementSources } from "../core/requirements"
 import type { Diagnostic } from "../core/types"
 import { EvidenceStore } from "../evidence"
-import { DisplayProjection, RequirementsGraphSource, SpecGraphBuilder } from "../model/index"
+import { collectWorkspaceContributions, DisplayProjection, SpecGraphBuilder } from "../model/index"
 import type { GraphElement, SpecGraph } from "../model/types"
 import { GitWorkspaceReader } from "./git"
 import { renderHuman, renderTechnical } from "./render"
@@ -34,7 +34,9 @@ export async function runQuery(target: string, options: QueryOptions = {}): Prom
   }
 
   const builder = new SpecGraphBuilder()
-  builder.add(new RequirementsGraphSource().collect(sources.blocks))
+  for (const contribution of await collectWorkspaceContributions(target, sources.blocks)) {
+    builder.add(contribution)
+  }
   const storedEvidence = await new EvidenceStore(target).loadAll()
   builder.add({
     elements: [],

@@ -1,5 +1,11 @@
 import { attempt, type Result } from "../core/result"
-import type { ProposalOperation, ProposalRecordFields } from "./types"
+import type {
+  ProposalComponentFields,
+  ProposalContractFields,
+  ProposalMoveField,
+  ProposalOperation,
+  ProposalRecordFields,
+} from "./types"
 
 export class ProposalOperationParser {
   static parseJson(text: string): Result<ProposalOperation[], string> {
@@ -42,6 +48,12 @@ export class ProposalOperationParser {
         return this.readSplit(value)
       case "merge":
         return this.readMerge(value)
+      case "extract":
+        return this.readExtract(value)
+      case "move":
+        return this.readMove(value)
+      case "change-contract":
+        return this.readChangeContract(value)
       default:
         return [null, `unknown operation kind '${value["kind"]}'`]
     }
@@ -104,10 +116,114 @@ export class ProposalOperationParser {
     return [{ kind: "merge", targets, result }, null]
   }
 
-  private static readFields(
-    value: unknown,
-    label: string,
-  ): Result<ProposalRecordFields, string> {
+  private static readExtract(value: Record<string, unknown>): Result<ProposalOperation, string> {
+    const target = this.readTarget(value["target"])
+    if (target === null) return [null, "extract requires a target"]
+
+    const [component, componentError] = this.readComponent(value["component"])
+    if (componentError !== null) return [null, componentError]
+    if (component === null) return [null, "extract requires component fields"]
+
+    const parent = this.readOptionalTarget(value["parent"])
+    if (parent === null && value["parent"] !== undefined) {
+      return [null, "extract parent must be a non-empty string"]
+    }
+
+    const from = this.readOptionalTarget(value["from"])
+    if (from === null && value["from"] !== undefined) {
+      return [null, "extract from must be a non-empty string"]
+    }
+
+    return [
+      {
+        kind: "extract",
+        target,
+        component,
+        ...(parent === null ? {} : { parent }),
+        ...(from === null ? {} : { from }),
+      },
+      null,
+    ]
+  }
+
+  private static readMove(value: Record<string, unknown>): Result<ProposalOperation, string> {
+    const target = this.readTarget(value["target"])
+    if (target === null) return [null, "move requires a target"]
+    const to = this.readTarget(value["to"])
+    if (to === null) return [null, "move requires a destination"]
+    if (target === to) return [null, "move target and destination must differ"]
+
+    const field = this.readMoveField(value["field"])
+    if (field === null && value["field"] !== undefined) {
+      return [null, "move field must be COMPONENT or CAPABILITY"]
+    }
+
+    const from = this.readOptionalTarget(value["from"])
+    if (from === null && value["from"] !== undefined) {
+      return [null, "move from must be a non-empty string"]
+    }
+
+    return [
+      {
+        kind: "move",
+        target,
+        to,
+        ...(field === null ? {} : { field }),
+        ...(from === null ? {} : { from }),
+      },
+      null,
+    ]
+  }
+
+  private static readChangeContract(
+    value: Record<string, unknown>,
+  ): Result<ProposalOperation, string> {
+    const target = this.readTarget(value["target"])
+    if (target === null) return [null, "change-contract requires a target"]
+
+    const [fields, error] = this.readJsonFields(value["fields"])
+    if (error !== null) return [null, error]
+    if (fields === null) return [null, "change-contract requires fields"]
+
+    return [{ kind: "change-contract", target, fields }, null]
+  }
+
+  private static readComponent(value: unknown): Result<ProposalComponentFields, string> {
+    if (!this.isRecord(value)) return [null, "component fields must be an object"]
+
+    const fields: ProposalRecordFields = {}
+    for (const [field, candidate] of Object.entries(value)) {
+      if (typeof candidate !== "string") {
+        return [null, `component field ${field} must be a string`]
+      }
+      fields[field] = candidate
+    }
+
+    const uid = (fields.UID ?? "").trim()
+    if (uid === "") return [null, "component fields require UID"]
+    const title = (fields.TITLE ?? "").trim()
+    if (title === "") return [null, "component fields require TITLE"]
+
+    return [{ ...fields, UID: uid, TITLE: title }, null]
+  }
+
+  private static readJsonFields(value: unknown): Result<ProposalContractFields, string> {
+    if (!this.isRecord(value)) return [null, "fields must be an object"]
+    if (Object.keys(value).length === 0) return [null, "fields must not be empty"]
+
+    return [{ ...value }, null]
+  }
+
+  private static readMoveField(value: unknown): ProposalMoveField | null {
+    return value === "COMPONENT" || value === "CAPABILITY" ? value : null
+  }
+
+  private static readOptionalTarget(value: unknown): string | null {
+    if (value === undefined) return null
+    return this.readTarget(value)
+  }
+
+  private static readFields(value: unknown, label: string): Result<ProposalRecordFields, string> {
     if (!this.isRecord(value)) return [null, `${label} fields must be an object`]
 
     const fields: ProposalRecordFields = {}

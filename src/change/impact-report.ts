@@ -2,7 +2,10 @@ import type { ImpactElement, ImpactLink, ImpactReport } from "../model"
 
 const KIND_LABELS: Record<string, string> = {
   system: "System",
+  actor: "Actor",
   component: "Component",
+  data_store: "Data store",
+  external_system: "External system",
   interface: "Interface",
   data_entity: "Data entity",
   requirement: "Requirement",

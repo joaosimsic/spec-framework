@@ -1,10 +1,10 @@
 # Use-case modes
 
 > Status: partially implemented. `spec change` provides the shared proposal
-> engine with same-worktree branches, typed SDoc operations, and impact reports.
-> `spec refactor` is a thin alias that defaults to refactor mode and warns when
-> no approved baseline exists. `spec start`, `spec map --review`, the workbench,
-> and the opencode plugin are not implemented. The mode model is accepted in
+> engine with same-worktree branches, typed cross-source operations, and impact
+> reports. `spec refactor` is a thin alias that defaults to refactor mode and
+> warns when no approved baseline exists. `spec start`, `spec map --review`, the
+> workbench, and the opencode plugin are not implemented. The mode model is accepted in
 > decision record [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle

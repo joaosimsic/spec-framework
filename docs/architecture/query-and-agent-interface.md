@@ -1,12 +1,11 @@
 # Query and agent interface
 
 > Status: partially implemented. `spec query` emits the deterministic identity
-> graph and display model for SDoc requirement and acceptance records plus
-> evidence artifacts stored under `spec/evidence/`, with id, kind, and status
-> filters. The display model carries names, plain-language state, blockers, open
-> questions, and opaque refs. Architecture, formal, and contract collectors, the
-> opencode plugin, and MCP remain design. MCP and the broader agent surface are
-> Phase 2.
+> graph and display model for SDoc records, annotated LikeC4 elements, contract
+> sidecars, and evidence artifacts stored under `spec/evidence/`, with id, kind,
+> and status filters. The display model carries names, plain-language state,
+> blockers, open questions, and opaque refs. The formal collector, the opencode
+> plugin, and MCP remain design. MCP and the broader agent surface are Phase 2.
 
 ## Purpose
 
@@ -110,6 +109,16 @@ not resolve become `GRAPH-UNRESOLVED-LINK` findings; the graph does not invent
 missing elements. The relation vocabulary is interim until the full cross-layer
 link pass.
 
+The architecture collector reads non-generated `.c4` sources under
+`spec/architecture` and emits elements that carry an explicit `// <ID>` comment.
+Unannotated elements become `ARCH-UNANNOTATED` findings instead of invented
+identities. `contains` relations become child `part_of` links; other labels
+become deterministic relation links.
+
+The contract collector reads `spec/contracts/**/*.contract.json` sidecars,
+emits `CON-*` contract elements, and skips IDs already declared by SDoc. The
+requirement `CONTRACTS` link resolves to the contract element.
+
 ## Query commands
 
 ```bash
@@ -139,9 +148,10 @@ identity; `--view experience --json` emits the display model with opaque refs
 and a technical payload. Default output uses titles and plain-language state
 without ID prefixes; `--technical` reveals identity, provenance, links, and
 diagnostics. Stored evidence artifacts under `spec/evidence/` appear in the
-graph evidence list; malformed artifacts become findings. The query requires a
-git worktree and refuses a dirty tree unless `--allow-dirty` is passed. Impact,
-coverage, and semantic query forms remain design.
+graph evidence list; malformed artifacts become findings. Architecture and
+contract sources join the same graph. The query requires a git worktree and
+refuses a dirty tree unless `--allow-dirty` is passed. Impact, coverage, and
+semantic query forms remain design.
 
 ## MCP surface
 

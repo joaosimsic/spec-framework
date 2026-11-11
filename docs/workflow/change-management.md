@@ -1,10 +1,10 @@
 # Change management
 
 > Status: partially implemented. `spec change` creates same-worktree proposal
-> branches, applies typed SDoc operations `rename`, `deprecate`, `replace`,
-> `split`, and `merge`, and reports impact over the current SDoc graph.
-> `spec refactor` is a thin alias that warns without an approved baseline.
-> `extract`, `move`, `change-contract`, and the workbench remain design.
+> branches, applies typed operations `rename`, `deprecate`, `replace`, `split`,
+> `merge`, `extract`, `move`, and `change-contract`, and reports impact over the
+> SDoc, annotated LikeC4, and contract sidecar graph. `spec refactor` is a thin
+> alias that warns without an approved baseline. The workbench remains design.
 
 ## Principle
 
@@ -88,9 +88,25 @@ Refactoring uses typed operations, not free-form edits:
 | `replace`         | Introduce a replacement with explicit deprecation              |
 | `change-contract` | Change a boundary and record compatibility impact              |
 
-`rename`, `deprecate`, `replace`, `split`, and `merge` apply to SDoc records
-today. `extract`, `move`, and `change-contract` remain design because they need
-architecture and contract source writers.
+`rename`, `deprecate`, `replace`, `split`, and `merge` apply to SDoc records.
+`extract` creates an annotated LikeC4 component and moves one requirement's
+`COMPONENT` link to it. `move` either reparents a LikeC4 component or reassigns
+a requirement `COMPONENT` or `CAPABILITY` link. `change-contract` patches a
+contract sidecar and keeps the contract ID stable.
+
+```json
+{"kind":"extract","target":"REQ-AUTH-001","component":{"UID":"CMP-AUTH-REFRESH","TITLE":"Token refresh"},"parent":"CMP-AUTH"}
+{"kind":"move","target":"CMP-AUTH-REFRESH","to":"CMP-SESSION"}
+{"kind":"move","target":"REQ-AUTH-001","to":"CMP-SESSION","field":"COMPONENT"}
+{"kind":"change-contract","target":"CON-EXAMPLE-001","fields":{"compatibility":"full"}}
+```
+
+`extract` and `move` fail closed when a requirement has multiple links and no
+explicit `from` is supplied. LikeC4 editing is line-preserving and limited to
+unambiguous declarations and containment relations; LikeC4 validation runs
+afterward. Annotated elements use a `// <ID>` comment. Unannotated elements stay
+out of the graph instead of receiving a guessed ID. `change-contract` changes
+the policy sidecar, not the schema source.
 
 The workbench simulates the before and after graph. The proposal cannot be
 implemented until a human approves the changed scope.
@@ -110,13 +126,13 @@ The CLI walks links in both directions:
 Any changed input invalidates downstream evidence. The report lists the affected
 chain.
 
-Current implementation walks the SDoc requirement and acceptance graph in both
-directions. Change seeds are typed operation targets and new records, plus
-locked elements whose content hash or `STATUS: Approved` no longer matches the
-current sources. The report lists changed and affected elements with names in
-the default view, invalidated evidence, approvals to renew, and open questions.
-Technical output and JSON keep IDs, distances, and traversal links. Evidence
-hashing and regeneration remain pending.
+Current implementation walks the SDoc, annotated LikeC4, and contract sidecar
+graph in both directions. Change seeds are typed operation targets and new
+records, plus locked elements whose content hash or `STATUS: Approved` no longer
+matches the current sources. The report lists changed and affected elements
+with names in the default view, invalidated evidence, approvals to renew, and
+open questions. Technical output and JSON keep IDs, distances, and traversal
+links. Evidence hashing and regeneration remain pending.
 
 The baseline is explicit: a PR merge-base, a named approved baseline, or `HEAD`
 for pending local work. Without an explicit baseline, the impact report is

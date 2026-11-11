@@ -24,6 +24,9 @@ const OPERATION_KINDS = new Set([
   "replace",
   "split",
   "merge",
+  "extract",
+  "move",
+  "change-contract",
 ])
 
 export class ProposalStore {

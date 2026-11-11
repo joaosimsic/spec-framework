@@ -4,8 +4,8 @@ import { loadRequirementSources } from "../core/requirements"
 import type { Result } from "../core/result"
 import type { SdocBlock } from "../core/types"
 import {
+  collectWorkspaceContributions,
   ImpactAnalyzer,
-  RequirementsGraphSource,
   SpecGraphBuilder,
   type ImpactApproval,
   type ImpactReport,
@@ -33,7 +33,9 @@ export class ProposalImpactAnalyzer {
     }
 
     const builder = new SpecGraphBuilder()
-    builder.add(new RequirementsGraphSource().collect(sources.blocks))
+    for (const contribution of await collectWorkspaceContributions(this.target, sources.blocks)) {
+      builder.add(contribution)
+    }
     const workspace: GraphWorkspace = {
       workspace: "single-repo",
       commit: proposal.base_commit,

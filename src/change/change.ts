@@ -6,7 +6,7 @@ import { attemptAsync, type Result } from "../core/result"
 import type { ToolLocator, ProcessRunner } from "../core/runner"
 import { GitProposalRepository } from "./git"
 import { ProposalImpactAnalyzer } from "./impact"
-import { SdocOperationApplier, type OperationApplication } from "./operations"
+import { WorkspaceOperationApplier, type OperationApplication } from "./operations"
 import { ChangeReportRenderer } from "./report"
 import { ProposalStore } from "./store"
 import {
@@ -130,7 +130,7 @@ export async function runChange(
   const [applied, applyError] =
     operations.length === 0
       ? ([emptyApplication, null] as const)
-      : await new SdocOperationApplier(target, options.now).apply(operations)
+      : await new WorkspaceOperationApplier(target, options.now).apply(operations)
   if (applyError !== null) return changeFailure(applyError)
   if (applied === null) return changeFailure("proposal operations failed")
 
@@ -189,7 +189,7 @@ export async function runProposalOperations(
   const [lock, lockLoadError] = await loadApprovalLock(target)
   if (lockLoadError !== null) return changeFailure(lockLoadError)
 
-  const [applied, applyError] = await new SdocOperationApplier(target, options.now).apply(
+  const [applied, applyError] = await new WorkspaceOperationApplier(target, options.now).apply(
     operations,
   )
   if (applyError !== null) return changeFailure(applyError)

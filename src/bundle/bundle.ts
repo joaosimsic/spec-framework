@@ -10,7 +10,7 @@ import { loadRequirementSources } from "../core/requirements"
 import type { Diagnostic } from "../core/types"
 import type { EvidenceRecord } from "../evidence"
 import type { GraphWorkspace, SpecGraph } from "../model/types"
-import { RequirementsGraphSource, SpecGraphBuilder } from "../model"
+import { collectWorkspaceContributions, SpecGraphBuilder } from "../model"
 import { GitWorkspaceReader } from "../query/git"
 import type { WorkspaceMetadataReader } from "../query/types"
 import { BundleChangeReportRenderer } from "./change-report"
@@ -137,7 +137,9 @@ async function buildGraph(
   if (sourceErrors.length > 0) return [null, sourceErrors.map((item) => item.message).join("\n")]
 
   const builder = new SpecGraphBuilder()
-  builder.add(new RequirementsGraphSource().collect(sources.blocks))
+  for (const contribution of await collectWorkspaceContributions(target, sources.blocks)) {
+    builder.add(contribution)
+  }
   builder.add({
     elements: [],
     evidence: evidence.map((record) => ({

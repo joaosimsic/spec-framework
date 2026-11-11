@@ -9,6 +9,12 @@ export {
   type DisplayTechnical,
 } from "./display-types"
 export { DisplayProjection } from "./display"
+export {
+  ArchitectureGraphSource,
+  loadArchitectureSources,
+  type ArchitectureSources,
+} from "./architecture"
+export { ContractsGraphSource, loadContractSources, type ContractSources } from "./contracts"
 export { SpecGraphBuilder } from "./graph"
 export { ImpactAnalyzer } from "./impact"
 export {
@@ -20,6 +26,7 @@ export {
   type ImpactState,
 } from "./impact-types"
 export { RequirementsGraphSource } from "./requirements"
+export { collectWorkspaceContributions } from "./sources"
 export {
   GRAPH_VERSION,
   type GraphContribution,

@@ -6,11 +6,30 @@ export type ProposalMode = "scratch" | "mapping" | "refactor"
 
 export type ProposalStatus = "draft" | "proposed" | "validated" | "approved" | "superseded"
 
-export type ProposalOperationKind = "rename" | "deprecate" | "replace" | "split" | "merge"
+export type ProposalOperationKind =
+  | "rename"
+  | "deprecate"
+  | "replace"
+  | "split"
+  | "merge"
+  | "extract"
+  | "move"
+  | "change-contract"
 
 export interface ProposalRecordFields {
   [field: string]: string
 }
+
+export interface ProposalComponentFields extends ProposalRecordFields {
+  UID: string
+  TITLE: string
+}
+
+export interface ProposalContractFields {
+  [field: string]: unknown
+}
+
+export type ProposalMoveField = "COMPONENT" | "CAPABILITY"
 
 export type ProposalOperation =
   | { kind: "rename"; target: string; title: string }
@@ -18,6 +37,21 @@ export type ProposalOperation =
   | { kind: "replace"; target: string; replacement: ProposalRecordFields }
   | { kind: "split"; target: string; parts: ProposalRecordFields[] }
   | { kind: "merge"; targets: string[]; result: ProposalRecordFields }
+  | {
+      kind: "extract"
+      target: string
+      component: ProposalComponentFields
+      parent?: string
+      from?: string
+    }
+  | {
+      kind: "move"
+      target: string
+      to: string
+      field?: ProposalMoveField
+      from?: string
+    }
+  | { kind: "change-contract"; target: string; fields: ProposalContractFields }
 
 export interface ProposalBaseline {
   commit: string

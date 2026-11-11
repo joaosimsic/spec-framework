@@ -110,6 +110,14 @@ export class SdocDocument {
     return this.lines.join(this.newline)
   }
 
+  sourcePath(): string {
+    return this.path
+  }
+
+  originalText(): string {
+    return this.original
+  }
+
   async save(): Promise<Result<string, string>> {
     if (!this.changed()) return [this.path, null]
 

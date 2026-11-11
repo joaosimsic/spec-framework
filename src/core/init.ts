@@ -39,8 +39,11 @@ const architectureTemplate = `specification {
 }
 
 model {
+  // ACTOR-USER observed human:owner@2026-11-10
   user = actor 'User'
+  // SYS-EXAMPLE observed human:owner@2026-11-10
   exampleSystem = system 'Example system'
+  // CMP-EXAMPLE observed human:owner@2026-11-10
   exampleComponent = component 'Example component'
 
   user -> exampleSystem 'uses'

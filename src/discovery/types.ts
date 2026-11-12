@@ -18,6 +18,7 @@ export interface DraftElement {
   owner?: string
   responsibility?: string
   boundary?: string
+  codePaths?: string[]
 }
 
 export interface DraftModel {

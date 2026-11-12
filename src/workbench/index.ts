@@ -2,6 +2,8 @@ export { WorkbenchServer, type WorkbenchServerHandle, type WorkbenchServerOption
 export { WorkbenchService, type WorkbenchServiceOptions } from "./service"
 export { WorkbenchStateReader } from "./state"
 export type {
+  WorkbenchArchitectureCodeFile,
+  WorkbenchArchitectureCodeSymbol,
   WorkbenchArchitectureGraphEdge,
   WorkbenchArchitectureGraphNode,
   WorkbenchArchitectureGraphView,

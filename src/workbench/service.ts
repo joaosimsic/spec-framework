@@ -12,6 +12,7 @@ import { ScratchBriefingFactory } from "../change/start"
 import type { ChangeReport, Proposal, ProposalOperation } from "../change/types"
 import type { SpecGraph } from "../model/types"
 import { WorkbenchArchitectureGraphDisplay } from "./architecture-graph-display"
+import { TypeScriptSymbolReader } from "./code-symbols"
 import { WorkbenchChangeDisplay } from "./change-display"
 import { WorkbenchFailureFactory, type WorkbenchFailure } from "./failure"
 import { WorkbenchGraphDisplay } from "./graph-display"
@@ -122,7 +123,22 @@ export class WorkbenchService {
       return [null, WorkbenchFailureFactory.internal("architecture model unavailable")]
     }
 
-    return [new WorkbenchArchitectureGraphDisplay(catalog).view(), null]
+    const hasCodePaths = catalog.elements.some(
+      (element) => (element.annotation.metadata["code"]?.trim() ?? "") !== "",
+    )
+    const discovery = hasCodePaths
+      ? await runMap(this.target, {
+          processRunner: this.options.processRunner,
+          toolLocator: this.options.toolLocator,
+        })
+      : null
+    const report = discovery?.code === 0 ? discovery.report : null
+    const sourcePaths =
+      report?.elements.flatMap((element) => (element.kind === "module" ? [element.title] : [])) ??
+      []
+    const symbolsByPath = await new TypeScriptSymbolReader(this.target).read(sourcePaths)
+
+    return [new WorkbenchArchitectureGraphDisplay(catalog, report, symbolsByPath).view(), null]
   }
 
   async repoGraph(): Promise<Result<WorkbenchRepoGraphView, WorkbenchFailure>> {

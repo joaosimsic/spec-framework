@@ -109,6 +109,8 @@ describe("WorkbenchServer integration", () => {
 
     try {
       await mkdir(join(target, "spec", "architecture"), { recursive: true })
+      await mkdir(join(target, "src", "core"), { recursive: true })
+      await writeFile(join(target, "src", "core", "result.ts"), "export const result = 1\n")
       await writeFile(
         join(target, "spec", "architecture", "model.c4"),
         `specification {
@@ -120,7 +122,7 @@ describe("WorkbenchServer integration", () => {
 model {
   // SYS-SAMPLE observed human:tester@2026-11-12
   sample = system 'Sample system'
-  // CMP-SAMPLE-CORE observed human:tester@2026-11-12
+  // CMP-SAMPLE-CORE observed human:tester@2026-11-12 description="Builds the validated graph." responsibility="Owns validation." boundary="In scope: checks." code="src/core"
   core = component 'Core'
   sample -> core 'contains'
   core -> sample 'reports to'
@@ -142,6 +144,13 @@ model {
         const view = (await response.json()) as WorkbenchArchitectureGraphView
         expect(response.status).toBe(200)
         expect(view.nodes.map((node) => node.label).sort()).toEqual(["Core", "Sample system"])
+        expect(view.nodes.find((node) => node.label === "Core")).toMatchObject({
+          description: "Builds the validated graph.",
+          responsibility: "Owns validation.",
+          boundary: "In scope: checks.",
+          codePaths: ["src/core"],
+          codeFiles: [{ label: "result.ts", path: "src/core/result.ts" }],
+        })
         expect(view.nodes.find((node) => node.label === "Core")?.parentRef).not.toBeNull()
         expect(view.edges.map((edge) => edge.label)).toEqual(["reports to"])
         expect(JSON.stringify(view)).not.toMatch(/\b(?:SYS|CMP)-/)
@@ -178,8 +187,10 @@ model {
         const response = await fetch(`${handle.url}/api/repo-graph`)
         const view = (await response.json()) as WorkbenchRepoGraphView
         expect(response.status).toBe(200)
-        expect(view.nodes.some((node) => node.label === "core")).toBe(true)
+        expect(view.nodes.some((node) => node.label === "src/core")).toBe(true)
         expect(view.nodes.some((node) => node.label === "operations.ts")).toBe(true)
+        expect(view.nodes.some((node) => node.label === "app")).toBe(false)
+        expect(view.nodes.some((node) => node.label === "src cli")).toBe(false)
         expect(
           view.edges.some(
             (edge) =>

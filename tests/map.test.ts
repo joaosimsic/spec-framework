@@ -70,15 +70,14 @@ describe("runMap", () => {
       await writeJson(join(target, "package.json"), {
         name: "root-app",
         workspaces: ["packages/*"],
-        dependencies: {
-          "@sample/core": "1.0.0",
-          "better-sqlite3": "11.0.0",
-          express: "5.0.0",
-        },
       })
       await writeJson(join(target, "packages", "core", "package.json"), {
         name: "@sample/core",
-        dependencies: { "@sample/util": "1.0.0" },
+        dependencies: {
+          "@sample/util": "1.0.0",
+          "better-sqlite3": "11.0.0",
+          express: "5.0.0",
+        },
       })
       await writeJson(join(target, "packages", "util", "package.json"), {
         name: "@sample/util",
@@ -91,34 +90,32 @@ describe("runMap", () => {
       const elements = run.report?.elements ?? []
       const byId = new Map(elements.map((element) => [element.id, element]))
       expect([...byId.keys()]).toEqual([
-        "CMP-ROOT-APP",
-        "CMP-SAMPLE-CORE",
-        "CMP-SAMPLE-UTIL",
+        "CMP-PACKAGES-CORE",
+        "CMP-PACKAGES-UTIL",
         "DAT-BETTER-SQLITE3",
         "SYS-SAMPLE",
       ])
 
-      const root = byId.get("CMP-ROOT-APP")
-      expect(root?.links).toContainEqual({
+      expect(byId.get("CMP-PACKAGES-CORE")?.links).toContainEqual({
         type: "depends_on",
-        to: "CMP-SAMPLE-CORE",
+        to: "CMP-PACKAGES-UTIL",
         confidence: "observed",
         provenance: "code:package.json#dependencies",
       })
-      expect(root?.links).toContainEqual({
+      expect(byId.get("CMP-PACKAGES-CORE")?.links).toContainEqual({
         type: "depends_on",
         to: "DAT-BETTER-SQLITE3",
         confidence: "inferred",
         provenance: "code:package.json#dependencies",
       })
-      expect(byId.get("CMP-SAMPLE-CORE")?.links).toContainEqual({
+      expect(byId.get("CMP-PACKAGES-CORE")?.links).toContainEqual({
         type: "part_of",
-        to: "CMP-ROOT-APP",
+        to: "SYS-SAMPLE",
         confidence: "observed",
         provenance: "code:package.json",
       })
       expect(byId.get("DAT-BETTER-SQLITE3")?.confidence).toBe("inferred")
-      expect(run.report?.gaps.externalDependencies).toEqual(["CMP-ROOT-APP -> express"])
+      expect(run.report?.gaps.externalDependencies).toEqual(["CMP-PACKAGES-CORE -> express"])
     } finally {
       await rm(target, { recursive: true, force: true })
     }

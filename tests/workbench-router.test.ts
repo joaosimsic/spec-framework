@@ -77,6 +77,7 @@ class FakeWorkbenchService {
       {
         nodes: [],
         edges: [],
+        warnings: [],
         summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
       },
       null,
@@ -154,6 +155,7 @@ describe("WorkbenchRouter", () => {
     expect(await response?.json()).toEqual({
       nodes: [],
       edges: [],
+      warnings: [],
       summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
     })
   })

@@ -5,7 +5,7 @@ import { shouldIgnoreDirectory } from "./fs"
 import { uniqueElementId } from "./ids"
 import type { DiscoveryContribution, DiscoveryFinding, DraftElement, DraftLink } from "./types"
 
-const SOURCE_ROOTS = ["src", "bin", "plugin", "scripts"]
+const SOURCE_ROOTS = ["src", "plugin"]
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"])
 const RESOLVE_EXTENSIONS = [
   "",
@@ -214,20 +214,17 @@ export class TypeScriptDiscovery {
     const parts = path.split("/")
     const first = parts[0] ?? "root"
     if (first === "src" && parts.length === 2) {
-      return { key: "src-cli", idName: "src cli", title: "src cli", directory: "src" }
+      return { key: "src", idName: "src", title: "src", directory: "src" }
     }
     if (first === "src") {
       const name = parts[1] ?? "src"
-      return { key: `src-${name}`, idName: `src ${name}`, title: name, directory: `src/${name}` }
+      const directory = `src/${name}`
+      return { key: directory, idName: directory, title: directory, directory }
     }
     if (first === "plugin") {
       const name = parts[1] ?? "plugin"
-      return {
-        key: `plugin-${name}`,
-        idName: `plugin ${name}`,
-        title: `${name} plugin`,
-        directory: `plugin/${name}`,
-      }
+      const directory = `plugin/${name}`
+      return { key: directory, idName: directory, title: directory, directory }
     }
     return { key: first, idName: first, title: first, directory: first }
   }

@@ -72,15 +72,27 @@ export class GenericDiscovery {
       return this.discoverDirectories(target, systemId, collection.findings)
     }
 
-    const visibleBoundaries = collection.boundaries.filter(
-      (boundary) => boundary.directory !== target || boundary.hasName,
+    const nonRootBoundaries = collection.boundaries.filter(
+      (boundary) => boundary.directory !== target,
     )
+    const hasSourceRoots = await this.hasSourceRoots(target)
+    const visibleBoundaries =
+      nonRootBoundaries.length > 0 ? nonRootBoundaries : hasSourceRoots ? [] : collection.boundaries
 
     if (visibleBoundaries.length === 0) {
+      if (hasSourceRoots)
+        return { elements: [], findings: collection.findings, externalDependencies: [] }
+
       return this.discoverDirectories(target, systemId, collection.findings)
     }
 
     return this.buildFromBoundaries(systemId, visibleBoundaries, collection.findings)
+  }
+
+  private async hasSourceRoots(target: string): Promise<boolean> {
+    const entries = await readdir(target, { withFileTypes: true }).catch(() => [])
+
+    return entries.some((entry) => entry.isDirectory() && ["src", "plugin"].includes(entry.name))
   }
 
   private async collectBoundaries(target: string): Promise<BoundaryCollection> {
@@ -299,7 +311,11 @@ export class GenericDiscovery {
     for (const boundary of [...boundaries].sort((left, right) =>
       left.relativeDirectory.localeCompare(right.relativeDirectory),
     )) {
-      const id = uniqueElementId("CMP", boundary.name, used)
+      const id = uniqueElementId(
+        "CMP",
+        boundary.relativeDirectory === "." ? boundary.name : boundary.relativeDirectory,
+        used,
+      )
       const confidence: Confidence = boundary.hasName ? "observed" : "ambiguous"
       const element: DraftElement = {
         id,

@@ -1,7 +1,7 @@
 import { likec4Alias } from "./ids"
 import type { DraftElement } from "./types"
 
-const KIND_ORDER = ["system", "component", "data_store", "external_system"]
+const KIND_ORDER = ["actor", "system", "subsystem", "component", "data_store", "external_system"]
 
 export function renderDraftModel(elements: DraftElement[]): string {
   const aliases = buildAliases(elements)
@@ -83,6 +83,9 @@ function metadata(element: DraftElement): string {
     fields.push(`responsibility=${JSON.stringify(element.responsibility)}`)
   }
   if (element.boundary !== undefined) fields.push(`boundary=${JSON.stringify(element.boundary)}`)
+  if (element.codePaths !== undefined && element.codePaths.length > 0) {
+    fields.push(`code=${JSON.stringify(element.codePaths.join(","))}`)
+  }
 
   return fields.length === 0 ? "" : ` ${fields.join(" ")}`
 }

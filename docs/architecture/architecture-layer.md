@@ -22,6 +22,26 @@ It provides:
 
 Structurizr is a valid alternative when strict C4 hierarchy is required. SysML v2 is an alternative when a standards-based systems model is more important than tooling ergonomics.
 
+## Generated model
+
+`spec architecture generate` writes a deterministic code-derived draft to
+`spec/generated/architecture.gen.c4`. It never writes the curated
+`spec/architecture/model.c4`, and `--check` checks only the generated draft.
+
+The draft is evidence for review, not an architecture decision:
+
+- the project package becomes the root system;
+- workspace packages and source groups become components;
+- labels use package names and source group names;
+- data stores and external dependencies become separate elements;
+- relations come from local imports and package dependencies;
+- repository paths stay in `code` metadata instead of becoming element titles.
+
+Curate the architecture with `spec map --review` and `spec map --promote`, then
+approve the resulting LikeC4 elements. Workbench Architecture reads the curated
+model; Code map reads discovery. Approval hashes apply to curated architecture,
+so code changes that alter the model invalidate affected approvals.
+
 ## Default metamodel
 
 The framework ships a starting specification that projects may extend:
@@ -62,6 +82,19 @@ Relation kinds:
 
 Projects may rename or add kinds, but relation endpoints and required fields must remain checkable.
 
+The workbench reads role metadata from the explicit ID annotation. A typical
+component annotation looks like:
+
+```text
+// CMP-SPEC-APPROVAL-SCOPE proposed observed human:owner@2026-11-12 description="Resolves visible approval names to exact IDs." responsibility="Owns approval scope resolution." boundary="In scope: names and ambiguity. Out of scope: lock writes." code="src/approval/scope.ts"
+```
+
+`description`, `responsibility`, `boundary`, `owner`, `technology`, and `code`
+are optional metadata. The workbench shows missing fields as not documented
+rather than inventing them. When code paths resolve to TypeScript sources, the
+workbench also extracts top-level functions, classes, interfaces, type aliases,
+enums, and constants for the implementation drill-down graph.
+
 ## Required metadata
 
 Every component-like element:
@@ -71,6 +104,7 @@ Every component-like element:
 - `responsibility` (one sentence);
 - `boundary` (in scope and out of scope);
 - `technology` or explicit `technology: none`;
+- `code` with comma-separated repository paths when the element maps to source;
 - `status`;
 - `provenance`.
 
@@ -84,7 +118,7 @@ Every relation:
 
 Native LikeC4 validation plus `spec-lint`:
 
-1. Every component belongs to exactly one system or parent component.
+1. Systems contain subsystems only. Subsystems may contain subsystems, components, and data stores. Components contain no architecture elements. Data stores, actors, and external systems are leaves.
 2. Every relation endpoint exists and has a legal kind pair.
 3. Every component has an owner and responsibility.
 4. Every external boundary has a contract reference or a waiver.

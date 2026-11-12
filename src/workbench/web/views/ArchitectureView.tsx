@@ -3,40 +3,52 @@ import { getArchitectureGraph } from "../api"
 import { EmptyPanel, FailurePanel, LoadingPanel } from "../components/Panels"
 import { useApiResource } from "../components/useApiResource"
 import type { WorkbenchViewProps } from "./types"
-import { ArchitectureCanvas } from "./architecture/ArchitectureCanvas"
 import { ArchitectureDetails } from "./architecture/ArchitectureDetails"
-import { ArchitectureProjectionBuilder } from "./architecture/projection"
+import { ArchitectureUniverseBuilder } from "./architecture/universe"
+import { ForceGraphCanvas } from "./graph/ForceGraphCanvas"
+import { ForceGraphVisibility } from "./graph/force-visibility"
 
 export function ArchitectureView(_props: WorkbenchViewProps) {
   const load = useCallback(() => getArchitectureGraph(), [])
   const architecture = useApiResource(load)
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<string | null>(null)
+  const [inspectorOpen, setInspectorOpen] = useState(true)
+  const [showInternal, setShowInternal] = useState(false)
 
-  const nodes = architecture.data?.nodes ?? []
-  const edges = architecture.data?.edges ?? []
-  const projection = useMemo(
-    () => ArchitectureProjectionBuilder.build(nodes, edges, collapsed, query),
-    [nodes, edges, collapsed, query],
+  const architectureNodes = architecture.data?.nodes ?? []
+  const architectureEdges = architecture.data?.edges ?? []
+  const universe = useMemo(
+    () => ArchitectureUniverseBuilder.build(architectureNodes, architectureEdges, showInternal),
+    [architectureNodes, architectureEdges, showInternal],
   )
-  const byRef = useMemo(
-    () => new Map(projection.nodes.map((node) => [node.ref, node])),
-    [projection.nodes],
+  const visible = useMemo(
+    () => ForceGraphVisibility.build(universe.graph, expanded, query),
+    [universe.graph, expanded, query],
   )
-  const selectedNode = selected === null ? null : (byRef.get(selected) ?? null)
+  const selectedNode = selected === null ? null : (universe.details.get(selected) ?? null)
   const incoming =
-    selected === null ? [] : projection.edges.filter((edge) => edge.targetRef === selected)
+    selected === null ? [] : universe.graph.links.filter((link) => link.targetRef === selected)
   const outgoing =
-    selected === null ? [] : projection.edges.filter((edge) => edge.sourceRef === selected)
+    selected === null ? [] : universe.graph.links.filter((link) => link.sourceRef === selected)
 
-  function toggleGroup(ref: string): void {
-    setCollapsed((current) => {
+  function choose(ref: string): void {
+    setSelected(ref)
+    setInspectorOpen(true)
+  }
+
+  function toggleExpanded(ref: string): void {
+    setExpanded((current) => {
       const next = new Set(current)
       if (next.has(ref)) next.delete(ref)
       else next.add(ref)
       return next
     })
+  }
+
+  function expandAll(): void {
+    setExpanded(new Set(universe.graph.nodes.map((node) => node.ref)))
   }
 
   if (architecture.loading) return <LoadingPanel label="Loading the architecture graph." />
@@ -57,78 +69,107 @@ export function ArchitectureView(_props: WorkbenchViewProps) {
         </div>
         <p className="meta graph-summary">
           {architecture.data.summary.nodes} elements - {architecture.data.summary.relations}{" "}
-          relations - {architecture.data.summary.groups} groups - {architecture.data.summary.roots}{" "}
-          top-level
+          relations - {visible.nodes.length} visible
         </p>
         <p className="meta graph-description">
-          Read-only curated model. Scroll to zoom, drag to pan. Nothing here approves or edits the
-          model.
+          Expand nodes to reveal systems, subsystems, components, files, and symbols. Click selects;
+          double-click expands or collapses.
         </p>
       </section>
 
+      {architecture.data.warnings.length > 0 && (
+        <div className="panel notice-warn" role="status">
+          <ul>
+            {architecture.data.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <section className="panel graph-controls graph-toolbar" aria-label="Architecture controls">
+        <div className="graph-legend" aria-label="Architecture legend">
+          <span>System</span>
+          <span>Subsystem</span>
+          <span>Component</span>
+          <span>File</span>
+          <span>Symbol</span>
+        </div>
+
         <label className="graph-field">
           Search
           <input
             value={query}
-            placeholder="Name or kind"
+            placeholder="Name, role, code path, or symbol"
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
         <div className="graph-control-group">
-          <span className="meta">Groups</span>
-          <button
-            type="button"
-            onClick={() =>
-              setCollapsed(
-                new Set(nodes.filter((node) => node.childCount > 0).map((node) => node.ref)),
-              )
-            }
-          >
+          <span className="meta">Graph</span>
+          <button type="button" onClick={expandAll}>
+            Expand all
+          </button>
+          <button type="button" onClick={() => setExpanded(new Set())}>
             Collapse all
           </button>
-          <button type="button" onClick={() => setCollapsed(new Set())}>
-            Expand all
+        </div>
+        <label className="graph-control-group">
+          <input
+            type="checkbox"
+            checked={showInternal}
+            onChange={(event) => setShowInternal(event.target.checked)}
+          />
+          Show internal declarations
+        </label>
+        <div className="graph-control-group">
+          <span className="meta">Inspector</span>
+          <button type="button" onClick={() => setInspectorOpen((open) => !open)}>
+            {inspectorOpen ? "Hide" : "Show"}
           </button>
         </div>
       </section>
 
-      <div className="graph-layout">
-        <ArchitectureCanvas
-          nodes={projection.nodes}
-          edges={projection.edges}
-          collapsed={collapsed}
+      <div className={`graph-layout${inspectorOpen ? "" : " graph-layout-inspector-hidden"}`}>
+        <ForceGraphCanvas
+          nodes={visible.nodes}
+          links={visible.links}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={choose}
+          onToggle={toggleExpanded}
         />
-        <aside className="panel graph-details" aria-live="polite">
-          <ArchitectureDetails
-            selected={selectedNode}
-            nodes={byRef}
-            incoming={incoming}
-            outgoing={outgoing}
-            collapsed={selected === null ? false : collapsed.has(selected)}
-            onToggleGroup={toggleGroup}
-          />
-        </aside>
+        {inspectorOpen && (
+          <aside className="panel graph-details" aria-live="polite">
+            <ArchitectureDetails
+              selected={selectedNode}
+              nodes={universe.details}
+              incoming={incoming}
+              outgoing={outgoing}
+              collapsed={
+                selected !== null && !expanded.has(selected) && (selectedNode?.childCount ?? 0) > 0
+              }
+              onToggleGroup={toggleExpanded}
+              onSelect={choose}
+            />
+          </aside>
+        )}
       </div>
 
       <details className="panel graph-list-panel">
-        <summary>Visible elements ({projection.nodes.length})</summary>
+        <summary>Visible elements ({visible.nodes.length})</summary>
         <ul className="plain-list graph-node-list">
-          {projection.nodes.map((node) => (
+          {visible.nodes.map((node) => (
             <li key={node.ref}>
-              <button type="button" onClick={() => setSelected(node.ref)}>
+              <button type="button" onClick={() => choose(node.ref)}>
                 {node.label}
               </button>
               <span className="meta">
                 {node.kindLabel}
-                {node.childCount > 0 ? ` - ${node.childCount} inside` : ""}
+                {node.hiddenCount !== undefined && node.hiddenCount > 0
+                  ? ` - ${node.hiddenCount} hidden`
+                  : ""}
               </span>
-              {node.childCount > 0 && (
-                <button type="button" onClick={() => toggleGroup(node.ref)}>
-                  {collapsed.has(node.ref) ? "Expand" : "Collapse"}
-                </button>
+              {node.description !== undefined && (
+                <span className="graph-node-summary">{node.description}</span>
               )}
             </li>
           ))}

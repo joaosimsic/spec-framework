@@ -118,15 +118,40 @@ export interface WorkbenchMappingView {
   next: string[]
 }
 
+export interface WorkbenchArchitectureCodeSymbol {
+  ref: string
+  name: string
+  kind: string
+  kindLabel: string
+  exported: boolean
+  line: number
+}
+
+export interface WorkbenchArchitectureCodeFile {
+  ref: string
+  label: string
+  path: string
+  dependencies: string[]
+  symbols: WorkbenchArchitectureCodeSymbol[]
+}
+
 export interface WorkbenchArchitectureGraphNode {
   ref: string
   label: string
+  kind: string
   kindLabel: string
   parentRef: string | null
   groupRef: string
   childCount: number
   confidenceLabel: string
   stateLabel: string
+  description?: string
+  responsibility?: string
+  boundary?: string
+  owner?: string
+  technology?: string
+  codePaths: string[]
+  codeFiles: WorkbenchArchitectureCodeFile[]
 }
 
 export interface WorkbenchArchitectureGraphEdge {
@@ -139,6 +164,7 @@ export interface WorkbenchArchitectureGraphEdge {
 export interface WorkbenchArchitectureGraphView {
   nodes: WorkbenchArchitectureGraphNode[]
   edges: WorkbenchArchitectureGraphEdge[]
+  warnings: string[]
   summary: {
     nodes: number
     relations: number

@@ -61,23 +61,29 @@ files. A proposal records its base commit, baseline, and author.
 
 ### Architecture
 
-The read-only system map. It shows the curated LikeC4 elements and relations,
-using `contains` relations as collapsible groups. Cross-group relations remain
-visible and de-emphasized. The view supports search, collapse and expand, wheel
-zoom, drag panning, node details, and a collapsible text node list. Element kinds
-and relation labels come from the project model. It never edits or approves
-anything and does not require a proposal. The canvas takes most of the viewport;
-identity and hashes stay behind technical details.
+The read-only system map. It uses a force-directed graph with expansion:
+collapsing everything leaves only the root system, expanding a node reveals its
+children and direct relation neighbors, and physics spreads nearby nodes to make
+room. Click selects and opens the inspector; double-click expands or collapses.
+The view supports search, expand all, collapse all, wheel zoom, drag panning, a
+collapsible inspector, and a collapsible text node list. Element kinds and
+relation labels come from the curated project model. Expanding components reveals files;
+expanding files reveals exported symbols, with a toggle for internal top-level
+declarations. The inspector shows descriptions, responsibilities, boundaries,
+owners, technology, relations, code paths, source files, and symbols. It never
+edits or approves anything and does not require a proposal. The canvas takes most
+of the viewport; identity and hashes stay behind technical details.
 
 ### Code map
 
-The read-only repository graph. It shows subsystem nodes and file nodes
-discovered from TypeScript source. Subsystems appear by default; selecting a
-subsystem opens its files and their imports. Local import dependencies are
-aggregated into subsystem dependencies. The view supports search, level
-switching, wheel zoom, drag panning, node details, and a collapsible text node
-list. It is code-derived evidence, not the curated architecture, and does not
-require a proposal.
+The read-only repository graph. It uses the same force-directed expansion as
+Architecture: collapsing everything leaves the root system, expanding reveals
+subsystems, files, and direct dependency neighbors. Local import dependencies are
+aggregated into subsystem dependencies. Labels are path-based unless a package
+name is available; root package components, `bin`, and `scripts` are excluded.
+The view supports search, expand all, collapse all, wheel zoom, drag panning,
+node details, and a collapsible text node list. It is code-derived evidence, not
+the curated architecture, and does not require a proposal.
 
 ### Overview
 

@@ -46,7 +46,7 @@ describe("TypeScriptDiscovery", () => {
       const byId = new Map(contribution.elements.map((element) => [element.id, element]))
 
       for (const id of [
-        "CMP-SRC-CLI",
+        "CMP-SRC",
         "CMP-SRC-CORE",
         "CMP-SRC-CHANGE",
         "CMP-SRC-WORKBENCH",
@@ -54,6 +54,10 @@ describe("TypeScriptDiscovery", () => {
       ]) {
         expect(byId.get(id)?.kind).toBe("component")
       }
+      expect(byId.get("CMP-SRC")?.title).toBe("src")
+      expect(byId.get("CMP-SRC-CORE")?.title).toBe("src/core")
+      expect(byId.get("CMP-PLUGIN-OPENCODE")?.title).toBe("plugin/opencode")
+      expect(contribution.elements.some((element) => element.id === "CMP-BIN")).toBe(false)
 
       for (const id of [
         "FILE-SRC-CORE-SDOC-TS",
@@ -62,7 +66,6 @@ describe("TypeScriptDiscovery", () => {
         "FILE-SRC-CLI-TS",
         "FILE-SRC-WORKBENCH-SERVICE-TS",
         "FILE-PLUGIN-OPENCODE-SRC-TOOLS-TS",
-        "FILE-BIN-SPEC-TS",
       ]) {
         expect(byId.get(id)?.kind).toBe("module")
       }
@@ -78,12 +81,6 @@ describe("TypeScriptDiscovery", () => {
         to: "FILE-SRC-CORE-SDOC-TS",
         confidence: "observed",
         provenance: "code:src/change/operations.ts#imports",
-      })
-      expect(byId.get("FILE-BIN-SPEC-TS")?.links).toContainEqual({
-        type: "depends_on",
-        to: "FILE-SRC-CLI-TS",
-        confidence: "observed",
-        provenance: "code:bin/spec.ts#imports",
       })
       expect(byId.get("CMP-SRC-CHANGE")?.links).toContainEqual({
         type: "depends_on",

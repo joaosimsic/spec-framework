@@ -111,7 +111,7 @@ function mergeElements(elements: DraftElement[]): DraftElement[] {
       links.set(`${link.type}\u0000${link.to}`, link)
     }
     byId.set(element.id, {
-      ...element,
+      ...existing,
       links: [...links.values()],
     })
   }

@@ -691,6 +691,27 @@ pre {
   padding: 0.6rem 0.75rem;
 }
 
+.graph-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.graph-breadcrumb button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+}
+
+.graph-breadcrumb button[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 650;
+}
+
 .graph-control-group {
   display: flex;
   flex-wrap: wrap;
@@ -740,8 +761,13 @@ pre {
 }
 
 .shell-graph .graph-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 17rem);
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 24rem);
   gap: 0.75rem;
+}
+
+.shell-graph .graph-layout-inspector-hidden,
+.graph-layout-inspector-hidden {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .shell-graph .graph-panel {
@@ -839,6 +865,50 @@ pre {
   stroke-width: 2;
 }
 
+.architecture-node-system rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.architecture-node-system text {
+  fill: var(--accent-ink);
+}
+
+.architecture-node-subsystem rect {
+  fill: color-mix(in srgb, var(--accent) 10%, var(--paper-raised));
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.architecture-node-component rect {
+  stroke: var(--accent);
+  stroke-width: 1.8;
+}
+
+.architecture-node-file rect {
+  fill: color-mix(in srgb, var(--ink-muted) 8%, var(--paper-raised));
+  stroke-dasharray: 4 3;
+}
+
+.architecture-node-function rect,
+.architecture-node-class rect,
+.architecture-node-interface rect,
+.architecture-node-type rect,
+.architecture-node-enum rect,
+.architecture-node-constant rect {
+  fill: color-mix(in srgb, var(--focus) 8%, var(--paper-raised));
+  stroke: var(--focus);
+}
+
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
 .architecture-node-selected rect,
 .architecture-node:focus-visible rect {
   stroke: var(--focus);
@@ -911,6 +981,70 @@ pre {
   align-self: start;
 }
 
+.inspector-empty h2 {
+  margin-bottom: 0.5rem;
+}
+
+.inspector-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.inspector-header h2 {
+  margin-bottom: 0.4rem;
+}
+
+.inspector-header p {
+  margin-bottom: 0.3rem;
+}
+
+.inspector-section {
+  margin-top: 1rem;
+}
+
+.inspector-section h3 {
+  margin-bottom: 0.35rem;
+}
+
+.inspector-list li {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+}
+
+.link-button:hover:not(:disabled) {
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.relation-label {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.code-path-list code {
+  overflow-wrap: anywhere;
+}
+
+.code-file-list {
+  margin-top: 0.6rem;
+}
+
+.graph-node-summary {
+  flex-basis: 100%;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
 .graph-relations {
   margin-top: 1rem;
 }
@@ -968,4 +1102,116 @@ pre {
   .shell-graph {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.force-panel {
+  overflow: hidden;
+}
+
+.force-canvas {
+  min-height: 44rem;
+}
+
+.force-link line {
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+  opacity: 0.45;
+}
+
+.force-link-contains line,
+.force-link-implements line,
+.force-link-declares line,
+.force-link-part_of line {
+  stroke-dasharray: 4 5;
+  opacity: 0.3;
+}
+
+.force-link-imports line {
+  opacity: 0.38;
+}
+
+.force-link text {
+  fill: var(--ink-muted);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: var(--paper);
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+
+.force-node {
+  cursor: pointer;
+}
+
+.force-node circle {
+  fill: var(--paper-raised);
+  stroke: var(--line-strong);
+  stroke-width: 2;
+}
+
+.force-node-system circle {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.force-node-subsystem circle {
+  fill: color-mix(in srgb, var(--accent) 16%, var(--paper-raised));
+  stroke: var(--accent);
+}
+
+.force-node-component circle {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+}
+
+.force-node-file circle {
+  fill: color-mix(in srgb, var(--ink-muted) 10%, var(--paper-raised));
+  stroke: var(--ink-muted);
+  stroke-dasharray: 3 2;
+}
+
+.force-node-function circle,
+.force-node-class circle,
+.force-node-interface circle,
+.force-node-type circle,
+.force-node-enum circle,
+.force-node-constant circle {
+  fill: color-mix(in srgb, var(--focus) 12%, var(--paper-raised));
+  stroke: var(--focus);
+}
+
+.force-node-selected circle,
+.force-node:focus-visible circle {
+  stroke: var(--focus);
+  stroke-width: 4;
+}
+
+.force-node text {
+  fill: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: var(--paper);
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+
+.force-node-system text {
+  fill: var(--accent-ink);
+  stroke: var(--accent);
+}
+
+.force-node-badge circle {
+  fill: var(--accent);
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+
+.force-node-badge text {
+  fill: var(--accent-ink);
+  stroke: none;
+  font-size: 9px;
 }

@@ -13,6 +13,7 @@ import {
   type ProposalOperation,
 } from "./change/index"
 import { attemptAsync } from "./core/result"
+import { ArchitectureModelGenerator } from "./core/architecture-generate"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { ToolProvisioner, type ProvisionOutcome } from "./core/provision"
@@ -46,6 +47,7 @@ Usage:
   spec check [--structural] [--json]
   spec next [--technical] [--json]
   spec map [--draft] [--review [--interactive|--no-interactive] [--action <json|file>]...] [--promote [--scope <name>]...] [--check] [--technical] [--json]
+  spec architecture generate [--check]
   spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
@@ -64,6 +66,7 @@ Commands:
   check     Run structural checks, then native checks
   next      Show the next decisions and checks in the active mode
   map       Discover draft architecture, review it, promote it, or check drift
+  architecture Generate a code-derived architecture draft without touching curated sources
   start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
@@ -1239,6 +1242,30 @@ async function commandApprove(args: string[]): Promise<number> {
   return run.code
 }
 
+async function commandArchitecture(args: string[]): Promise<number> {
+  const target = process.cwd()
+  const check = hasFlag(args, "--check") || args.includes("check")
+  const generator = new ArchitectureModelGenerator(target)
+
+  if (check) {
+    const [run, error] = await generator.check()
+    if (error !== null || run === null) {
+      console.error(error ?? "architecture check failed")
+      return 1
+    }
+    console.log(run.output)
+    return run.code
+  }
+
+  const [run, error] = await generator.write()
+  if (error !== null || run === null) {
+    console.error(error ?? "architecture generation failed")
+    return 1
+  }
+  console.log(run.output)
+  return run.code
+}
+
 export async function main(args: string[]): Promise<number> {
   const [command = "help"] = withoutFlags(args)
 
@@ -1253,6 +1280,8 @@ export async function main(args: string[]): Promise<number> {
       return commandNext(args)
     case "map":
       return commandMap(args)
+    case "architecture":
+      return commandArchitecture(args)
     case "start":
       return commandStart(args)
     case "query":

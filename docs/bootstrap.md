@@ -1,6 +1,6 @@
 # Bootstrap
 
-> Implementation status: the current skeleton reports missing tools and prints a provisioning plan. The LikeC4, StrictDoc, Quint, JSON Schema, CLI, and Rust public API adapters are implemented. Adapters run only when their sources or language are present, or when explicitly required in config.
+> Implementation status: `spec doctor --fix` installs pinned LikeC4, Quint, and StrictDoc under `.spec/tools` using Bun and uv, then reports any tool it cannot provision safely. Apalache and Java remain manual prerequisites. The LikeC4, StrictDoc, Quint, JSON Schema, CLI, and Rust public API adapters are implemented. Adapters run only when their sources or language are present, or when explicitly required in config.
 
 ## Default
 
@@ -26,32 +26,26 @@ spec check
 ```
 
 1. `spec init` detects the project type, writes `spec/config.json`, and scaffolds the full profile.
-2. `spec doctor --fix` resolves missing pinned tools using the best available runner.
+2. `spec doctor --fix` installs pinned tools with the available package-manager runners.
 3. `spec check` runs structural checks, then every active native adapter. An adapter is active when its sources or language are detected, or when it is listed in `spec/config.json`. Inactive adapters do not run and their tools are not required.
 
 If provisioning is not possible, `spec doctor` prints exact commands per missing tool. It never installs globally without explicit consent.
 
 ## Provisioning matrix
 
-| Environment                 | Runner                       | Behavior                                               |
-| --------------------------- | ---------------------------- | ------------------------------------------------------ |
-| Nix available               | pinned flake                 | Preferred; reproducible, no global mutation            |
-| Container runtime available | pinned image                 | Reproducible; mounts the project read/write            |
-| Bun available               | project-local `bun add`      | LikeC4 and Quint tooling                               |
-| Python `uv` available       | `uvx`                        | StrictDoc                                              |
-| Java available              | cached Apalache distribution | Quint model checking                                   |
-| None of the above           | instructions                 | `spec doctor` prints exact commands and exits non-zero |
+| Tool          | Runner | Behavior                                                  |
+| ------------- | ------ | --------------------------------------------------------- |
+| LikeC4, Quint | Bun    | `bun add --exact` under `.spec/tools`                     |
+| StrictDoc     | uv     | `uv tool install` into `.spec/tools`                      |
+| Apalache      | manual | pinned release and Java 21+ reported as instructions      |
+| Java          | manual | Java 21+ reported as instructions                         |
+| Unpinned tool | none   | `spec doctor --fix` refuses to resolve a floating version |
 
 Pinned versions live in `spec/toolchain.lock.json`. The lockfile is committed. `spec doctor --fix` does not resolve floating versions.
 
 ## Project-local by default
 
-Provisioned tools live under one of:
-
-- `.spec/tools/` inside the project;
-- the Nix store;
-- a container image;
-- an explicitly configured cache.
+The current implementation provisions tools under `.spec/tools/` inside the project. Nix and container runners remain future additions.
 
 No global installs, no `curl | sh`, no edits to shell profiles. A tool provisioned for one project does not silently become the default for another.
 
@@ -88,7 +82,7 @@ This is not a reduced product mode. It is a preflight that gives immediate feedb
 
 ## Offline and CI
 
-- `spec doctor --fix` can use a pre-populated cache.
+- `spec doctor --fix` reuses the project-local `.spec/tools` cache.
 - CI uses the pinned lockfile and does not resolve new versions.
 - The audit bundle records runner, tool versions, command lines, and input hashes.
 - Missing tools in CI fail the job; local development may run structural-only checks for fast feedback.
@@ -96,15 +90,18 @@ This is not a reduced product mode. It is a preflight that gives immediate feedb
 ## Example doctor output
 
 ```text
-$ spec doctor
-likec4       missing    run: spec doctor --fix
-strictdoc    ok         0.30.1
-quint        ok         0.30.0
-apalache     missing    requires Java 21+; run: spec doctor --fix
-pdf          ok         strictdoc html2pdf
-contracts    ok         json-schema, cli
+$ spec doctor --fix
+provisioned strictdoc 0.30.4
+provisioned quint 0.33.1
+skipped apalache: install pinned Apalache release (requires Java 21+) [TOOL-UNSUPPORTED]
 
-2 missing capabilities. Full approval is blocked for architecture and formal claims.
+likec4       ok         required  run spec doctor --fix (bun)
+strictdoc    ok         required  run spec doctor --fix (uv)
+quint        ok         required  run spec doctor --fix (bun)
+apalache     missing    required  install pinned Apalache release (requires Java 21+)
+java         ok         required  install Java 21+
+
+1 required tool(s) missing
 ```
 
 ## Security

@@ -5,6 +5,8 @@ import tseslint from "typescript-eslint"
 export default tseslint.config(
   {
     ignores: [
+      ".spec/**",
+      "_apalache-out/**",
       "node_modules/**",
       "dist/**",
       "src/workbench/web/dist/**",

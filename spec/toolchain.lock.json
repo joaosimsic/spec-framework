@@ -2,6 +2,9 @@
   "schema": 1,
   "status": "partial",
   "tools": {
-    "likec4": "1.60.0"
+    "apalache": "0.63.0",
+    "likec4": "1.60.0",
+    "quint": "0.33.1",
+    "strictdoc": "0.30.4"
   }
 }

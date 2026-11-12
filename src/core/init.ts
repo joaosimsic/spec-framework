@@ -102,7 +102,12 @@ listed in \`config.json\`. Approved content is hash-locked in \`spec.lock\`.
 const toolchainLock = `{
   "schema": 1,
   "status": "unprovisioned",
-  "tools": {}
+  "tools": {
+    "apalache": "0.63.0",
+    "likec4": "1.60.0",
+    "quint": "0.33.1",
+    "strictdoc": "0.30.4"
+  }
 }
 `
 

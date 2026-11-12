@@ -1,3 +1,5 @@
+.spec
+_apalache-out
 node_modules
 dist
 src/workbench/web/dist

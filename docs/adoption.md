@@ -1,6 +1,6 @@
 # Adoption
 
-> Implementation status: `spec init`, `spec doctor`, structural checks, native adapters, `spec map --draft`, the `spec map --review` mapping entry with area and relation curation actions, `spec map --promote`, architecture approval, `spec map --check`, the `spec start` scratch entry, and the local `spec workbench` are available. Automatic provisioning is in progress.
+> Implementation status: `spec init`, `spec doctor`, `spec doctor --fix`, structural checks, native adapters, `spec map --draft`, the `spec map --review` mapping entry with area and relation curation actions, `spec map --promote`, architecture approval, `spec map --check`, the `spec start` scratch entry, and the local `spec workbench` are available. Automatic provisioning installs pinned LikeC4, Quint, and StrictDoc under `.spec/tools`; Apalache and Java remain manual prerequisites.
 
 ## Goal
 

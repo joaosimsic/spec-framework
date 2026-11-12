@@ -15,6 +15,8 @@ import {
 import { attemptAsync } from "./core/result"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
+import { ToolProvisioner, type ProvisionOutcome } from "./core/provision"
+import { BunProcessRunner } from "./core/runner"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
 import { runMapCheck } from "./core/map-check"
@@ -48,7 +50,7 @@ Usage:
 
 Commands:
   init      Create the full-stack spec scaffold
-  doctor    Report required and optional tools
+  doctor    Report or provision required and optional tools
   check     Run structural checks, then native checks
   map       Discover draft architecture, review it, promote it, or check drift
   start     Open a scratch-mode proposal from a goal
@@ -89,29 +91,73 @@ async function commandInit(args: string[]): Promise<number> {
 }
 
 async function commandDoctor(args: string[]): Promise<number> {
-  const statuses = getToolStatuses()
-  const missing = missingRequiredDiagnostics(statuses)
+  const target = process.cwd()
   const json = hasFlag(args, "--json")
   const fix = hasFlag(args, "--fix")
+  let statuses = getToolStatuses(target)
+  let provision: ProvisionOutcome | null = null
+  let provisionFailure: string | null = null
+
+  if (fix && missingRequiredDiagnostics(statuses).length > 0) {
+    const [outcome, error] = await new ToolProvisioner(target, new BunProcessRunner()).provision()
+    if (error !== null) {
+      provisionFailure = `${error.code}: ${error.message}`
+    } else if (outcome !== null) {
+      provision = outcome
+      statuses = outcome.statuses
+    }
+  }
+
+  const missing = missingRequiredDiagnostics(statuses)
 
   if (json) {
-    console.log(JSON.stringify({ tools: statuses, missing: missing.length }, null, 2))
+    const payload: Record<string, unknown> = { tools: statuses, missing: missing.length }
+    if (provision !== null) {
+      payload.provision = {
+        status: provision.lockStatus,
+        provisioned: provision.provisioned,
+        skipped: provision.skipped,
+        failed: provision.failed,
+      }
+    }
+    if (provisionFailure !== null) payload.error = provisionFailure
+    console.log(JSON.stringify(payload, null, 2))
   } else {
+    printProvisioning(provision, provisionFailure)
     console.log(formatStatuses(statuses))
     console.log("")
     console.log(`${missing.length} required tool(s) missing`)
   }
 
+  if (provisionFailure !== null) return 1
   if (missing.length === 0) return 0
 
-  if (fix) {
-    console.error("")
-    console.error("provisioning plan (automatic execution is not implemented in this skeleton):")
-    for (const item of missing) console.error(`- ${item.message}`)
-    return 2
-  }
+  return fix ? 2 : 1
+}
 
-  return 1
+function printProvisioning(
+  provision: ProvisionOutcome | null,
+  provisionFailure: string | null,
+): void {
+  if (provisionFailure !== null) {
+    console.error(`doctor: ${provisionFailure}`)
+    console.error("")
+    return
+  }
+  if (provision === null) return
+
+  for (const tool of provision.provisioned) {
+    console.log(`provisioned ${tool.name} ${tool.version}`)
+  }
+  for (const item of provision.skipped) {
+    console.log(`skipped ${item.name}: ${item.message} [${item.code}]`)
+  }
+  for (const item of provision.failed) {
+    console.error(`failed ${item.name}: ${item.message} [${item.code}]`)
+  }
+  if (provision.provisioned.length > 0 || provision.skipped.length > 0) {
+    console.log("")
+  }
 }
 
 async function commandCheck(args: string[]): Promise<number> {

@@ -19,6 +19,16 @@ describe("initProject", () => {
       )
       expect(created.some((path) => path.endsWith("implementation/README.md"))).toBe(true)
 
+      const lock = JSON.parse(await readFile(join(dir, "spec", "toolchain.lock.json"), "utf8")) as {
+        tools: Record<string, string>
+      }
+      expect(lock.tools).toEqual({
+        apalache: "0.63.0",
+        likec4: "1.60.0",
+        quint: "0.33.1",
+        strictdoc: "0.30.4",
+      })
+
       const run = await runCheck(dir, { structural: true })
       expect(run.code).toBe(0)
       expect(run.result.errors).toBe(0)

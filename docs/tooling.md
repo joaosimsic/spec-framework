@@ -17,7 +17,7 @@
 | Implementation preflight | project compiler or build tool          | Configured commands; no shell; planned         |
 | Contracts                | adapters                                | JSON Schema, CLI, Rust public API in Phase 1   |
 | PDF                      | StrictDoc HTML2PDF                      | Fallback: Typst/Pandoc assembly                |
-| Provisioning             | `spec doctor --fix`                     | Nix, container, or local runners               |
+| Provisioning             | `spec doctor --fix`                     | Project-local Bun and uv runners               |
 
 ## Version pinning
 
@@ -29,9 +29,9 @@
 
 ## Provisioning preference
 
-1. Nix flake, when available.
-2. Pinned container image.
-3. Project-local tool directory using Bun/Python/Java runners.
+1. Project-local tool directory using Bun and uv runners.
+2. Nix flake, when available.
+3. Pinned container image.
 4. Exact instructions printed by `spec doctor`.
 
 No global installation by default.

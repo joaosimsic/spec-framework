@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs"
-import { join } from "node:path"
+import { localToolCandidates } from "./runner"
 import type { Diagnostic } from "./types"
 
 export interface ToolStatus {
@@ -11,9 +11,14 @@ export interface ToolStatus {
 }
 
 const TOOLS = [
-  { name: "likec4", command: "likec4", required: true, install: "bun add -d likec4" },
-  { name: "strictdoc", command: "strictdoc", required: true, install: "uvx strictdoc --version" },
-  { name: "quint", command: "quint", required: true, install: "bun add -d @informalsystems/quint" },
+  { name: "likec4", command: "likec4", required: true, install: "run spec doctor --fix (bun)" },
+  {
+    name: "strictdoc",
+    command: "strictdoc",
+    required: true,
+    install: "run spec doctor --fix (uv)",
+  },
+  { name: "quint", command: "quint", required: true, install: "run spec doctor --fix (bun)" },
   {
     name: "apalache",
     command: "apalache-mc",
@@ -46,7 +51,7 @@ export function getToolStatuses(target = process.cwd()): ToolStatus[] {
   return TOOLS.map((tool) => ({
     ...tool,
     present:
-      existsSync(join(target, "node_modules", ".bin", tool.command)) ||
+      localToolCandidates(target, tool.command).some((candidate) => existsSync(candidate)) ||
       Bun.which(tool.command) !== null,
   }))
 }

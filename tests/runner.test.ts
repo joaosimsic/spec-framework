@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { BunProcessRunner, ToolResolver } from "../src/core/runner"
+import { BunProcessRunner, ToolResolver, localToolCandidates } from "../src/core/runner"
 
 describe("ToolResolver", () => {
   test("prefers a project-local executable", async () => {
@@ -16,6 +16,26 @@ describe("ToolResolver", () => {
       const resolved = await new ToolResolver(target).resolve("spec-framework-test-tool")
 
       expect(resolved).toBe(executable)
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("prefers project-managed tools over project dependencies", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const managedDirectory = join(target, ".spec", "tools", "bin")
+      const managedExecutable = join(managedDirectory, "spec-framework-test-tool")
+      const dependencyDirectory = join(target, "node_modules", ".bin")
+      await mkdir(managedDirectory, { recursive: true })
+      await mkdir(dependencyDirectory, { recursive: true })
+      await Bun.write(managedExecutable, "")
+      await Bun.write(join(dependencyDirectory, "spec-framework-test-tool"), "")
+
+      const resolved = await new ToolResolver(target).resolve("spec-framework-test-tool")
+
+      expect(resolved).toBe(managedExecutable)
+      expect(localToolCandidates(target, "spec-framework-test-tool")[0]).toBe(managedExecutable)
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -51,6 +71,23 @@ describe("BunProcessRunner", () => {
 
       expect(result).toBeNull()
       expect(error?.code).toBe("COMMAND_TIMEOUT")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("passes additional environment variables to the command", async () => {
+    const target = await mkdtemp(join(tmpdir(), "spec-framework-"))
+    try {
+      const [result, error] = await new BunProcessRunner().run({
+        executable: Bun.which("bun") ?? "bun",
+        arguments: ["-e", "console.log(process.env.SPEC_TEST_VALUE ?? '')"],
+        workingDirectory: target,
+        environment: { SPEC_TEST_VALUE: "provisioned" },
+      })
+
+      expect(error).toBeNull()
+      expect(result?.stdout.trim()).toBe("provisioned")
     } finally {
       await rm(target, { recursive: true, force: true })
     }

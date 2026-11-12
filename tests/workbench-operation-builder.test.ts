@@ -4,9 +4,9 @@ import {
   buildDraftOperation,
   canSubmitDraft,
   initialDraftForm,
-} from "../src/workbench/web/views/compose/draft-builder"
-import { buildOperation } from "../src/workbench/web/views/rework/operation-builder"
-import { canSubmit, initialOperationForm } from "../src/workbench/web/views/rework/operation-form"
+} from "../src/workbench/forms/draft-builder"
+import { buildOperation } from "../src/workbench/forms/operation-builder"
+import { canSubmit, initialOperationForm } from "../src/workbench/forms/operation-form"
 
 describe("rework operation builder", () => {
   test("builds record and source operations", () => {

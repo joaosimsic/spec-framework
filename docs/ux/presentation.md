@@ -128,6 +128,10 @@ the tool asks for a choice.
 - Human output by default.
 - `--technical` shows identity, hashes, provenance, and diagnostic codes.
 - `--json` is the machine contract and includes identity.
+- On a TTY, scratch, mapping, and refactor commands open guided sessions that
+  use names and questions.
+- `--no-interactive` keeps one-shot output; `--json`, `--action`, and `--op`
+  never prompt.
 - Interactive approval selects named scope; `--id` remains for automation.
 
 ### Workbench

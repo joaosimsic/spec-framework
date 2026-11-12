@@ -7,7 +7,7 @@ import {
   initialDraftForm,
   type DraftForm,
   type DraftMode,
-} from "./draft-builder"
+} from "../../../forms/draft-builder"
 import { DraftLinkFields } from "./DraftLinkFields"
 import { DraftNameFields } from "./DraftNameFields"
 

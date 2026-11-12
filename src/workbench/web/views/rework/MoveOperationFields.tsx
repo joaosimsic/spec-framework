@@ -1,5 +1,5 @@
 import type { DisplayEntry } from "../../../../model"
-import type { OperationForm } from "./operation-form"
+import type { OperationForm } from "../../../forms/operation-form"
 
 export function MoveOperationFields({
   form,

@@ -9,7 +9,9 @@
 > open; `spec refactor` enables it by default and `spec change` accepts
 > `--simulate`. `spec refactor` is a thin alias that warns without an approved
 > baseline, and `spec start` opens a scratch-mode proposal. The local workbench
-> and opencode plugin surface the same change report and simulation.
+> and opencode plugin surface the same change report and simulation. On a TTY,
+> `spec change`, `spec refactor`, and `spec start` continue into guided proposal
+> sessions; `spec next` shows the next decisions and checks.
 
 ## Principle
 
@@ -127,7 +129,9 @@ the policy sidecar, not the schema source.
 
 The CLI simulates the before and after graph from the baseline snapshot stored
 with the proposal. `spec refactor` enables simulation by default; `spec change`
-and `spec change --op` accept `--simulate`. The report lists added, removed, and
+and `spec change --op` accept `--simulate`. On a TTY, `spec change` and
+`spec refactor` offer a guided menu of typed operations and print the named
+diff and impact after each write. `--no-interactive` keeps the one-shot path. The report lists added, removed, and
 modified elements with names in the default view; technical output and JSON keep
 IDs, changed fields, and baseline commits. A requested simulation fails closed
 when the baseline snapshot is missing. The workbench shows the same simulation

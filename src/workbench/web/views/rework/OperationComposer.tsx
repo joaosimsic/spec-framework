@@ -5,13 +5,13 @@ import { ContractOperationFields } from "./ContractOperationFields"
 import { DecisionOperationFields } from "./DecisionOperationFields"
 import { MoveOperationFields } from "./MoveOperationFields"
 import { RecordOperationFields } from "./RecordOperationFields"
-import { buildOperation } from "./operation-builder"
+import { buildOperation } from "../../../forms/operation-builder"
 import {
   canSubmit,
   initialOperationForm,
   type OperationForm,
   type ReworkOperationKind,
-} from "./operation-form"
+} from "../../../forms/operation-form"
 
 const KINDS: Array<{ value: ReworkOperationKind; label: string }> = [
   { value: "rename", label: "Rename" },

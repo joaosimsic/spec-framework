@@ -1,4 +1,4 @@
-import type { OperationForm } from "./operation-form"
+import type { OperationForm } from "../../../forms/operation-form"
 
 export function ContractOperationFields({
   form,

@@ -5,7 +5,9 @@
 > across requirements, architecture, formal sources, contracts, evidence, and
 > approvals. `spec start` opens the scratch-mode entry. `spec approve --scope`
 > resolves visible requirement titles to identity. The local workbench and the
-> opencode plugin are implemented.
+> opencode plugin are implemented. `spec next` and the guided terminal sessions
+> cover scratch drafting, mapping curation, and refactor operations without an
+> approval path.
 
 ## Principle
 
@@ -17,6 +19,11 @@ See [use-case modes](use-cases.md).
 Planning is interactive. The terminal, the [workbench](workbench.md), and the
 [opencode plugin](opencode-plugin.md) operate on the same proposal. A static
 report or bundle is an output, not the working surface.
+
+On a TTY, `spec start`, `spec map --review`, `spec change`, and `spec refactor`
+continue into guided sessions. `spec next` shows the current decisions and
+checks. `--no-interactive`, `--json`, `--action`, and `--op` keep scripted
+output unchanged.
 
 Humans work with names, questions, and outcomes. Stable IDs, status values, and
 diagnostic codes stay in sources and the audit bundle. See

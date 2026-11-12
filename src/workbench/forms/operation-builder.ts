@@ -1,4 +1,4 @@
-import type { ProposalOperation } from "../../../../change"
+import type { ProposalOperation } from "../../change"
 import type { OperationForm } from "./operation-form"
 
 export function buildOperation(form: OperationForm): ProposalOperation | null {

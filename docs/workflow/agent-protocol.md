@@ -33,6 +33,7 @@ Read-only. It runs validators, inspects diffs, and files defects and unknowns. I
 | `spec doctor --fix`   | human or agent | Provision pinned tools                            |
 | `spec check`          | agent          | Run all checks; report blocked scope              |
 | `spec change`         | spec-architect | Create proposal and change report                 |
+| `spec next`           | agent          | Show the next decisions, blockers, and checks     |
 | `spec review`         | spec-critic    | Read-only critique and defect filing              |
 | `spec bundle`         | agent          | Generate audit bundle                             |
 | `spec approve`        | human only     | Hash-lock approved elements                       |

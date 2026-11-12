@@ -58,7 +58,8 @@ baseline.
 
 1. `spec init` scaffolds the full profile.
 2. `spec start "<goal>"` enters `scratch` mode. It requires a clean tree, so
-   commit the scaffold before starting.
+   commit the scaffold before starting. On a TTY it opens the guided draft
+   session; `--no-interactive` or a non-TTY keeps the one-shot briefing.
 3. The agent interviews the human: users, scope, non-goals, constraints, quality
    attributes, failure expectations, and operational context.
 4. Answers become named decisions, open questions, capabilities, and draft
@@ -66,7 +67,9 @@ baseline.
 5. The tool proposes a feature slice: capability, components and interfaces,
    requirements with acceptance criteria, verification method, contract, and
    expected evidence.
-6. `spec next` shows the next decision or missing check.
+6. `spec next` shows the next decision or missing check. The guided terminal
+   session records decisions, open questions, requirements, and acceptance
+   criteria through typed proposal operations.
 7. The human refines the slice in chat or the workbench.
 8. `spec check` runs. The human approves the named slice.
 9. Implementation proceeds from the approved slice.
@@ -105,9 +108,10 @@ specification, or a specification that covers only part of the system.
    - uncertain boundary;
    - needs human input.
 5. The human accepts, rejects, renames, merges, splits, owns, and describes the
-   elements, and accepts or rejects uncertain relations.
-   `spec map --review --action <json|file>` records each decision against the
-   proposal snapshot. Unknown intent becomes a named open question.
+   elements, and accepts or rejects uncertain relations. On a TTY the review
+   continues into a guided queue; `spec map --review --action <json|file>`
+   remains the scripted path. Each decision is recorded against the proposal
+   snapshot. Unknown intent becomes a named open question.
 6. `spec map --promote` writes accepted areas into proposed LikeC4 elements.
 7. `spec check` runs. The human approves an explicit subset of the model.
 8. `spec map --check` reports drift against the approved subset.
@@ -144,7 +148,8 @@ must run first. A draft-only refactor is allowed only with an explicit warning.
 3. The human chooses a typed operation: rename, split, merge, extract, move,
    deprecate, replace, or change contract.
 4. The CLI simulates before and after states and shows the named impact:
-   affected requirements, contracts, checks, evidence, and approvals. The
+   affected requirements, contracts, checks, evidence, and approvals. On a TTY
+   it opens a guided operation session unless `--no-interactive` is passed. The
    workbench shows the same simulation.
 5. Chat and workbench edits update the same proposal.
 6. `spec check` validates the proposal.

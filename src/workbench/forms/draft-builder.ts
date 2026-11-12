@@ -1,4 +1,4 @@
-import type { ProposalOperation } from "../../../../change"
+import type { ProposalOperation } from "../../change"
 
 export type DraftMode = "requirement" | "acceptance" | "revise" | "retire" | "decision" | "question"
 

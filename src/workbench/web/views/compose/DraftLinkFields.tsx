@@ -1,5 +1,5 @@
 import type { DisplayEntry } from "../../../../model"
-import type { DraftForm } from "./draft-builder"
+import type { DraftForm } from "../../../forms/draft-builder"
 
 const LINKS = [
   ["component", "Component", ["component", "system"]],

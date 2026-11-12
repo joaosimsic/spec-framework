@@ -26,7 +26,16 @@ import { CurationParser } from "./discovery/curation-parser"
 import type { CurationAction } from "./discovery/curation-types"
 import { runBundle } from "./bundle/index"
 import { runQuery, type QueryView } from "./query/index"
-import { WorkbenchServer } from "./workbench/index"
+import { WorkbenchServer, WorkbenchService } from "./workbench/index"
+import {
+  ReadlineTerminalIO,
+  TerminalCurationSession,
+  TerminalMode,
+  TerminalNextReporter,
+  TerminalPrompt,
+  TerminalProposalSession,
+  TerminalRenderer,
+} from "./terminal/index"
 import { join } from "node:path"
 
 const HELP = `spec-framework CLI
@@ -35,13 +44,14 @@ Usage:
   spec init [--existing] [--force]
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
-  spec map [--draft] [--review [--action <json|file>]...] [--promote [--scope <name>]...] [--check] [--technical] [--json]
-  spec start "<goal>" [--json] [--technical]
+  spec next [--technical] [--json]
+  spec map [--draft] [--review [--interactive|--no-interactive] [--action <json|file>]...] [--promote [--scope <name>]...] [--check] [--technical] [--json]
+  spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
-  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--simulate] [--technical] [--json]
-  spec change --op <json|file> [--op <json|file>]... [--simulate] [--technical] [--json]
+  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
+  spec change [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
   spec change --status [--technical] [--json]
-  spec refactor "<direction>" [--op <json|file>]... [--simulate] [--technical] [--json]
+  spec refactor "<direction>" [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
   spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
   spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]...
   spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]
@@ -52,6 +62,7 @@ Commands:
   init      Create the full-stack spec scaffold
   doctor    Report or provision required and optional tools
   check     Run structural checks, then native checks
+  next      Show the next decisions and checks in the active mode
   map       Discover draft architecture, review it, promote it, or check drift
   start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
@@ -169,6 +180,61 @@ async function commandCheck(args: string[]): Promise<number> {
   return run.code
 }
 
+interface NextArguments {
+  technical: boolean
+  json: boolean
+  error?: string
+}
+
+function parseNextArguments(args: string[]): NextArguments {
+  let technical = false
+  let json = false
+  let index = args[0] === "next" ? 1 : 0
+
+  while (index < args.length) {
+    const argument = args[index]
+    if (argument === "--technical") {
+      technical = true
+      index += 1
+      continue
+    }
+    if (argument === "--json") {
+      json = true
+      index += 1
+      continue
+    }
+
+    return { technical, json, error: `unknown next option: ${argument}` }
+  }
+
+  return { technical, json }
+}
+
+async function commandNext(args: string[]): Promise<number> {
+  const parsed = parseNextArguments(args)
+  if (parsed.error !== undefined) {
+    console.error(parsed.error)
+    return 2
+  }
+
+  const service = new WorkbenchService(process.cwd())
+  const [view, error] = await new TerminalNextReporter(service).read()
+  if (error !== null || view === null) {
+    console.error(`next failed: ${error ?? "no view"}`)
+    return 1
+  }
+
+  if (parsed.json) {
+    console.log(JSON.stringify(view, null, 2))
+    return 0
+  }
+
+  const io = new ReadlineTerminalIO()
+  new TerminalRenderer(io, parsed.technical).next(view.context)
+  io.close()
+  return 0
+}
+
 interface MapArguments {
   review: boolean
   draft: boolean
@@ -178,6 +244,7 @@ interface MapArguments {
   scopes: string[]
   technical: boolean
   json: boolean
+  interactive?: boolean
   error?: string
 }
 
@@ -204,11 +271,20 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
   const scopes: string[] = []
   let technical = false
   let json = false
+  let interactive: boolean | undefined
   let index = args[0] === "map" ? 1 : 0
 
   while (index < args.length) {
     const argument = args[index]
     switch (argument) {
+      case "--interactive":
+        interactive = true
+        index += 1
+        break
+      case "--no-interactive":
+        interactive = false
+        index += 1
+        break
       case "--review":
         review = true
         index += 1
@@ -303,7 +379,7 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
     }
   }
 
-  return { review, draft, promote, check, actions, scopes, technical, json }
+  return { review, draft, promote, check, actions, scopes, technical, json, interactive }
 }
 
 async function commandMap(args: string[]): Promise<number> {
@@ -315,6 +391,16 @@ async function commandMap(args: string[]): Promise<number> {
 
   if (parsed.actions.length > 0 && !parsed.review) {
     console.error("map: --action requires --review")
+    return 2
+  }
+
+  if (parsed.interactive === true && parsed.json) {
+    console.error("map: --interactive cannot be combined with --json")
+    return 2
+  }
+
+  if (parsed.interactive === true && parsed.actions.length > 0) {
+    console.error("map: --interactive cannot be combined with --action")
     return 2
   }
 
@@ -370,6 +456,15 @@ async function commandMap(args: string[]): Promise<number> {
     })
     printWarnings(run.warnings)
     console.log(run.output)
+    if (run.code !== 0) return run.code
+
+    const interactive = TerminalMode.resolve({
+      interactive: parsed.interactive,
+      json: parsed.json,
+      scripted: parsed.actions.length > 0,
+    })
+    if (interactive) return runCurationSession(process.cwd(), parsed.technical)
+
     return run.code
   }
 
@@ -385,6 +480,7 @@ interface StartArguments {
   goal?: string
   technical: boolean
   json: boolean
+  interactive?: boolean
   error?: string
 }
 
@@ -392,6 +488,7 @@ function parseStartArguments(args: string[]): StartArguments {
   let goal: string | undefined
   let technical = false
   let json = false
+  let interactive: boolean | undefined
   let index = args[0] === "start" ? 1 : 0
 
   while (index < args.length) {
@@ -406,17 +503,27 @@ function parseStartArguments(args: string[]): StartArguments {
       index += 1
       continue
     }
+    if (argument === "--interactive") {
+      interactive = true
+      index += 1
+      continue
+    }
+    if (argument === "--no-interactive") {
+      interactive = false
+      index += 1
+      continue
+    }
     if (argument.startsWith("-")) {
-      return { technical, json, error: `unknown start option: ${argument}` }
+      return { technical, json, interactive, error: `unknown start option: ${argument}` }
     }
     if (goal !== undefined) {
-      return { goal, technical, json, error: "start accepts one goal" }
+      return { goal, technical, json, interactive, error: "start accepts one goal" }
     }
     goal = argument
     index += 1
   }
 
-  return { goal, technical, json }
+  return { goal, technical, json, interactive }
 }
 
 async function commandStart(args: string[]): Promise<number> {
@@ -426,7 +533,13 @@ async function commandStart(args: string[]): Promise<number> {
     return 2
   }
   if (parsed.goal === undefined) {
-    console.error('usage: spec start "<goal>" [--json] [--technical]')
+    console.error(
+      'usage: spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]',
+    )
+    return 2
+  }
+  if (parsed.interactive === true && parsed.json) {
+    console.error("start: --interactive cannot be combined with --json")
     return 2
   }
 
@@ -436,6 +549,15 @@ async function commandStart(args: string[]): Promise<number> {
   })
   printWarnings(run.warnings)
   console.log(run.output)
+  if (run.code !== 0) return run.code
+
+  const interactive = TerminalMode.resolve({
+    interactive: parsed.interactive,
+    json: parsed.json,
+    scripted: false,
+  })
+  if (interactive) return runProposalSession(process.cwd(), true, parsed.technical)
+
   return run.code
 }
 
@@ -563,6 +685,7 @@ interface ChangeArguments {
   simulate: boolean
   technical: boolean
   json: boolean
+  interactive?: boolean
   error?: string
 }
 
@@ -590,12 +713,23 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
   let simulate = false
   let technical = false
   let json = false
+  let interactive: boolean | undefined
   let index = args[0] === "change" ? 1 : 0
 
   while (index < args.length) {
     const argument = args[index]
     if (argument === "--json") {
       json = true
+      index += 1
+      continue
+    }
+    if (argument === "--interactive") {
+      interactive = true
+      index += 1
+      continue
+    }
+    if (argument === "--no-interactive") {
+      interactive = false
       index += 1
       continue
     }
@@ -692,7 +826,7 @@ async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
     }
   }
 
-  return { direction, status, mode, operations, simulate, technical, json }
+  return { direction, status, mode, operations, simulate, technical, json, interactive }
 }
 
 async function commandChange(args: string[]): Promise<number> {
@@ -702,7 +836,28 @@ async function commandChange(args: string[]): Promise<number> {
     return 2
   }
 
+  if (parsed.interactive === true && parsed.json) {
+    console.error("change: --interactive cannot be combined with --json")
+    return 2
+  }
+
+  if (parsed.interactive === true && parsed.operations.length > 0) {
+    console.error("change: --interactive cannot be combined with --op")
+    return 2
+  }
+
+  const interactive = TerminalMode.resolve({
+    interactive: parsed.interactive,
+    json: parsed.json,
+    scripted: parsed.operations.length > 0 || parsed.status,
+  })
+
   if (parsed.status) {
+    if (parsed.interactive === true) {
+      console.error("change: --interactive cannot be combined with --status")
+      return 2
+    }
+
     const run = await runChangeStatus(process.cwd(), {
       technical: parsed.technical,
       json: parsed.json,
@@ -723,8 +878,10 @@ async function commandChange(args: string[]): Promise<number> {
   }
 
   if (parsed.direction === undefined) {
-    console.error('usage: spec change "<direction>" [--op <json|file>]...')
-    console.error("       spec change --op <json|file> [--op <json|file>]...")
+    if (interactive) return runProposalSession(process.cwd(), true, parsed.technical)
+
+    console.error('usage: spec change "<direction>" [--interactive] [--op <json|file>]...')
+    console.error("       spec change [--interactive] [--op <json|file>]...")
     console.error("       spec change --status [--json]")
     return 2
   }
@@ -738,6 +895,12 @@ async function commandChange(args: string[]): Promise<number> {
   })
   printWarnings(run.warnings)
   console.log(run.output)
+  if (run.code !== 0) return run.code
+
+  if (interactive) {
+    return runProposalSession(process.cwd(), true, parsed.technical)
+  }
+
   return run.code
 }
 
@@ -918,6 +1081,54 @@ function printWarnings(warnings: string[]): void {
   for (const warning of warnings) console.error(`warning: ${warning}`)
 }
 
+async function runCurationSession(target: string, technical: boolean): Promise<number> {
+  const io = new ReadlineTerminalIO()
+  const prompt = new TerminalPrompt(io)
+  const renderer = new TerminalRenderer(io, technical)
+  const session = new TerminalCurationSession(new WorkbenchService(target), prompt, renderer, io)
+  const [view, error] = await session.run()
+  io.close()
+  if (error !== null) {
+    console.error(`interactive curation failed: ${error}`)
+    return 1
+  }
+  if (view === null) {
+    console.error("interactive curation failed")
+    return 1
+  }
+
+  return 0
+}
+
+async function runProposalSession(
+  target: string,
+  simulate: boolean,
+  technical: boolean,
+): Promise<number> {
+  const io = new ReadlineTerminalIO()
+  const prompt = new TerminalPrompt(io)
+  const renderer = new TerminalRenderer(io, technical)
+  const session = new TerminalProposalSession(
+    new WorkbenchService(target),
+    prompt,
+    renderer,
+    io,
+    simulate,
+  )
+  const [view, error] = await session.run()
+  io.close()
+  if (error !== null) {
+    console.error(`interactive proposal failed: ${error}`)
+    return 1
+  }
+  if (view === null) {
+    console.error("interactive proposal failed")
+    return 1
+  }
+
+  return 0
+}
+
 interface ApproveArguments {
   ids: string[]
   scopes: string[]
@@ -1038,6 +1249,8 @@ export async function main(args: string[]): Promise<number> {
       return commandDoctor(args)
     case "check":
       return commandCheck(args)
+    case "next":
+      return commandNext(args)
     case "map":
       return commandMap(args)
     case "start":

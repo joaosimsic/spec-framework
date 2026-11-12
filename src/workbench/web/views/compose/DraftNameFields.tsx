@@ -1,4 +1,4 @@
-import type { DraftForm } from "./draft-builder"
+import type { DraftForm } from "../../../forms/draft-builder"
 
 export function DraftNameFields({
   form,

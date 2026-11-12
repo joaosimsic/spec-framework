@@ -29,7 +29,11 @@ workbench may edit a proposal, but never approved content and never
   and never hand-edited.
 - Localhost binding by default. Non-local access requires explicit
   configuration.
-- Terminal equivalents exist for environments without a browser.
+- Terminal equivalents exist for environments without a browser. `spec next`
+  shows the current guidance; `spec start`, `spec map --review`,
+  `spec change`, and `spec refactor` open guided sessions when stdin and
+  stdout are TTYs. `--no-interactive` restores one-shot output, and `--json`,
+  `--action`, and `--op` never prompt.
 
 ## Write boundary
 
@@ -43,6 +47,15 @@ workbench may edit a proposal, but never approved content and never
 
 Every write is a typed proposal operation. The workbench does not edit arbitrary
 files. A proposal records its base commit, baseline, and author.
+
+## Terminal session behavior
+
+- Queues and menus use visible names. Opaque refs and technical identity appear
+  only with `--technical`.
+- EOF and Ctrl-C exit the session and leave the proposal open.
+- Ambiguous names show contextual choices and re-prompt.
+- Every write uses the same typed proposal operations as the workbench.
+- The session never writes `spec/spec.lock` and has no approval step.
 
 ## Views
 

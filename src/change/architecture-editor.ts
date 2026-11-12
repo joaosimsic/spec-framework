@@ -1,12 +1,15 @@
-import { createHash } from "node:crypto"
 import { join } from "node:path"
 import {
   collectC4Files,
   escapeTitle,
+  formatC4Annotation,
   parseC4,
+  C4_ID_COMMENT,
+  type C4Annotation,
   type C4Element,
   type C4Relationship,
 } from "../core/c4"
+import { architectureContentHash } from "../approval/hash"
 import { likec4Alias } from "../discovery/ids"
 import { attemptAsync, type Result } from "../core/result"
 
@@ -95,18 +98,91 @@ export class ArchitectureEditor {
     const element = this.element(id)
     if (element === null) return null
 
-    const related = this.relationships
-      .filter(
-        (relationship) =>
-          relationship.source === element.alias || relationship.target === element.alias,
-      )
-      .map((relationship) => relationshipText(relationship))
-      .sort()
-    const content = [element.id ?? "", element.alias, element.kind, element.title, ...related].join(
-      "\n",
-    )
+    return architectureContentHash(element, this.relationships)
+  }
 
-    return `sha256:${createHash("sha256").update(content, "utf8").digest("hex")}`
+  ensureElementKind(kind: string): Result<boolean, string> {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(kind)) return [null, `invalid element kind '${kind}'`]
+
+    const [document, documentError] = this.writeDocument()
+    if (documentError !== null) return [null, documentError]
+    if (document === null) return [null, "no writable architecture document"]
+
+    if (this.hasKindDeclaration(document, kind)) return [true, null]
+
+    const [closeIndex, closeError] = this.blockCloseIndex(document, "specification")
+    if (closeError !== null) return [null, closeError]
+    if (closeIndex === null) return [null, "architecture specification block not found"]
+
+    const closing = document.lines[closeIndex] ?? "}"
+    const indent = /^\s*/.exec(closing)?.[0] ?? ""
+    document.lines.splice(closeIndex, 0, `${indent}  element ${kind}`)
+    this.refresh()
+
+    return [true, null]
+  }
+
+  setAnnotation(id: string, annotation: C4Annotation): Result<boolean, string> {
+    this.refresh()
+    const element = this.element(id)
+    if (element === null) return [null, `unknown architecture element '${id}'`]
+
+    const document = this.documents.find((candidate) => candidate.path === element.file)
+    if (document === undefined) return [null, `cannot load ${element.file}`]
+
+    const annotationIndex = element.line - 2
+    const existing = document.lines[annotationIndex]
+    const indent = /^\s*/.exec(document.lines[element.line - 1] ?? "")?.[0] ?? ""
+    const formatted = formatC4Annotation(annotation)
+    const line = formatted === "" ? `${indent}// ${id}` : `${indent}// ${id} ${formatted}`
+
+    if (existing !== undefined && C4_ID_COMMENT.exec(existing)?.[1] === id) {
+      document.lines[annotationIndex] = line
+    } else {
+      document.lines.splice(element.line - 1, 0, line)
+    }
+    this.refresh()
+
+    return [true, null]
+  }
+
+  addRelation(sourceId: string, targetId: string, type: string): Result<boolean, string> {
+    const [, sourceAnnotationError] = this.annotateElement(sourceId)
+    if (sourceAnnotationError !== null) return [null, sourceAnnotationError]
+    const [, targetAnnotationError] = this.annotateElement(targetId)
+    if (targetAnnotationError !== null) return [null, targetAnnotationError]
+    this.refresh()
+
+    const source = this.element(sourceId)
+    if (source === null) return [null, `unknown architecture element '${sourceId}'`]
+    const target = this.element(targetId)
+    if (target === null) return [null, `unknown architecture element '${targetId}'`]
+    if (source.alias === target.alias) return [null, "an element cannot relate to itself"]
+
+    const containment = type === "part_of"
+    const sourceAlias = containment ? target.alias : source.alias
+    const targetAlias = containment ? source.alias : target.alias
+    const label = containment ? "contains" : type
+    const exists = this.relationships.some(
+      (relationship) =>
+        relationship.source === sourceAlias &&
+        relationship.target === targetAlias &&
+        relationship.label === label,
+    )
+    if (exists) return [true, null]
+
+    const [document, documentError] = this.writeDocument()
+    if (documentError !== null) return [null, documentError]
+    if (document === null) return [null, "no writable architecture document"]
+
+    const [inserted, insertError] = this.insertModelLines(document, [
+      `${sourceAlias} -> ${targetAlias} '${escapeTitle(label)}'`,
+    ])
+    if (insertError !== null) return [null, insertError]
+    if (!inserted) return [null, "relation was not added"]
+    this.refresh()
+
+    return [true, null]
   }
 
   addElement(id: string, title: string, kind: string, parentId?: string): Result<string, string> {
@@ -303,8 +379,13 @@ export class ArchitectureEditor {
   }
 
   private modelCloseIndex(document: C4Document): Result<number | null, string> {
-    const start = document.lines.findIndex((line) => /^\s*model\s*\{\s*$/.test(line))
-    if (start === -1) return [null, "architecture model block not found"]
+    return this.blockCloseIndex(document, "model")
+  }
+
+  private blockCloseIndex(document: C4Document, block: string): Result<number | null, string> {
+    const pattern = new RegExp(`^\\s*${block}\\s*\\{\\s*$`)
+    const start = document.lines.findIndex((line) => pattern.test(line))
+    if (start === -1) return [null, `architecture ${block} block not found`]
 
     let depth = 0
     for (let index = start; index < document.lines.length; index++) {
@@ -314,7 +395,18 @@ export class ArchitectureEditor {
       if (depth === 0) return [index, null]
     }
 
-    return [null, "architecture model block is not closed"]
+    return [null, `architecture ${block} block is not closed`]
+  }
+
+  private hasKindDeclaration(document: C4Document, kind: string): boolean {
+    const [closeIndex, closeError] = this.blockCloseIndex(document, "specification")
+    if (closeError !== null || closeIndex === null) return false
+
+    const start = document.lines.findIndex((line) => /^\s*specification\s*\{\s*$/.test(line))
+    if (start === -1) return false
+    const pattern = new RegExp(`^\\s*element\\s+${kind}\\s*$`)
+
+    return document.lines.slice(start, closeIndex).some((line) => pattern.test(line))
   }
 
   private writeDocument(): Result<C4Document | null, string> {
@@ -348,10 +440,6 @@ export class ArchitectureEditor {
 
     return [...new Set(candidates.filter(Boolean))]
   }
-}
-
-function relationshipText(relationship: C4Relationship): string {
-  return `${relationship.source}->${relationship.target}:${relationship.label}`
 }
 
 function count(value: string, needle: string): number {

@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. Promotion into approved architecture, `spec map --check`, rustdoc item mapping, and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. `spec map --promote` promotes accepted areas into proposed LikeC4 elements, and `spec approve` hash-locks annotated architecture elements. `spec map --check` reports drift between approved architecture and the current discovery graph. Rustdoc item mapping and contract import are not implemented.
 
 ## Commands
 
@@ -13,6 +13,7 @@ Implementation status: `spec map --draft` discovers generic package boundaries a
 | `spec init --existing`  | Detect project structure, write config, scaffold empty spec |
 | `spec map --draft`      | Extract draft architecture and report confidence            |
 | `spec map --review`     | Open or resume a mapping review and curate draft areas      |
+| `spec map --promote`    | Promote accepted areas into proposed architecture           |
 | `spec map --check`      | Compare approved architecture with current code graph       |
 | `spec import-contracts` | Extract draft contract definitions                          |
 | `spec gap`              | Report missing links, owners, contracts, and evidence       |
@@ -155,18 +156,19 @@ The human must:
 `spec map --check` compares:
 
 - approved LikeC4 elements vs discovered elements;
-- approved dependency relations vs discovered dependencies;
-- contract references vs observed public APIs;
-- code annotations referencing approved IDs vs actual code.
+- approved relations vs discovered relations;
+- approved content hashes vs the current architecture sources.
 
 Findings are reported as:
 
-- `missing-in-spec`;
-- `missing-in-code`;
-- `changed-contract`;
-- `stale-evidence`.
+- `missing-in-spec`: discovered element inside the approved scope;
+- `missing-in-code`: approved element absent from discovery;
+- `changed-relation`: approved-endpoint relation differs;
+- `changed-approval`: approved architecture content changed.
 
-Drift does not modify the approved model.
+Contract-drift and code-annotation checks remain future work because contract
+import and code annotation mapping are not implemented. Drift does not modify
+the approved model.
 
 ## Non-goals
 

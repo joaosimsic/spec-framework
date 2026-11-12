@@ -17,6 +17,8 @@ import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
 import { runCheck } from "./core/check"
 import { runMap } from "./core/map"
+import { runMapCheck } from "./core/map-check"
+import { runMapPromote } from "./core/map-promote"
 import { runMapReview } from "./core/map-review"
 import { CurationParser } from "./discovery/curation-parser"
 import type { CurationAction } from "./discovery/curation-types"
@@ -31,7 +33,7 @@ Usage:
   spec init [--existing] [--force]
   spec doctor [--fix] [--json]
   spec check [--structural] [--json]
-  spec map [--draft] [--review [--action <json|file>]... [--technical]] [--json]
+  spec map [--draft] [--review [--action <json|file>]...] [--promote [--scope <name>]...] [--check] [--technical] [--json]
   spec start "<goal>" [--json] [--technical]
   spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
   spec change "<direction>" [--mode <scratch|mapping|refactor>] [--op <json|file>]... [--simulate] [--technical] [--json]
@@ -48,7 +50,7 @@ Commands:
   init      Create the full-stack spec scaffold
   doctor    Report required and optional tools
   check     Run structural checks, then native checks
-  map       Discover draft architecture, open a mapping review, or curate it
+  map       Discover draft architecture, review it, promote it, or check drift
   start     Open a scratch-mode proposal from a goal
   query     Read the unified spec graph
   change    Create or inspect a same-worktree proposal
@@ -124,7 +126,10 @@ async function commandCheck(args: string[]): Promise<number> {
 interface MapArguments {
   review: boolean
   draft: boolean
+  promote: boolean
+  check: boolean
   actions: CurationAction[]
+  scopes: string[]
   technical: boolean
   json: boolean
   error?: string
@@ -147,7 +152,10 @@ async function readActionSource(value: string): Promise<[CurationAction[] | null
 async function parseMapArguments(args: string[]): Promise<MapArguments> {
   let review = false
   let draft = false
+  let promote = false
+  let check = false
   const actions: CurationAction[] = []
+  const scopes: string[] = []
   let technical = false
   let json = false
   let index = args[0] === "map" ? 1 : 0
@@ -163,6 +171,33 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
         draft = true
         index += 1
         break
+      case "--promote":
+        promote = true
+        index += 1
+        break
+      case "--check":
+        check = true
+        index += 1
+        break
+      case "--scope": {
+        const value = args[index + 1]
+        if (value === undefined || value.startsWith("-")) {
+          return {
+            review,
+            draft,
+            promote,
+            check,
+            actions,
+            scopes,
+            technical,
+            json,
+            error: "--scope requires a name",
+          }
+        }
+        scopes.push(value)
+        index += 2
+        break
+      }
       case "--technical":
         technical = true
         index += 1
@@ -177,7 +212,10 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
           return {
             review,
             draft,
+            promote,
+            check,
             actions,
+            scopes,
             technical,
             json,
             error: "--action requires JSON or a file path",
@@ -188,7 +226,10 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
           return {
             review,
             draft,
+            promote,
+            check,
             actions,
+            scopes,
             technical,
             json,
             error: parseError ?? "cannot parse actions",
@@ -203,7 +244,10 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
           return {
             review,
             draft,
+            promote,
+            check,
             actions,
+            scopes,
             technical,
             json,
             error: `unknown map option: ${argument}`,
@@ -213,7 +257,7 @@ async function parseMapArguments(args: string[]): Promise<MapArguments> {
     }
   }
 
-  return { review, draft, actions, technical, json }
+  return { review, draft, promote, check, actions, scopes, technical, json }
 }
 
 async function commandMap(args: string[]): Promise<number> {
@@ -226,6 +270,45 @@ async function commandMap(args: string[]): Promise<number> {
   if (parsed.actions.length > 0 && !parsed.review) {
     console.error("map: --action requires --review")
     return 2
+  }
+
+  if (parsed.review && (parsed.promote || parsed.check || parsed.draft)) {
+    console.error("map: --review cannot be combined with --promote, --check, or --draft")
+    return 2
+  }
+
+  if (parsed.promote && (parsed.check || parsed.draft)) {
+    console.error("map: --promote cannot be combined with --check or --draft")
+    return 2
+  }
+
+  if (parsed.check && parsed.draft) {
+    console.error("map: --check cannot be combined with --draft")
+    return 2
+  }
+
+  if (parsed.scopes.length > 0 && !parsed.promote) {
+    console.error("map: --scope requires --promote")
+    return 2
+  }
+
+  if (parsed.check) {
+    const run = await runMapCheck(process.cwd(), {
+      json: parsed.json,
+      technical: parsed.technical,
+    })
+    console.log(run.output)
+    return run.code
+  }
+
+  if (parsed.promote) {
+    const run = await runMapPromote(process.cwd(), {
+      scopes: parsed.scopes,
+      json: parsed.json,
+      technical: parsed.technical,
+    })
+    console.log(run.output)
+    return run.code
   }
 
   if (parsed.review) {

@@ -17,6 +17,7 @@ export type ProposalOperationKind =
   | "change-contract"
   | "record-decision"
   | "record-open-question"
+  | "promote-mapping"
 
 export interface ProposalRecordFields {
   [field: string]: string

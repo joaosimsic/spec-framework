@@ -1,9 +1,9 @@
 # Brownfield mapping
 
 > Status: `spec map --draft`, the `spec map --review` entry with area and
-> relation curation, and the local workbench are implemented. Drift checks and
-> promotion into approved architecture are design only. See
-> [use-case modes](workflow/use-cases.md).
+> relation curation, the local workbench, promotion into proposed architecture,
+> architecture approval, and `spec map --check` drift findings are implemented.
+> See [use-case modes](workflow/use-cases.md).
 
 ## Principle
 
@@ -54,8 +54,10 @@ sequenceDiagram
 3. The mapping report lists low-confidence elements, missing owners, missing contracts, and unobserved boundaries.
 4. Human curates the model in LikeC4 or runs `spec map --review` for the
    interactive path.
-5. `spec check` runs architecture validation and cross-layer checks.
-6. Human approves the reviewed elements.
+5. `spec map --promote` writes accepted areas into proposed architecture.
+6. `spec check` runs architecture validation and cross-layer checks.
+7. Human approves the reviewed elements.
+8. `spec map --check` reports drift against the approved subset.
 
 ## Interactive mapping
 

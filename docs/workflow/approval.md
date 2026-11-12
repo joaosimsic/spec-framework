@@ -1,10 +1,11 @@
 # Approval
 
-> Status: implemented for SDoc requirement and acceptance records, stored at
-> `spec/spec.lock`. Native adapter evidence is hashed into the lock and written
-> under `spec/evidence/`. Named-scope selection resolves visible titles and
-> expands a requirement to its acceptance criteria. The approval audit trail is
-> pending.
+> Status: implemented for SDoc requirement and acceptance records and for
+> annotated LikeC4 architecture elements, stored at `spec/spec.lock`. Native
+> adapter evidence is hashed into the lock and written under `spec/evidence/`.
+> Named-scope selection resolves visible titles, expands a requirement to its
+> acceptance criteria, and accepts proposed architecture elements. The approval
+> audit trail is pending.
 
 ## Principle
 
@@ -80,9 +81,12 @@ spec approve REQ-AUTH-001 AC-AUTH-001
 ```
 
 The current slice resolves `REQ-*` and `AC-*` records from SDoc requirement
-sources. Other element kinds are rejected until their adapters expose an
-approval catalog. `--technical` shows IDs in the confirmation and result;
-default output uses names.
+sources and annotated `SYS-*`, `CMP-*`, `DAT-*`, `EXT-*`, and `ACTOR-*`
+architecture elements from LikeC4 sources. Promoted architecture elements carry
+status `proposed`; approval rewrites that status to `approved` and hash-locks
+the element content and its relations. Other element kinds are rejected until
+their adapters expose an approval catalog. `--technical` shows IDs in the
+confirmation and result; default output uses names.
 
 Requirements:
 

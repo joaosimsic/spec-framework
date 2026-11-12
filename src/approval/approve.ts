@@ -1,6 +1,14 @@
 import { loadRequirementSources } from "../core/requirements"
 import type { SdocBlock } from "../core/types"
 import { EvidenceStore, type EvidenceRecord } from "../evidence"
+import {
+  ArchitectureCatalogLoader,
+  ArchitectureStatusWriter,
+  architectureElementHash,
+  findArchitectureElement,
+  isArchitectureId,
+  type ArchitectureCatalog,
+} from "./architecture"
 import type { ApprovalConfirmation } from "./confirmation"
 import { GitCleanlinessReader, type GitStatusReader } from "./git"
 import { elementContentHash } from "./hash"
@@ -36,13 +44,25 @@ export async function runApproval(
   if (options.approver.trim() === "") return failure("approver identity is required")
 
   const sources = await loadRequirementSources(target)
-  const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
+  const sourceErrors = sources.diagnostics.filter(
+    (item) => item.level === "error" && item.code !== "SPEC-NO-REQUIREMENTS",
+  )
   if (sourceErrors.length > 0) return failure(sourceErrors.map((item) => item.message).join("\n"))
 
   const [blocks, blockError] = indexBlocks(sources.blocks)
   if (blockError !== null || blocks === null) return failure(blockError ?? "cannot index elements")
 
-  const missing = requested.filter((id) => !blocks.has(id))
+  const architectureIds = requested.filter(isArchitectureId)
+  const [loadedArchitecture, architectureError] = await loadArchitectureCatalog(
+    target,
+    architectureIds.length,
+  )
+  if (architectureError !== null) return failure(architectureError)
+  const architecture = loadedArchitecture ?? { elements: [], relationships: [] }
+
+  const missing = requested.filter(
+    (id) => !blocks.has(id) && findArchitectureElement(architecture, id) === null,
+  )
   if (missing.length > 0) return failure(`unknown element(s): ${missing.join(", ")}`)
 
   const loader = new SpecLockLoader(target)
@@ -52,10 +72,9 @@ export async function runApproval(
   }
   const existingLock = lockError === null ? loadedLock : null
 
-  const failureMessage = validateScope(requested, blocks, existingLock)
+  const failureMessage = validateScope(requested, blocks, existingLock, architecture)
   if (failureMessage !== null) return failure(failureMessage)
 
-  const requestedIds = new Set(requested)
   const [clean, gitError] = await (options.gitStatus ?? new GitCleanlinessReader()).read(target)
   const dirty = clean !== true
   if (dirty && !options.allowDirty) {
@@ -78,16 +97,28 @@ export async function runApproval(
     return failure(evidenceError?.message ?? "cannot write evidence artifacts")
   }
 
-  const [writtenFiles, statusError] = await new SdocStatusWriter(target).write(
-    requestedIds,
+  const requirementIds = new Set(requested.filter((id) => !isArchitectureId(id)))
+  const architectureIdsToWrite = new Set(requested.filter(isArchitectureId))
+  const [requirementFiles, requirementStatusError] = await new SdocStatusWriter(target).write(
+    requirementIds,
     "Approved",
   )
-  if (statusError !== null) return failure(`cannot update STATUS: ${statusError}`)
+  if (requirementStatusError !== null) {
+    return failure(`cannot update STATUS: ${requirementStatusError}`)
+  }
+
+  const [architectureFiles, architectureStatusError] = await new ArchitectureStatusWriter(
+    target,
+  ).write(architectureIdsToWrite, "approved")
+  if (architectureStatusError !== null) {
+    return failure(`cannot update architecture status: ${architectureStatusError}`)
+  }
 
   const timestamp = (options.now ?? (() => new Date()))().toISOString()
   const lock = buildLock(
     requested,
     blocks,
+    architecture,
     existingLock,
     options.approver.trim(),
     timestamp,
@@ -102,11 +133,19 @@ export async function runApproval(
   const lines = requested.map((id) => `approved ${approvalLabel(id, options)}`)
   lines.push(`lock: ${lockPath}`)
   if (evidencePaths.length > 0) lines.push(`evidence: ${evidencePaths.length} artifact(s)`)
-  if (writtenFiles !== null && writtenFiles.length > 0) {
-    lines.push(`updated status in ${writtenFiles.length} file(s)`)
-  }
+  const writtenFiles = (requirementFiles?.length ?? 0) + (architectureFiles?.length ?? 0)
+  if (writtenFiles > 0) lines.push(`updated status in ${writtenFiles} file(s)`)
 
   return { lock, output: lines.join("\n"), code: 0 }
+}
+
+async function loadArchitectureCatalog(
+  target: string,
+  requested: number,
+): Promise<[ArchitectureCatalog | null, string | null]> {
+  if (requested === 0) return [{ elements: [], relationships: [] }, null]
+
+  return new ArchitectureCatalogLoader(target).load()
 }
 
 function indexBlocks(blocks: SdocBlock[]): [Map<string, SdocBlock> | null, string | null] {
@@ -126,10 +165,20 @@ function validateScope(
   requested: string[],
   blocks: Map<string, SdocBlock>,
   existingLock: SpecLock | null,
+  architecture: ArchitectureCatalog,
 ): string | null {
   const requestedIds = new Set(requested)
 
   for (const id of requested) {
+    if (isArchitectureId(id)) {
+      const element = findArchitectureElement(architecture, id)
+      if (element === null) return `unknown architecture element '${id}'`
+      if (element.annotation.status !== "proposed") {
+        return `${id} must have status 'proposed' before approval`
+      }
+      continue
+    }
+
     const block = blocks.get(id)
     if (block === undefined) return `unknown element '${id}'`
     if (!id.startsWith("REQ-") && !id.startsWith("AC-")) {
@@ -198,6 +247,7 @@ function validateAcceptanceScope(
 function buildLock(
   requested: string[],
   blocks: Map<string, SdocBlock>,
+  architecture: ArchitectureCatalog,
   existingLock: SpecLock | null,
   approver: string,
   approvedAt: string,
@@ -207,6 +257,15 @@ function buildLock(
   const elements = { ...(existingLock?.elements ?? {}) }
 
   for (const id of requested) {
+    const element = findArchitectureElement(architecture, id)
+    if (element !== null) {
+      elements[id] = {
+        content_hash: architectureElementHash(architecture, element),
+        evidence: [],
+      }
+      continue
+    }
+
     const block = blocks.get(id)
     if (block === undefined) continue
     elements[id] = {

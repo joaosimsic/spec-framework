@@ -7,9 +7,10 @@
 > baseline exists. `spec start` opens a scratch-mode
 > proposal for a greenfield repository. `spec map --review` opens or resumes a
 > mapping proposal, prints the area and relation confidence queues, and records
-> typed area and relation curation actions. The local React/Vite workbench and
-> the opencode plugin are implemented. Promotion into approved architecture is
-> not implemented. The mode model is accepted in decision record
+> typed area and relation curation actions. Accepted areas are promoted into
+> proposed architecture and hash-locked by human approval. `spec map --check`
+> reports drift. The local React/Vite workbench and the opencode plugin are
+> implemented. The mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
@@ -107,8 +108,9 @@ specification, or a specification that covers only part of the system.
    elements, and accepts or rejects uncertain relations.
    `spec map --review --action <json|file>` records each decision against the
    proposal snapshot. Unknown intent becomes a named open question.
-6. `spec check` runs. The human approves an explicit subset of the model.
-7. `spec map --check` reports drift against the approved subset.
+6. `spec map --promote` writes accepted areas into proposed LikeC4 elements.
+7. `spec check` runs. The human approves an explicit subset of the model.
+8. `spec map --check` reports drift against the approved subset.
 
 ### Guardrails
 

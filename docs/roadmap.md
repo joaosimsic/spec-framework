@@ -63,8 +63,9 @@ refactor` enables it by default and `spec change` accepts `--simulate`. Formal
 source collection is implemented. The scratch-mode entry `spec start`, the
 mapping-review entry `spec map --review`, and area-level and relation-level
 interactive mapping curation are implemented, as is named-scope approval that
-resolves visible requirement titles to identity. The React/Vite workbench and
-the opencode plugin are implemented. Decision record
+resolves visible requirement titles to identity. The React/Vite workbench, the opencode plugin, mapping promotion into proposed
+architecture, architecture approval, and `spec map --check` drift findings are
+implemented. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -83,6 +84,8 @@ the opencode plugin are implemented. Decision record
 
 - interactive mapping curation over the area and relation confidence queues
   (area and relation decisions implemented);
+- mapping promotion into proposed architecture, architecture approval, and
+  `spec map --check` drift findings (implemented);
 - refactor before/after simulation and named impact (implemented);
 - technical-details surface for IDs, hashes, provenance, and diagnostics
   (implemented);

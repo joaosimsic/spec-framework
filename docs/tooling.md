@@ -42,7 +42,7 @@ No global installation by default.
 spec init [--existing]
 spec doctor [--fix]
 spec check [--structural]
-spec map [--draft|--check]
+spec map [--draft|--review|--promote|--check]
 spec change "<direction>" [--op <json|file>]
 spec change --op <json|file>
 spec change --status

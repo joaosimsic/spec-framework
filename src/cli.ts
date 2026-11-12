@@ -109,7 +109,7 @@ async function commandDoctor(args: string[]): Promise<number> {
   let provision: ProvisionOutcome | null = null
   let provisionFailure: string | null = null
 
-  if (fix && missingRequiredDiagnostics(statuses).length > 0) {
+  if (fix) {
     const [outcome, error] = await new ToolProvisioner(target, new BunProcessRunner()).provision()
     if (error !== null) {
       provisionFailure = `${error.code}: ${error.message}`

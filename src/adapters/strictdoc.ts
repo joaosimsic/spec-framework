@@ -1,6 +1,6 @@
 import { readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, relative } from "node:path"
 import { attemptAsync } from "../core/result"
 import type { Diagnostic } from "../core/types"
 import { EvidenceFactory } from "../evidence"
@@ -51,7 +51,7 @@ export class StrictDocAdapter implements NativeAdapter {
           ran: true,
           diagnostics: [this.failure(commandError.code, commandError.message)],
         },
-        [this.tool, ...commandArguments],
+        this.canonicalCommand(context.target, requirementsDirectory),
       )
     }
     if (commandResult === null) {
@@ -62,7 +62,7 @@ export class StrictDocAdapter implements NativeAdapter {
           ran: true,
           diagnostics: [this.failure("REQ-STRICTDOC", "strictdoc produced no result")],
         },
-        [this.tool, ...commandArguments],
+        this.canonicalCommand(context.target, requirementsDirectory),
       )
     }
 
@@ -70,8 +70,21 @@ export class StrictDocAdapter implements NativeAdapter {
       context,
       requirementFiles,
       this.parseResult(commandResult.stdout, commandResult.stderr, commandResult.exitCode),
-      [this.tool, ...commandArguments],
+      this.canonicalCommand(context.target, requirementsDirectory),
     )
+  }
+
+  private canonicalCommand(target: string, requirementsDirectory: string): string[] {
+    return [
+      this.tool,
+      "export",
+      relative(target, requirementsDirectory),
+      "--output-dir",
+      "<temporary>",
+      "--formats",
+      "json",
+      "--no-parallelization",
+    ]
   }
 
   private async withEvidence(

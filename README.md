@@ -8,6 +8,19 @@ The first interactive slices are implemented: `spec query` emits the determinist
 
 `spec doctor --fix` installs pinned LikeC4, Quint, and StrictDoc into `.spec/tools` with Bun and uv. Apalache and Java remain explicit manual prerequisites. Unpinned tools are never resolved automatically.
 
+Run the self-host MVP after installing Apalache:
+
+```bash
+bun install
+bun run spec doctor --fix
+bun run mvp
+```
+
+`bun run mvp` creates a temporary Git worktree, approves one pilot requirement
+and architecture slice, verifies a Quint property with Apalache, builds the audit
+bundle, proves approval invalidation and re-approval, and checks architecture
+drift. It leaves this repository untouched. See [self-host MVP](docs/mvp.md).
+
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 
 The framework does not ask an LLM to write a better prose document. It changes the representation:
@@ -140,6 +153,7 @@ Start here:
 - [Workspace and branches](docs/architecture/workspace-and-branches.md)
 - [Use-case modes](docs/workflow/use-cases.md)
 - [Workflow](docs/workflow/authoring.md)
+- [Self-host MVP](docs/mvp.md)
 - [Workbench](docs/workflow/workbench.md)
 - [opencode plugin](docs/workflow/opencode-plugin.md)
 - [Explorer](docs/workflow/explorer.md)
@@ -154,6 +168,7 @@ Full index: [docs/index.md](docs/index.md).
 
 ```
 bin/         CLI entry point
+scripts/     self-host MVP harness and verification helpers
 src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
 src/model/   unified spec graph, deterministic builder, SDoc/architecture/formal/contract collectors, display projection, impact analysis
 src/query/   read-only graph query and git workspace metadata

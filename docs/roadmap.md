@@ -32,7 +32,8 @@ Build one end-to-end path:
 - deterministic audit bundle with HTML, PDF, manifest, graph, sources, evidence, and change report;
 - `spec check`, `spec change`, `spec bundle`, `spec approve`;
 - agent skill, commands, permissions;
-- self-hosting: spec-framework specifies and maps itself.
+- self-hosting: spec-framework specifies and maps itself; the MVP harness runs
+  one approved pilot slice in a temporary worktree.
 
 Exit criteria:
 
@@ -69,7 +70,10 @@ implemented: `spec next` reports guidance, and `spec start`,
 `spec map --review`, `spec change`, and `spec refactor` open guided TTY
 sessions that write proposals only. The React/Vite workbench, the opencode
 plugin, mapping promotion into proposed architecture, architecture approval,
-and `spec map --check` drift findings are implemented. Decision record
+and `spec map --check` drift findings are implemented. The self-host MVP
+(`bun run mvp`) approves one pilot requirement and architecture slice in a
+temporary worktree, verifies a Quint property with Apalache, builds the audit
+bundle, and proves approval invalidation and re-approval. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -155,6 +159,10 @@ Exit criteria:
 4. Generate its own audit bundle.
 5. Use the framework for every subsequent change.
 6. Use `spec map --check` for drift.
+
+The MVP harness covers milestones 1-4 for one pilot slice in a temporary
+worktree. The repository baseline itself is not approved yet; that remains a
+human action.
 
 ## Risks
 

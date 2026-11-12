@@ -8,17 +8,24 @@ specification {
 model {
   // ACTOR-DEVELOPER observed human:joao@2026-11-11
   user = actor 'Developer'
-  // SYS-SPEC-FRAMEWORK observed human:joao@2026-11-11
+  // SYS-SPEC-FRAMEWORK proposed observed human:joao@2026-11-11
   framework = system 'spec-framework'
+  // CMP-SPEC-FRAMEWORK-CLI proposed observed human:joao@2026-11-11
+  frameworkCli = component 'spec CLI package'
+  // CMP-SPEC-FRAMEWORK-OPENCODE-PLUGIN proposed observed human:joao@2026-11-11
+  frameworkPlugin = component 'opencode plugin'
   // CMP-SPEC-CLI observed human:joao@2026-11-11
   cli = component 'spec CLI'
-  // CMP-SPEC-CORE observed human:joao@2026-11-11
+  // CMP-SPEC-CORE proposed observed human:joao@2026-11-11
   core = component 'core'
   // CMP-SPEC-ADAPTERS observed human:joao@2026-11-11
   adapters = component 'adapters'
 
   user -> framework 'uses'
   framework -> cli 'contains'
+  framework -> frameworkCli 'contains'
+  frameworkCli -> frameworkPlugin 'contains'
+  frameworkPlugin -> frameworkCli 'depends_on'
   cli -> core 'uses'
   core -> adapters 'dispatches'
 }

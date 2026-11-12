@@ -1,4 +1,4 @@
-import { relative } from "node:path"
+import { join, relative } from "node:path"
 import { attemptAsync } from "../core/result"
 import { EvidenceHasher } from "./hash"
 import {
@@ -19,6 +19,30 @@ export class EvidenceFactory {
     }
 
     return EvidenceHasher.sortedInputs(inputs)
+  }
+
+  async refresh(target: string, records: EvidenceRecord[]): Promise<EvidenceRecord[]> {
+    const refreshed: EvidenceRecord[] = []
+    for (const record of records) {
+      const inputs = await this.inputs(
+        target,
+        record.inputs.map((input) => join(target, input.path)),
+      )
+      refreshed.push(
+        this.create({
+          id: record.id,
+          kind: record.kind,
+          method: record.method,
+          tool: record.tool,
+          result: record.result,
+          inputs,
+          ...(record.command === undefined ? {} : { command: record.command }),
+          ...(record.details === undefined ? {} : { details: record.details }),
+        }),
+      )
+    }
+
+    return refreshed
   }
 
   create(draft: EvidenceDraft): EvidenceRecord {

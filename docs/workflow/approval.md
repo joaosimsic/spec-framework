@@ -101,6 +101,8 @@ Requirements:
 On success:
 
 - content and evidence hashes are written to `spec/spec.lock`;
+- evidence input hashes are refreshed after approval status writes, so approval
+  does not invalidate its own evidence;
 - evidence artifacts are written under `spec/evidence/`;
 - status becomes `approved`;
 - an approval record is appended to the audit trail;

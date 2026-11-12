@@ -1,5 +1,6 @@
 import { attemptAsync, type Result } from "../core/result"
 import { parseSdoc } from "../core/sdoc"
+import { SDOC_GRAMMAR } from "../core/sdoc"
 import type { SdocBlock } from "../core/types"
 
 const BLOCK_START = /^\[([A-Z_]+)\]\s*$/
@@ -49,7 +50,7 @@ export class SdocDocument {
   }
 
   static empty(path: string): SdocDocument {
-    const text = `[DOCUMENT]\nTITLE: Decisions and open questions\n`
+    const text = `[DOCUMENT]\nTITLE: Decisions and open questions\n\n${SDOC_GRAMMAR}`
 
     return new SdocDocument(path, text, "\n", text.split("\n"))
   }

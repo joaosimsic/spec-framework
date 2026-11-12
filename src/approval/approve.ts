@@ -1,6 +1,6 @@
 import { loadRequirementSources } from "../core/requirements"
 import type { SdocBlock } from "../core/types"
-import { EvidenceStore, type EvidenceRecord } from "../evidence"
+import { EvidenceFactory, EvidenceStore, type EvidenceRecord } from "../evidence"
 import {
   ArchitectureCatalogLoader,
   ArchitectureStatusWriter,
@@ -90,13 +90,6 @@ export async function runApproval(
   )
   if (!confirmed) return failure("approval cancelled")
 
-  const [evidencePaths, evidenceError] = await new EvidenceStore(target).writeAll(
-    options.evidence ?? [],
-  )
-  if (evidenceError !== null || evidencePaths === null) {
-    return failure(evidenceError?.message ?? "cannot write evidence artifacts")
-  }
-
   const requirementIds = new Set(requested.filter((id) => !isArchitectureId(id)))
   const architectureIdsToWrite = new Set(requested.filter(isArchitectureId))
   const [requirementFiles, requirementStatusError] = await new SdocStatusWriter(target).write(
@@ -114,6 +107,13 @@ export async function runApproval(
     return failure(`cannot update architecture status: ${architectureStatusError}`)
   }
 
+  const approvalEvidence = await new EvidenceFactory().refresh(target, options.evidence ?? [])
+
+  const [evidencePaths, evidenceError] = await new EvidenceStore(target).writeAll(approvalEvidence)
+  if (evidenceError !== null || evidencePaths === null) {
+    return failure(evidenceError?.message ?? "cannot write evidence artifacts")
+  }
+
   const timestamp = (options.now ?? (() => new Date()))().toISOString()
   const lock = buildLock(
     requested,
@@ -123,7 +123,7 @@ export async function runApproval(
     options.approver.trim(),
     timestamp,
     dirty,
-    options.evidence ?? [],
+    approvalEvidence,
   )
   const [lockPath, writeError] = await new SpecLockWriter(target).write(lock)
   if (writeError !== null || lockPath === null) {

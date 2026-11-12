@@ -1,0 +1,9 @@
+{
+  "checks": [
+    {
+      "id": "typecheck",
+      "command": ["bun", "run", "typecheck"],
+      "timeoutMs": 120000
+    }
+  ]
+}

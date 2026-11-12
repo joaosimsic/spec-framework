@@ -243,12 +243,7 @@ export class QuintAdapter implements NativeAdapter {
         ),
       }
     }
-    const combinedOutput = `${commandResult.stdout}\n${commandResult.stderr}`.toLowerCase()
-    const verifyFailed =
-      commandResult.exitCode !== 0 ||
-      combinedOutput.includes("error") ||
-      combinedOutput.includes("fail") ||
-      combinedOutput.includes("violation")
+    const verifyFailed = this.verifyFailed(commandResult)
     if (!verifyFailed) {
       return {
         diagnostics: [],
@@ -281,6 +276,17 @@ export class QuintAdapter implements NativeAdapter {
         canonicalCommand,
       ),
     }
+  }
+
+  private verifyFailed(result: { exitCode: number; stdout: string; stderr: string }): boolean {
+    if (result.exitCode !== 0) return true
+
+    const output = result.stdout.toLowerCase()
+    const outcome = /the outcome is:\s*([a-z]+)/i.exec(result.stdout)?.[1]?.toLowerCase()
+    if (outcome !== undefined && outcome !== "noerror") return true
+    if (output.includes("no violation found")) return false
+
+    return output.includes("violation") || output.includes("invariant violated")
   }
 
   private async invariantEvidence(

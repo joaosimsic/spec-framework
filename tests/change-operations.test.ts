@@ -410,6 +410,7 @@ describe("SdocOperationApplier", () => {
       ])
 
       const text = await readFile(join(target, "spec", "requirements", "decisions.sdoc"), "utf8")
+      expect(text).toContain("[GRAMMAR]")
       expect(text).toContain("UID: DEC-USE-SHORT-LIVED-SESSION-TOKENS")
       expect(text).toContain("STATUS: Proposed")
       expect(text).toContain("DECIDES: REQ-SAMPLE-001")

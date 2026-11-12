@@ -63,6 +63,23 @@ describe("StrictDocAdapter", () => {
     expect(run.evidence?.[0]?.result).toBe("pass")
   })
 
+  test("records a stable command without the temporary output directory", async () => {
+    const { run } = await runAdapter(
+      "Export completed. Documentation tree can be found at: /tmp/sdoc-json",
+    )
+
+    expect(run.evidence?.[0]?.command).toEqual([
+      "strictdoc",
+      "export",
+      "spec/requirements",
+      "--output-dir",
+      "<temporary>",
+      "--formats",
+      "json",
+      "--no-parallelization",
+    ])
+  })
+
   test("maps semantic errors to diagnostics", async () => {
     const { run } = await runAdapter(
       [

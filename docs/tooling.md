@@ -90,6 +90,8 @@ CI also verifies:
 - `spec bundle` writes `spec/audit/audit-<short-commit>` by default; use `--output` for another destination and `--force` to replace an existing bundle directory.
 - `spec bundle --allow-dirty` is for local preview only and marks the manifest as a preview.
 - `spec serve` and `spec mcp` are read-only review aids.
+- `bun run mvp` runs the self-host pilot slice in a temporary worktree. See
+  [self-host MVP](mvp.md).
 - Full approval requires a clean tree and full checks.
 
 ## Repository layout produced by init

@@ -162,6 +162,31 @@ describe("QuintAdapter", () => {
     expect(run.diagnostics[0]?.level).toBe("warning")
   })
 
+  test("accepts successful verify output with backend warnings", async () => {
+    const { target, formalDirectory } = await createFormalTarget()
+    await writeFile(
+      join(formalDirectory, "quint.json"),
+      JSON.stringify({ maxSteps: 5, invariants: { "example.qnt": ["noNegative"] } }),
+    )
+    const typecheckSuccess: Result<CommandResult, CommandFailure> = [
+      { exitCode: 0, stdout: "", stderr: "" },
+      null,
+    ]
+    const warning: Result<CommandResult, CommandFailure> = [
+      {
+        exitCode: 0,
+        stdout: "The outcome is: NoError\n[ok] No violation found",
+        stderr: "warning: protobuf warning mentions error and vulnerable gencode",
+      },
+      null,
+    ]
+    const { run } = await runAdapter(target, [typecheckSuccess, warning])
+    expect(run.diagnostics).toEqual([])
+    expect(
+      run.evidence?.find((record) => record.id === "EVD-QUINT-EXAMPLE-NONEGATIVE")?.result,
+    ).toBe("pass")
+  })
+
   test("maps verify failure to a diagnostic", async () => {
     const { target, quintFile, formalDirectory } = await createFormalTarget()
     await writeFile(

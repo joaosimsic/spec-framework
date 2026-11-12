@@ -19,6 +19,10 @@ describe("initProject", () => {
       )
       expect(created.some((path) => path.endsWith("implementation/README.md"))).toBe(true)
 
+      const requirements = await readFile(join(dir, "spec", "requirements", "example.sdoc"), "utf8")
+      expect(requirements).toContain("[GRAMMAR]")
+      expect(requirements).toContain("TITLE: ACCEPTANCE")
+
       const lock = JSON.parse(await readFile(join(dir, "spec", "toolchain.lock.json"), "utf8")) as {
         tools: Record<string, string>
       }

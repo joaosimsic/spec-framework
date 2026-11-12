@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "partial",
+  "status": "provisioned",
   "tools": {
     "apalache": "0.63.0",
     "likec4": "1.60.0",

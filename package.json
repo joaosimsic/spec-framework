@@ -10,6 +10,7 @@
   "scripts": {
     "spec": "bun run bin/spec.ts",
     "build:workbench": "vite build src/workbench/web --config src/workbench/web/vite.config.ts",
+    "mvp": "bun run scripts/mvp.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

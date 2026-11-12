@@ -8,8 +8,10 @@ import type { GitStatusReader } from "../src/approval/git"
 import { elementContentHash } from "../src/approval/hash"
 import { specLockPath } from "../src/approval/lock"
 import { parseSdoc } from "../src/core/sdoc"
+import { loadRequirementSources } from "../src/core/requirements"
 import type { Result } from "../src/core/result"
-import { EvidenceFactory } from "../src/evidence"
+import { EvidenceFactory, EvidenceStore, type EvidenceRecord } from "../src/evidence"
+import { verifySpecLock } from "../src/approval/verify"
 
 const proposedRequirement = `[DOCUMENT]
 TITLE: Sample requirements
@@ -144,6 +146,41 @@ describe("runApproval", () => {
         "utf8",
       )
       expect(JSON.parse(artifact)).toEqual(evidence)
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("refreshes evidence inputs after writing approval statuses", async () => {
+    const target = await createTarget()
+    try {
+      const sourcePath = join(target, "spec", "requirements", "core.sdoc")
+      const inputs = await new EvidenceFactory().inputs(target, [sourcePath])
+      const evidence = new EvidenceFactory().create({
+        id: "EVD-SAMPLE-REFRESH",
+        kind: "sample",
+        method: "test",
+        tool: "bun",
+        result: "pass",
+        inputs,
+        command: ["bun", "test"],
+      })
+      const run = await runApproval(target, ["REQ-SAMPLE-001", "AC-SAMPLE-001"], {
+        ...approvalOptions(new FakeConfirmation(true), new FakeGitStatus(true)),
+        evidence: [evidence],
+      })
+
+      expect(run.code).toBe(0)
+      const load = await new EvidenceStore(target).loadAll()
+      const artifact = load.records.find((record) => record.id === "EVD-SAMPLE-REFRESH")
+      expect(artifact).toBeDefined()
+      const refreshedInputs = await new EvidenceFactory().inputs(target, [sourcePath])
+      expect(artifact?.inputs).toEqual(refreshedInputs)
+      expect(run.lock?.evidence["EVD-SAMPLE-REFRESH"]?.hash ?? "").toBe(artifact?.hash ?? "")
+
+      const sources = await loadRequirementSources(target)
+      const diagnostics = await verifySpecLock(target, sources.blocks, [artifact as EvidenceRecord])
+      expect(diagnostics).toEqual([])
     } finally {
       await rm(target, { recursive: true, force: true })
     }

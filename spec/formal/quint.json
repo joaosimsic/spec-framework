@@ -1,1 +1,6 @@
-{ "invariants": { "example.qnt": ["noNegative"] }, "maxSteps": 10 }
+{
+  "invariants": {
+    "check.qnt": ["everyInvalidRecordReported"]
+  },
+  "maxSteps": 6
+}

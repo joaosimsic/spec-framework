@@ -45,6 +45,7 @@
 | [Change management](workflow/change-management.md) | How are changes reviewed and re-verified?             |
 | [Approval](workflow/approval.md)                   | How does human authority work mechanically?           |
 | [Workbench](workflow/workbench.md)                 | What does the interactive proposal surface show?      |
+| [Self-host MVP](mvp.md)                            | How do I test the core loop end to end?               |
 | [Explorer](workflow/explorer.md)                   | What does the read-only review surface show?          |
 | [Model lifecycle](workflow/model-lifecycle.md)     | How are model versions migrated and verified?         |
 

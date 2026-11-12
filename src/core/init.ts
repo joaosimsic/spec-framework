@@ -2,10 +2,12 @@ import { mkdir } from "node:fs/promises"
 import { join, basename } from "node:path"
 import { QuintAdapter } from "../adapters/quint"
 import { RustAdapter } from "../adapters/rust"
+import { SDOC_GRAMMAR } from "./sdoc"
 
 const requirementTemplate = `[DOCUMENT]
 TITLE: Example requirements
 
+${SDOC_GRAMMAR}
 [REQUIREMENT]
 UID: REQ-EXAMPLE-001
 TITLE: Example behavior

@@ -20,6 +20,8 @@ const FIELD_ORDER = [
   "EVIDENCE",
   "WAIVER",
   "REPLACES",
+  "DECIDES",
+  "QUESTIONS",
   "PROVENANCE",
   "OWNER",
   "PRIORITY",
@@ -44,6 +46,12 @@ export class SdocDocument {
     this.original = text
     this.newline = newline
     this.lines = lines
+  }
+
+  static empty(path: string): SdocDocument {
+    const text = `[DOCUMENT]\nTITLE: Decisions and open questions\n`
+
+    return new SdocDocument(path, text, "\n", text.split("\n"))
   }
 
   static async load(path: string): Promise<Result<SdocDocument, string>> {

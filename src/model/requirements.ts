@@ -38,6 +38,8 @@ const LINK_FIELDS = [
   { field: "EVIDENCE", type: "evidence", skipped: [] },
   { field: "WAIVER", type: "waiver", skipped: [] },
   { field: "REPLACES", type: "replaces", skipped: [] },
+  { field: "DECIDES", type: "decides", skipped: [] },
+  { field: "QUESTIONS", type: "questions", skipped: [] },
 ] as const
 
 export class RequirementsGraphSource {

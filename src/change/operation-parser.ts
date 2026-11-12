@@ -54,6 +54,10 @@ export class ProposalOperationParser {
         return this.readMove(value)
       case "change-contract":
         return this.readChangeContract(value)
+      case "record-decision":
+        return this.readRecordDecision(value)
+      case "record-open-question":
+        return this.readRecordOpenQuestion(value)
       default:
         return [null, `unknown operation kind '${value["kind"]}'`]
     }
@@ -186,6 +190,68 @@ export class ProposalOperationParser {
     if (fields === null) return [null, "change-contract requires fields"]
 
     return [{ kind: "change-contract", target, fields }, null]
+  }
+
+  private static readRecordDecision(
+    value: Record<string, unknown>,
+  ): Result<ProposalOperation, string> {
+    const title = this.readText(value["title"])
+    if (title === null) return [null, "record-decision requires a title"]
+    const statement = this.readText(value["statement"])
+    if (statement === null) return [null, "record-decision requires a statement"]
+
+    const target = this.readOptionalTarget(value["target"])
+    if (target === null && value["target"] !== undefined) {
+      return [null, "record-decision target must be a non-empty string"]
+    }
+    const owner = this.readOptionalTarget(value["owner"])
+    if (owner === null && value["owner"] !== undefined) {
+      return [null, "record-decision owner must be a non-empty string"]
+    }
+
+    return [
+      {
+        kind: "record-decision",
+        title,
+        statement,
+        ...(target === null ? {} : { target }),
+        ...(owner === null ? {} : { owner }),
+      },
+      null,
+    ]
+  }
+
+  private static readRecordOpenQuestion(
+    value: Record<string, unknown>,
+  ): Result<ProposalOperation, string> {
+    const question = this.readText(value["question"])
+    if (question === null) return [null, "record-open-question requires a question"]
+
+    const target = this.readOptionalTarget(value["target"])
+    if (target === null && value["target"] !== undefined) {
+      return [null, "record-open-question target must be a non-empty string"]
+    }
+    const owner = this.readOptionalTarget(value["owner"])
+    if (owner === null && value["owner"] !== undefined) {
+      return [null, "record-open-question owner must be a non-empty string"]
+    }
+
+    return [
+      {
+        kind: "record-open-question",
+        question,
+        ...(target === null ? {} : { target }),
+        ...(owner === null ? {} : { owner }),
+      },
+      null,
+    ]
+  }
+
+  private static readText(value: unknown): string | null {
+    if (typeof value !== "string") return null
+    const text = value.replace(/\s+/g, " ").trim()
+
+    return text === "" ? null : text
   }
 
   private static readComponent(value: unknown): Result<ProposalComponentFields, string> {

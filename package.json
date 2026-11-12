@@ -35,5 +35,11 @@
   },
   "engines": {
     "bun": ">=1.4.0"
+  },
+  "workspaces": [
+    "plugin/opencode"
+  ],
+  "exports": {
+    "./plugin": "./src/plugin/index.ts"
   }
 }

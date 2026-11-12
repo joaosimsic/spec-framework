@@ -2,13 +2,14 @@
 
 > Status: partially implemented. `spec change` creates same-worktree proposal
 > branches, applies typed operations `rename`, `deprecate`, `replace`, `split`,
-> `merge`, `extract`, `move`, and `change-contract`, and reports impact over the
-> SDoc, annotated LikeC4, formal source, and contract sidecar graph. Change
-> reports can include a before/after graph simulation from the baseline snapshot
-> captured at proposal open; `spec refactor` enables it by default and `spec
-change` accepts `--simulate`. `spec refactor` is a thin alias that warns
-> without an approved baseline, and `spec start` opens a scratch-mode proposal.
-> The local workbench surfaces the same change report and simulation.
+> `merge`, `extract`, `move`, `change-contract`, `record-decision`, and
+> `record-open-question`, and reports impact over the SDoc, annotated LikeC4,
+> formal source, and contract sidecar graph. Change reports can include a
+> before/after graph simulation from the baseline snapshot captured at proposal
+> open; `spec refactor` enables it by default and `spec change` accepts
+> `--simulate`. `spec refactor` is a thin alias that warns without an approved
+> baseline, and `spec start` opens a scratch-mode proposal. The local workbench
+> and opencode plugin surface the same change report and simulation.
 
 ## Principle
 
@@ -81,22 +82,27 @@ are available under technical details.
 
 Refactoring uses typed operations, not free-form edits:
 
-| Operation         | Meaning                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| `rename`          | Change a title or label; IDs stay stable                       |
-| `split`           | Create new elements and `replaces` links from one element      |
-| `merge`           | Combine elements into a new element, deprecating the originals |
-| `extract`         | Move a responsibility into a new component or capability       |
-| `move`            | Change containment or ownership                                |
-| `deprecate`       | Retire an element without deleting it                          |
-| `replace`         | Introduce a replacement with explicit deprecation              |
-| `change-contract` | Change a boundary and record compatibility impact              |
+| Operation              | Meaning                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| `rename`               | Change a title or label; IDs stay stable                       |
+| `split`                | Create new elements and `replaces` links from one element      |
+| `merge`                | Combine elements into a new element, deprecating the originals |
+| `extract`              | Move a responsibility into a new component or capability       |
+| `move`                 | Change containment or ownership                                |
+| `deprecate`            | Retire an element without deleting it                          |
+| `replace`              | Introduce a replacement with explicit deprecation              |
+| `change-contract`      | Change a boundary and record compatibility impact              |
+| `record-decision`      | Record a human-confirmed decision linked to an element         |
+| `record-open-question` | Record an open question linked to an element                   |
 
 `rename`, `deprecate`, `replace`, `split`, and `merge` apply to SDoc records.
 `extract` creates an annotated LikeC4 component and moves one requirement's
 `COMPONENT` link to it. `move` either reparents a LikeC4 component or reassigns
 a requirement `COMPONENT` or `CAPABILITY` link. `change-contract` patches a
-contract sidecar and keeps the contract ID stable.
+contract sidecar and keeps the contract ID stable. `record-decision` and
+`record-open-question` append records under `spec/requirements/decisions.sdoc`
+with `DECIDES` or `QUESTIONS` links. They create only draft or proposed
+records, never approved ones.
 
 ```json
 {"kind":"extract","target":"REQ-AUTH-001","component":{"UID":"CMP-AUTH-REFRESH","TITLE":"Token refresh"},"parent":"CMP-AUTH"}

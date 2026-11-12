@@ -179,7 +179,7 @@ export async function runChange(
   const [applied, applyError] =
     operations.length === 0
       ? ([emptyApplication, null] as const)
-      : await new WorkspaceOperationApplier(target, options.now).apply(operations)
+      : await new WorkspaceOperationApplier(target, options.now, proposal.author).apply(operations)
   if (applyError !== null) return changeFailure(applyError)
   if (applied === null) return changeFailure("proposal operations failed")
 
@@ -255,9 +255,11 @@ export async function runProposalOperations(
   )
   if (baselineError !== null) return changeFailure(baselineError)
 
-  const [applied, applyError] = await new WorkspaceOperationApplier(target, options.now).apply(
-    operations,
-  )
+  const [applied, applyError] = await new WorkspaceOperationApplier(
+    target,
+    options.now,
+    proposal.author,
+  ).apply(operations)
   if (applyError !== null) return changeFailure(applyError)
   if (applied === null) return changeFailure("proposal operations failed")
 

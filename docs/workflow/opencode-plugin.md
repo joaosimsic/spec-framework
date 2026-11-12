@@ -1,6 +1,9 @@
 # opencode plugin
 
-> Status: design. The plugin is not implemented. Decision record
+> Status: implemented. `plugin/opencode/` is a standalone package and
+> `.opencode/plugins/spec/` is the local self-hosting loader. The plugin
+> registers the documented tools, commands, agents, and skills. It has no
+> approval tool and cannot write `spec/spec.lock`. Decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > packaging, permissions, and identity rules.
 
@@ -41,7 +44,9 @@ compatibility module so a later API change does not touch the tool contracts.
 | `spec_diff`      | Proposal versus baseline                                       |
 
 The plugin has no approval tool. It cannot write `spec/spec.lock`, mark an
-element approved, or bypass the proposal workflow.
+element approved, or bypass the proposal workflow. Bash approval commands and
+lock writes are also rejected by a tool guard. `spec_decide` records named
+decisions and open questions as typed proposal operations in every mode.
 
 ## Commands
 

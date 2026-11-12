@@ -53,6 +53,8 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   verification: "Verified by",
   evidence: "Evidence",
   waiver: "Waiver",
+  decides: "Decides",
+  questions: "Questions",
 }
 
 const BLOCKER_LABELS: Record<string, string> = {

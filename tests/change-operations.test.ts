@@ -73,6 +73,35 @@ describe("ProposalOperationParser", () => {
     expect(invalid).toBeNull()
     expect(invalidError).toContain("unknown operation kind")
   })
+
+  test("parses decision and open-question operations", () => {
+    const [operations, error] = ProposalOperationParser.parseList([
+      {
+        kind: "record-decision",
+        title: "Use session tokens",
+        statement: "Use short-lived session tokens for refresh.",
+        target: "REQ-SAMPLE-001",
+      },
+      {
+        kind: "record-open-question",
+        question: "What happens when the token store is down?",
+      },
+    ])
+
+    expect(error).toBeNull()
+    expect(operations).toEqual([
+      {
+        kind: "record-decision",
+        title: "Use session tokens",
+        statement: "Use short-lived session tokens for refresh.",
+        target: "REQ-SAMPLE-001",
+      },
+      {
+        kind: "record-open-question",
+        question: "What happens when the token store is down?",
+      },
+    ])
+  })
 })
 
 describe("SdocOperationApplier", () => {
@@ -219,6 +248,83 @@ describe("SdocOperationApplier", () => {
 
       const text = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
       expect(text).toContain("REPLACES: REQ-SAMPLE-001 REQ-SAMPLE-002")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("records a decision and links it to its subject", async () => {
+    const target = await createTarget()
+    try {
+      const [applied, error] = await apply(target, [
+        {
+          kind: "record-decision",
+          title: "Use short-lived session tokens",
+          statement: "Use short-lived session tokens for refresh.",
+          target: "REQ-SAMPLE-001",
+        },
+      ])
+
+      expect(error).toBeNull()
+      expect(applied?.changes).toEqual([
+        expect.objectContaining({
+          id: "DEC-USE-SHORT-LIVED-SESSION-TOKENS",
+          action: "added",
+          kind: "decision",
+          status: "Proposed",
+        }),
+      ])
+
+      const text = await readFile(join(target, "spec", "requirements", "decisions.sdoc"), "utf8")
+      expect(text).toContain("UID: DEC-USE-SHORT-LIVED-SESSION-TOKENS")
+      expect(text).toContain("STATUS: Proposed")
+      expect(text).toContain("DECIDES: REQ-SAMPLE-001")
+      expect(text).toContain("PROVENANCE: human:proposal")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("records an open question", async () => {
+    const target = await createTarget()
+    try {
+      const [applied, error] = await apply(target, [
+        {
+          kind: "record-open-question",
+          question: "What happens when the token store is down?",
+          target: "REQ-SAMPLE-001",
+        },
+      ])
+
+      expect(error).toBeNull()
+      expect(applied?.changes[0]?.kind).toBe("unknown")
+
+      const text = await readFile(join(target, "spec", "requirements", "decisions.sdoc"), "utf8")
+      expect(text).toContain("UID: UNK-WHAT-HAPPENS-WHEN-THE-TOKEN-STORE-IS-DOWN")
+      expect(text).toContain("STATUS: Draft")
+      expect(text).toContain("QUESTIONS: REQ-SAMPLE-001")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects a decision that targets an unknown item", async () => {
+    const target = await createTarget()
+    try {
+      const [, error] = await apply(target, [
+        {
+          kind: "record-decision",
+          title: "Bad decision",
+          statement: "Record a bad decision.",
+          target: "REQ-MISSING",
+        },
+      ])
+
+      expect(error).toContain("unknown element")
+      const [file] = await Promise.all([
+        Bun.file(join(target, "spec", "requirements", "decisions.sdoc")).exists(),
+      ])
+      expect(file).toBe(false)
     } finally {
       await rm(target, { recursive: true, force: true })
     }

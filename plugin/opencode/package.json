@@ -1,0 +1,14 @@
+{
+  "name": "@spec-framework/opencode-plugin",
+  "version": "0.1.0",
+  "description": "opencode tools and commands for the spec framework",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.13",
+    "@spec-framework/cli": "file:../.."
+  }
+}

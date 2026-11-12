@@ -141,6 +141,40 @@ UID: REQ-SAMPLE-001
     expect(requirement).not.toHaveProperty("provenance")
   })
 
+  test("maps decision and open-question links", () => {
+    const graph = buildGraph(`[REQUIREMENT]
+UID: DEC-SESSION-TOKENS
+TITLE: Use session tokens
+STATUS: Proposed
+STATEMENT: Use short-lived session tokens.
+DECIDES: REQ-SAMPLE-001
+PROVENANCE: human:test@2026-11-10
+OWNER: test
+
+[REQUIREMENT]
+UID: UNK-TOKEN-STORE-DOWN
+TITLE: What happens when the token store is down?
+STATUS: Draft
+STATEMENT: What happens when the token store is down?
+QUESTIONS: REQ-SAMPLE-001
+PROVENANCE: human:test@2026-11-10
+OWNER: test
+`)
+
+    expect(graph.elements.find((element) => element.id === "DEC-SESSION-TOKENS")?.kind).toBe(
+      "decision",
+    )
+    expect(graph.elements.find((element) => element.id === "UNK-TOKEN-STORE-DOWN")?.kind).toBe(
+      "unknown",
+    )
+    expect(graph.elements.find((element) => element.id === "DEC-SESSION-TOKENS")?.links).toEqual([
+      { type: "decides", to: "REQ-SAMPLE-001" },
+    ])
+    expect(graph.elements.find((element) => element.id === "UNK-TOKEN-STORE-DOWN")?.links).toEqual([
+      { type: "questions", to: "REQ-SAMPLE-001" },
+    ])
+  })
+
   test("maps replaces fields to replacement links", () => {
     const graph = buildGraph(`[REQUIREMENT]
 UID: REQ-SAMPLE-002

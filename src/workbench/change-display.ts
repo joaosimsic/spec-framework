@@ -20,6 +20,8 @@ const OPERATION_LABELS: Record<ProposalOperationKind, string> = {
   extract: "Extracted",
   move: "Moved",
   "change-contract": "Changed contract",
+  "record-decision": "Recorded decision",
+  "record-open-question": "Recorded open question",
 }
 
 export class WorkbenchChangeDisplay {

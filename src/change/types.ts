@@ -7,7 +7,16 @@ export type ProposalMode = "scratch" | "mapping" | "refactor"
 export type ProposalStatus = "draft" | "proposed" | "validated" | "approved" | "superseded"
 
 export type ProposalOperationKind =
-  "rename" | "deprecate" | "replace" | "split" | "merge" | "extract" | "move" | "change-contract"
+  | "rename"
+  | "deprecate"
+  | "replace"
+  | "split"
+  | "merge"
+  | "extract"
+  | "move"
+  | "change-contract"
+  | "record-decision"
+  | "record-open-question"
 
 export interface ProposalRecordFields {
   [field: string]: string
@@ -45,6 +54,19 @@ export type ProposalOperation =
       from?: string
     }
   | { kind: "change-contract"; target: string; fields: ProposalContractFields }
+  | {
+      kind: "record-decision"
+      title: string
+      statement: string
+      target?: string
+      owner?: string
+    }
+  | {
+      kind: "record-open-question"
+      question: string
+      target?: string
+      owner?: string
+    }
 
 export interface ProposalBaseline {
   commit: string

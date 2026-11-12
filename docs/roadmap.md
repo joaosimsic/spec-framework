@@ -53,7 +53,8 @@ annotated LikeC4 architecture elements, annotated Quint modules and properties,
 contract sidecars, and evidence. The presentation projection with opaque refs is
 implemented. The proposal engine core, same-worktree proposal branches, and
 typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
-`move`, and `change-contract` are implemented. Change reports include
+`move`, `change-contract`, `record-decision`, and `record-open-question` are
+implemented. Change reports include
 deterministic impact analysis over the graph, invalidated evidence, approvals to
 renew, and open questions. The `spec refactor` alias is implemented and warns
 when no approved baseline exists. Refactor before/after simulation is
@@ -62,8 +63,8 @@ refactor` enables it by default and `spec change` accepts `--simulate`. Formal
 source collection is implemented. The scratch-mode entry `spec start`, the
 mapping-review entry `spec map --review`, and area-level and relation-level
 interactive mapping curation are implemented, as is named-scope approval that
-resolves visible requirement titles to identity. The React/Vite workbench is
-implemented; the plugin remains. Decision record
+resolves visible requirement titles to identity. The React/Vite workbench and
+the opencode plugin are implemented. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -77,8 +78,9 @@ implemented; the plugin remains. Decision record
 - formal source collector (implemented);
 - `spec start` and `spec map --review` (implemented);
 - React/Vite workbench for scratch, mapping, and refactor (implemented);
+- opencode plugin package and local self-hosting loader (implemented);
 - terminal interactive paths for the same modes;
-- opencode plugin as both a standalone package and a local self-hosting loader;
+
 - interactive mapping curation over the area and relation confidence queues
   (area and relation decisions implemented);
 - refactor before/after simulation and named impact (implemented);

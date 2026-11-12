@@ -38,6 +38,10 @@ export class WorkbenchOperationResolver {
         return this.move(operation)
       case "change-contract":
         return this.changeContract(operation)
+      case "record-decision":
+        return this.recordDecision(operation)
+      case "record-open-question":
+        return this.recordOpenQuestion(operation)
     }
   }
 
@@ -145,6 +149,49 @@ export class WorkbenchOperationResolver {
     if (target === null) return [null, this.notFound(operation.target)]
 
     return [{ ...operation, target }, null]
+  }
+
+  private recordDecision(
+    operation: Extract<ProposalOperation, { kind: "record-decision" }>,
+  ): Result<ProposalOperation, WorkbenchFailure> {
+    const target = this.optionalTarget(operation.target)
+    if (target.error !== null) return [null, target.error]
+
+    return [
+      {
+        ...operation,
+        ...(target.value === null ? {} : { target: target.value }),
+      },
+      null,
+    ]
+  }
+
+  private recordOpenQuestion(
+    operation: Extract<ProposalOperation, { kind: "record-open-question" }>,
+  ): Result<ProposalOperation, WorkbenchFailure> {
+    const target = this.optionalTarget(operation.target)
+    if (target.error !== null) return [null, target.error]
+
+    return [
+      {
+        ...operation,
+        ...(target.value === null ? {} : { target: target.value }),
+      },
+      null,
+    ]
+  }
+
+  private optionalTarget(value: string | undefined): {
+    value: string | null
+    error: WorkbenchFailure | null
+  } {
+    if (value === undefined) return { value: null, error: null }
+
+    const [resolved, error] = this.handle(value)
+    if (error !== null) return { value: null, error }
+    if (resolved === null) return { value: null, error: this.notFound(value) }
+
+    return { value: resolved, error: null }
   }
 
   private optionalHandle(value: string | undefined): Result<string | null, WorkbenchFailure> {

@@ -49,10 +49,12 @@ export class WorkspaceOperationApplier {
   private readonly changes = new Map<string, ChangeEntry>()
   private architecture: ArchitectureEditor | null = null
   private contracts: ContractEditor | null = null
+  private decisions: SdocDocument | null = null
 
   constructor(
     private readonly target: string,
     private readonly now: () => Date = () => new Date(),
+    private readonly author: string = "proposal",
   ) {}
 
   async apply(operations: ProposalOperation[]): Promise<Result<OperationApplication, string>> {
@@ -113,9 +115,36 @@ export class WorkspaceOperationApplier {
         return this.ensureArchitecture(false)
       case "change-contract":
         return this.ensureContracts()
+      case "record-decision":
+      case "record-open-question":
+        return this.ensureDecisions()
       default:
         return [true, null]
     }
+  }
+
+  private async ensureDecisions(): Promise<Result<boolean, string>> {
+    if (this.decisions !== null) return [true, null]
+
+    const path = join(this.target, "spec", "requirements", "decisions.sdoc")
+    const existing = this.documents.get(path)
+    if (existing !== undefined) {
+      this.decisions = existing
+      return [true, null]
+    }
+
+    const [exists, existsError] = await attemptAsync(() => Bun.file(path).exists())
+    if (existsError !== null) return [null, `cannot read ${path}: ${existsError}`]
+
+    const [document, documentError] = exists
+      ? await SdocDocument.load(path)
+      : ([SdocDocument.empty(path), null] as const)
+    if (documentError !== null) return [null, documentError]
+    if (document === null) return [null, `cannot load ${path}`]
+
+    this.decisions = document
+    this.documents.set(path, document)
+    return [true, null]
   }
 
   private async ensureArchitecture(required: boolean): Promise<Result<boolean, string>> {
@@ -196,6 +225,10 @@ export class WorkspaceOperationApplier {
         return this.move(operation.target, operation.to, operation.field, operation.from)
       case "change-contract":
         return this.changeContract(operation.target, operation.fields)
+      case "record-decision":
+        return this.recordDecision(operation)
+      case "record-open-question":
+        return this.recordOpenQuestion(operation)
     }
   }
 
@@ -427,6 +460,96 @@ export class WorkspaceOperationApplier {
     this.recordExternal(target, "component", "modified", previousTitle)
 
     return [true, null]
+  }
+
+  private recordDecision(
+    operation: Extract<ProposalOperation, { kind: "record-decision" }>,
+  ): Result<boolean, string> {
+    const uid = this.recordUid(operation)
+    if (this.hasAnyElement(uid)) return [null, `record '${uid}' already exists`]
+    if (operation.target !== undefined && !this.hasAnyElement(operation.target)) {
+      return [null, `unknown element '${operation.target}'`]
+    }
+
+    const owner = this.humanName(operation.owner)
+    const [added, addError] = this.appendDecision({
+      UID: uid,
+      TITLE: operation.title,
+      STATUS: "Proposed",
+      STATEMENT: operation.statement,
+      ...(operation.target === undefined ? {} : { DECIDES: operation.target }),
+      PROVENANCE: `human:${owner}`,
+      OWNER: owner,
+    })
+    if (addError !== null) return [null, addError]
+    if (!added) return [null, "decision was not recorded"]
+    this.recordAdded(uid)
+
+    return [true, null]
+  }
+
+  private recordOpenQuestion(
+    operation: Extract<ProposalOperation, { kind: "record-open-question" }>,
+  ): Result<boolean, string> {
+    const uid = this.recordUid(operation)
+    if (this.hasAnyElement(uid)) return [null, `record '${uid}' already exists`]
+    if (operation.target !== undefined && !this.hasAnyElement(operation.target)) {
+      return [null, `unknown element '${operation.target}'`]
+    }
+
+    const owner = this.humanName(operation.owner)
+    const [added, addError] = this.appendDecision({
+      UID: uid,
+      TITLE: operation.question,
+      STATUS: "Draft",
+      STATEMENT: operation.question,
+      ...(operation.target === undefined ? {} : { QUESTIONS: operation.target }),
+      PROVENANCE: `human:${owner}`,
+      OWNER: owner,
+    })
+    if (addError !== null) return [null, addError]
+    if (!added) return [null, "open question was not recorded"]
+    this.recordAdded(uid)
+
+    return [true, null]
+  }
+
+  private humanName(value: string | undefined): string {
+    const name = (value ?? this.author).replace(/\s+/g, " ").trim()
+
+    return name === "" ? "proposal" : name
+  }
+
+  private appendDecision(fields: ProposalRecordFields): Result<boolean, string> {
+    const document = this.decisions
+    if (document === null) return [null, "decision document is not available"]
+
+    const uid = (fields.UID ?? "").trim()
+    if (this.hasAnyElement(uid)) return [null, `duplicate element ID '${uid}'`]
+
+    const [appendedUid, appendError] = document.appendRecord(fields)
+    if (appendError !== null) return [null, appendError]
+    if (appendedUid === null) return [null, "decision record failed"]
+
+    this.pathsByUid.set(appendedUid, document.sourcePath())
+    return [true, null]
+  }
+
+  private recordUid(operation: ProposalOperation): string {
+    if (operation.kind !== "record-decision" && operation.kind !== "record-open-question") {
+      return ""
+    }
+
+    const prefix = operation.kind === "record-decision" ? "DEC" : "UNK"
+    const source = operation.kind === "record-decision" ? operation.title : operation.question
+    const slug = source
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48)
+      .replace(/-+$/g, "")
+
+    return `${prefix}-${slug === "" ? "RECORD" : slug}`
   }
 
   private changeContract(target: string, fields: ProposalContractFields): Result<boolean, string> {
@@ -669,6 +792,12 @@ export class WorkspaceOperationApplier {
       }
       case "change-contract":
         return [operation.target]
+      case "record-decision":
+      case "record-open-question":
+        return this.uniqueIds([
+          ...(operation.target === undefined ? [] : [operation.target]),
+          this.recordUid(operation),
+        ])
     }
   }
 
@@ -680,6 +809,12 @@ export class WorkspaceOperationApplier {
         return this.uniqueIds([operation.target, operation.component.UID])
       case "move":
         return this.uniqueIds([operation.target, operation.to])
+      case "record-decision":
+      case "record-open-question":
+        return this.uniqueIds([
+          ...(operation.target === undefined ? [] : [operation.target]),
+          this.recordUid(operation),
+        ])
       default:
         return [operation.target]
     }

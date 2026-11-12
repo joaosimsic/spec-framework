@@ -7,8 +7,8 @@
 > baseline exists. `spec start` opens a scratch-mode
 > proposal for a greenfield repository. `spec map --review` opens or resumes a
 > mapping proposal, prints the area and relation confidence queues, and records
-> typed area and relation curation actions. The local React/Vite workbench is
-> implemented. Promotion into approved architecture and the opencode plugin are
+> typed area and relation curation actions. The local React/Vite workbench and
+> the opencode plugin are implemented. Promotion into approved architecture is
 > not implemented. The mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
 

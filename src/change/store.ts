@@ -27,6 +27,8 @@ const OPERATION_KINDS = new Set([
   "extract",
   "move",
   "change-contract",
+  "record-decision",
+  "record-open-question",
 ])
 
 export class ProposalStore {

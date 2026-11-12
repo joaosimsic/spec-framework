@@ -11,7 +11,11 @@ import {
 const ID_PATTERNS = {
   REQ: /^REQ-[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
   AC: /^AC-[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
+  DEC: /^DEC-[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
+  UNK: /^UNK-[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
 }
+
+type RecordKind = keyof typeof ID_PATTERNS
 
 const LINK_PREFIXES = {
   ACCEPTANCE: ["AC-"],
@@ -26,6 +30,44 @@ const LINK_PREFIXES = {
     "CAP-",
     "VOBJ-",
     "VER-",
+    "PROP-",
+    "CON-",
+    "EVD-",
+    "UNK-",
+    "WVR-",
+    "DEC-",
+  ],
+  DECIDES: [
+    "REQ-",
+    "AC-",
+    "CMP-",
+    "CAP-",
+    "SYS-",
+    "IFC-",
+    "DAT-",
+    "VOBJ-",
+    "VER-",
+    "INV-",
+    "MOD-",
+    "PROP-",
+    "CON-",
+    "EVD-",
+    "UNK-",
+    "WVR-",
+    "DEC-",
+  ],
+  QUESTIONS: [
+    "REQ-",
+    "AC-",
+    "CMP-",
+    "CAP-",
+    "SYS-",
+    "IFC-",
+    "DAT-",
+    "VOBJ-",
+    "VER-",
+    "INV-",
+    "MOD-",
     "PROP-",
     "CON-",
     "EVD-",
@@ -59,12 +101,21 @@ function isAmbiguous(statement: string): string[] {
   )
 }
 
-function validateEars(block: SdocBlock, diagnostics: Diagnostic[]) {
+function recordKind(uid: string | undefined): RecordKind {
+  if (uid?.startsWith("AC-")) return "AC"
+  if (uid?.startsWith("DEC-")) return "DEC"
+  if (uid?.startsWith("UNK-")) return "UNK"
+
+  return "REQ"
+}
+
+function validateEars(block: SdocBlock, diagnostics: Diagnostic[], kind: RecordKind) {
   const statement = block.fields.STATEMENT ?? ""
   if (!statement) return
+  if (kind === "DEC" || kind === "UNK") return
 
   const id = block.fields.UID
-  if (/^AC-/.test(id ?? "")) {
+  if (kind === "AC") {
     if (!/^(Given|When|While|If|Where|The)\b/.test(statement) || !/[.!?]$/.test(statement)) {
       diagnostics.push(
         diag(
@@ -137,7 +188,7 @@ export function lintBlocks(blocks: SdocBlock[]): CheckResult {
 
   for (const block of requirementBlocks) {
     const uid = block.fields.UID
-    const kind = uid?.startsWith("AC-") ? "AC" : "REQ"
+    const kind = recordKind(uid)
 
     for (const field of REQUIRED_FIELDS[kind]) {
       if (!block.fields[field]) {
@@ -190,7 +241,7 @@ export function lintBlocks(blocks: SdocBlock[]): CheckResult {
       )
     }
 
-    validateEars(block, diagnostics)
+    validateEars(block, diagnostics, kind)
     validateLinks(block, diagnostics)
 
     if (kind === "REQ" && block.fields.ACCEPTANCE) {

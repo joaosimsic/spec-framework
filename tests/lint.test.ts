@@ -67,6 +67,30 @@ describe("lintBlocks", () => {
     expect(result.diagnostics.some((item) => item.code === "SDOC-MISSING-WAIVER")).toBe(true)
   })
 
+  test("accepts decision and open-question records without EARS statements", () => {
+    const result = lint(`${valid}
+[REQUIREMENT]
+UID: DEC-SESSION-TOKENS
+TITLE: Use session tokens
+STATUS: Proposed
+STATEMENT: Use short-lived session tokens.
+DECIDES: REQ-SAMPLE-001
+PROVENANCE: human:test@2026-11-10
+OWNER: test
+
+[REQUIREMENT]
+UID: UNK-TOKEN-STORE-DOWN
+TITLE: What happens when the token store is down?
+STATUS: Draft
+STATEMENT: What happens when the token store is down?
+QUESTIONS: REQ-SAMPLE-001
+PROVENANCE: human:test@2026-11-10
+OWNER: test
+`)
+
+    expect(result.errors).toBe(0)
+  })
+
   test("requires the acceptance criterion to exist", () => {
     const withoutAc = valid.split("[REQUIREMENT]\nUID: AC-SAMPLE-001")[0]
     const result = lint(withoutAc)

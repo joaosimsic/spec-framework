@@ -38,6 +38,8 @@ export const REQUIRED_FIELDS = {
     "OWNER",
   ],
   AC: ["UID", "TITLE", "STATUS", "STATEMENT", "PROVENANCE", "OWNER"],
+  DEC: ["UID", "TITLE", "STATUS", "STATEMENT", "PROVENANCE", "OWNER"],
+  UNK: ["UID", "TITLE", "STATUS", "STATEMENT", "PROVENANCE", "OWNER"],
 } as const
 
 export const EARS_PATTERNS = [

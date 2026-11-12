@@ -4,7 +4,7 @@
 
 The discovery layer turns an existing repository into a draft specification input. It never approves anything.
 
-Implementation status: `spec map --draft` discovers generic package boundaries and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. `spec map --promote` promotes accepted areas into proposed LikeC4 elements, and `spec approve` hash-locks annotated architecture elements. `spec map --check` reports drift between approved architecture and the current discovery graph. Rustdoc item mapping and contract import are not implemented.
+Implementation status: `spec map --draft` discovers generic package boundaries, TypeScript subsystems and file imports, and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. `spec map --promote` promotes accepted areas into proposed LikeC4 elements, and `spec approve` hash-locks annotated architecture elements. `spec map --check` reports drift between approved architecture and the current discovery graph. Rustdoc item mapping and contract import are not implemented.
 
 ## Commands
 
@@ -54,6 +54,29 @@ Native adapters activate automatically from source markers:
 | Rust public API | `Cargo.toml` or Rust contract sidecars             |
 
 An adapter can also be required explicitly in `spec/config.json` even when its sources are absent, in which case missing sources fail closed.
+
+## TypeScript discovery
+
+TypeScript discovery maps both subsystems and source files.
+
+Inputs:
+
+- production `.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, and
+  `.cjs` files under `src`, `bin`, `plugin`, and `scripts`;
+- static imports, dynamic imports, and local re-exports.
+
+Outputs:
+
+- subsystem components such as `src/core` and `src/change`;
+- file modules such as `src/change/operations.ts`;
+- `part_of` links from files to subsystems;
+- `depends_on` links between files for resolved local imports;
+- aggregated `depends_on` links between subsystems;
+- external package usage reported as gaps, not graph nodes.
+
+Tests, docs, examples, generated directories, and dependency trees are excluded.
+The graph is draft-only. It does not approve or promote the full repository
+architecture.
 
 ## Rust discovery
 

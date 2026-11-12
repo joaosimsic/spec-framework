@@ -1,5 +1,7 @@
 # spec-framework
 
+[![ci](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml)
+
 **Status: Phase 1 skeleton plus the first Phase 1.5 slices.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, `spec map --review`, `spec start`, a read-only `spec query`, a same-worktree `spec change` proposal engine, the local `spec workbench`, human approval with a hash lock and named-scope selection, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. `spec bundle` writes a deterministic audit directory with HTML, PDF, manifest, graph, sources, evidence, change report, and the approval lock.
 
 Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
@@ -18,8 +20,9 @@ bun run mvp
 
 `bun run mvp` creates a temporary Git worktree, approves one pilot requirement
 and architecture slice, verifies a Quint property with Apalache, builds the audit
-bundle, proves approval invalidation and re-approval, and checks architecture
-drift. It leaves this repository untouched. See [self-host MVP](docs/mvp.md).
+bundle, proves approval invalidation and re-approval, and generates a draft repo
+graph at subsystem and file level. It leaves this repository untouched. See
+[self-host MVP](docs/mvp.md).
 
 `spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
 

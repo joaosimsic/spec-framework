@@ -73,7 +73,9 @@ plugin, mapping promotion into proposed architecture, architecture approval,
 and `spec map --check` drift findings are implemented. The self-host MVP
 (`bun run mvp`) approves one pilot requirement and architecture slice in a
 temporary worktree, verifies a Quint property with Apalache, builds the audit
-bundle, and proves approval invalidation and re-approval. Decision record
+bundle, and proves approval invalidation and re-approval. Draft repo graph
+discovery now covers TypeScript subsystems, files, containment, and local import
+dependencies. Decision record
 [0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
 
 - unified spec graph and deterministic graph builder (SDoc, architecture,
@@ -117,7 +119,7 @@ Exit criteria:
 - verification objectives and cases (`VOBJ-*`, `VER-*`);
 - optional RDF/OWL/SKOS/SHACL semantic layer and adapter;
 - requirement-owned contracts and cross-subgraph bindings;
-- TypeScript and PHP discovery;
+- TypeScript discovery (subsystem and file imports implemented); PHP discovery;
 - TypeScript and PHP public API contracts;
 - Protobuf/CDDL contract adapters;
 - generic conformance trace replay;

@@ -1,7 +1,7 @@
 import { join } from "node:path"
 import type { Result } from "../src/core/result"
 import { MvpFailure, MvpRunner, MvpWorkspace, type CommandResult } from "./mvp/support"
-import { MvpVerification } from "./mvp/verify"
+import { MvpVerification, type GraphSummary } from "./mvp/verify"
 
 const REPO_ROOT = join(import.meta.dir, "..")
 const PILOT_SCOPE = "Structural error reporting"
@@ -16,6 +16,8 @@ interface MvpSummary {
   workspace: string
   bundle: string
   approvalInvalidation: string
+  graph: GraphSummary
+  draftGraph: string
   elapsedMs: number
 }
 
@@ -143,13 +145,50 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
   if (finalCheckError !== null) return [null, `${finalCheckError}\nworkspace: ${workspace.target}`]
   void finalCheck
 
-  const [drift, driftError] = await thisStep(runner, "map drift", ["map", "--check"])
-  if (driftError !== null) return [null, `${driftError}\nworkspace: ${workspace.target}`]
-  if (!(drift?.stdout ?? "").includes("0 finding(s)")) {
+  const [mapReport, mapError] = await thisStep(runner, "repo graph", ["map", "--json"])
+  if (mapError !== null) return [null, `${mapError}\nworkspace: ${workspace.target}`]
+  progress("verify repo graph")
+  const [graph, graphVerifyError] = MvpVerification.graph(mapReport?.stdout ?? "")
+  if (graphVerifyError !== null || graph === null) {
     return [
       null,
-      `map drift did not report zero findings\n${drift?.stdout ?? ""}\nworkspace: ${workspace.target}`,
+      `${graphVerifyError ?? "graph verification failed"}\nworkspace: ${workspace.target}`,
     ]
+  }
+
+  const [draftRun, draftError] = await thisStep(runner, "draft graph", ["map", "--draft"])
+  if (draftError !== null) return [null, `${draftError}\nworkspace: ${workspace.target}`]
+  void draftRun
+  progress("verify draft graph")
+  const [draftGraph, draftVerifyError] = await MvpVerification.draft(workspace.target)
+  if (draftVerifyError !== null || draftGraph === null) {
+    return [
+      null,
+      `${draftVerifyError ?? "draft graph verification failed"}\nworkspace: ${workspace.target}`,
+    ]
+  }
+
+  progress("validate draft graph")
+  const [draftDirectory, draftDirectoryError] = await MvpVerification.isolatedDraft(
+    workspace.target,
+    workspace.root,
+  )
+  if (draftDirectoryError !== null || draftDirectory === null) {
+    return [
+      null,
+      `${draftDirectoryError ?? "cannot isolate draft graph"}\nworkspace: ${workspace.target}`,
+    ]
+  }
+  const [like4, like4Error] = await runner.tool("likec4", ["validate", "--json", draftDirectory])
+  if (like4Error !== null || like4 === null) {
+    return [null, `${like4Error ?? "likec4 validation failed"}\nworkspace: ${workspace.target}`]
+  }
+  if (like4.code !== 0) {
+    return [null, `${MvpFailure.command("likec4 validate", like4)}\nworkspace: ${workspace.target}`]
+  }
+  const [, like4VerifyError] = MvpVerification.like4Validation(like4.stdout)
+  if (like4VerifyError !== null) {
+    return [null, `${like4VerifyError}\nworkspace: ${workspace.target}`]
   }
 
   return [
@@ -157,6 +196,8 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
       workspace: workspace.target,
       bundle: bundle.directory,
       approvalInvalidation: `${PILOT_SCOPE} -> ${REVISED_SCOPE}`,
+      graph,
+      draftGraph,
       elapsedMs: Date.now() - startedAt,
     },
     null,
@@ -222,4 +263,8 @@ console.log("mvp: pass")
 console.log(`mvp: workspace ${summary.workspace}`)
 console.log(`mvp: bundle ${summary.bundle}`)
 console.log(`mvp: approval invalidation ${summary.approvalInvalidation}`)
+console.log(
+  `mvp: graph ${summary.graph.elements} elements, ${summary.graph.relations} relations, ${summary.graph.components} components, ${summary.graph.files} files`,
+)
+console.log(`mvp: draft graph ${summary.draftGraph}`)
 console.log(`mvp: elapsed ${seconds(summary.elapsedMs)}s`)

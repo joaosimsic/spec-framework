@@ -2,9 +2,9 @@
 
 > Status: implemented. `bun run mvp` exercises one approved self-hosted slice:
 > requirement, architecture, Quint property, Apalache verification, evidence,
-> approval, audit bundle, change simulation, approval invalidation, and
-> re-approval. It runs in a temporary Git worktree and leaves this repository
-> untouched.
+> approval, audit bundle, change simulation, approval invalidation,
+> re-approval, and a draft repo graph at subsystem and file level. It runs in a
+> temporary Git worktree and leaves this repository untouched.
 
 ## Purpose
 
@@ -58,7 +58,7 @@ bun run spec doctor
 bun run mvp
 ```
 
-Expected runtime is about 90 seconds after tools and caches are warm. The first
+Expected runtime is about 100 seconds after tools and caches are warm. The first
 run is slower.
 
 The harness prints each step and a heartbeat for long-running checks.
@@ -76,7 +76,11 @@ The harness prints each step and a heartbeat for long-running checks.
 8. A refactor proposal lists the pilot approval for renewal.
 9. Editing approved content makes `spec check` fail with an approval finding.
 10. Re-approval restores a passing check.
-11. `spec map --check` reports zero drift for the approved architecture slice.
+11. `spec map --json` returns the repo graph at subsystem and file level.
+12. The graph has the expected subsystems, files, containment links, file
+    imports, and aggregated subsystem dependencies.
+13. `spec map --draft` writes a LikeC4 draft graph.
+14. An isolated LikeC4 validation accepts the generated draft graph.
 
 ## Artifacts
 
@@ -85,9 +89,44 @@ On success, the harness prints:
 - the temporary workspace path;
 - the generated audit bundle path;
 - the approval invalidation pair;
+- graph counts: elements, relations, components, and files;
+- the generated draft graph path;
 - elapsed time.
 
 The temporary workspace is kept for inspection. Remove it after review.
+
+## Repo graph
+
+The graph has two levels:
+
+- subsystem nodes such as `src/core`, `src/change`, `src/adapters`, and
+  `src/workbench`;
+- file nodes such as `src/change/operations.ts` and `src/core/sdoc.ts`.
+
+File nodes link to their subsystem with `part_of`. Local imports create
+`depends_on` edges between files. Cross-subsystem imports are aggregated into
+subsystem-to-subsystem `depends_on` edges.
+
+On this repository, expect roughly 200 elements, 660 relations, 18 components,
+and 185 file nodes.
+
+The graph is draft-only. It does not approve the full architecture and does not
+run `spec map --check` against it. `spec map --check` remains for curated,
+approved architecture slices.
+
+Inspect the graph:
+
+```bash
+spec map --json
+spec map --draft
+```
+
+`spec map --draft` writes `spec/architecture/draft.gen.c4`. The draft declares
+its own LikeC4 element kinds, so it is validated in isolation by the MVP. Do not
+keep a generated draft beside `model.c4` while running a full `spec check`;
+remove or regenerate it first. The workbench Map view is a curation queue, not a
+visual canvas; open a mapping proposal with `spec map --review` to inspect the
+discovered areas and relations.
 
 ## Evaluate
 
@@ -100,6 +139,9 @@ Use these questions to decide whether the direction is right:
   internal IDs?
 - Did a real content change invalidate exactly the expected approval?
 - Did re-approval feel safe and understandable?
+- Does the repo graph show the architecture you expect?
+- Are the subsystem and file dependencies useful, or too noisy?
+- Did the graph expose surprising coupling?
 - Did the workbench and terminal sessions help, or duplicate the CLI?
 - Would you use this on the next real feature?
 
@@ -114,6 +156,9 @@ Use these questions to decide whether the direction is right:
 
 ## Deferred
 
+- Approving or promoting the full repo graph.
+- Zero-drift checks against the draft graph.
+- A visual graph canvas in the workbench.
 - Approving every self-hosted requirement.
 - Capability and verification planning.
 - Semantic adapters, MCP, Explorer, workspaces, and migration.

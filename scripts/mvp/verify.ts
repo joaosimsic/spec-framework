@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises"
+import { cp, mkdir, readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { attempt, attemptAsync, type Result } from "../../src/core/result"
 import { WorkbenchServer } from "../../src/workbench/server"
@@ -14,6 +14,13 @@ export interface BundleSummary {
   requirement: string
 }
 
+export interface GraphSummary {
+  elements: number
+  relations: number
+  components: number
+  files: number
+}
+
 interface GraphSnapshot {
   elements: Array<{ id: string; status?: string }>
   evidence: Array<{ id: string; result?: string }>
@@ -27,6 +34,18 @@ interface RefactorReport {
 
 interface CheckReport {
   diagnostics: Array<{ code: string }>
+}
+
+interface MapElement {
+  id: string
+  kind: string
+  title?: string
+  links: Array<{ type: string; to: string }>
+}
+
+interface MapReport {
+  elements: MapElement[]
+  summary: { relations: number }
 }
 
 export class MvpVerification {
@@ -80,6 +99,108 @@ export class MvpVerification {
     }
 
     return [{ directory, evidence: PILOT_EVIDENCE, requirement: PILOT_REQUIREMENT }, null]
+  }
+
+  static graph(output: string): Result<GraphSummary, string> {
+    const [report, parseError] = attempt(() => JSON.parse(output) as MapReport)
+    if (parseError !== null || report === null) return [null, "map report is not valid JSON"]
+
+    const byId = new Map(report.elements.map((element) => [element.id, element]))
+    const requiredComponents = [
+      "CMP-SRC-ADAPTERS",
+      "CMP-SRC-APPROVAL",
+      "CMP-SRC-BUNDLE",
+      "CMP-SRC-CHANGE",
+      "CMP-SRC-CLI",
+      "CMP-SRC-CORE",
+      "CMP-SRC-DISCOVERY",
+      "CMP-SRC-EVIDENCE",
+      "CMP-SRC-MODEL",
+      "CMP-SRC-QUERY",
+      "CMP-SRC-TERMINAL",
+      "CMP-SRC-WORKBENCH",
+      "CMP-PLUGIN-OPENCODE",
+    ]
+    for (const id of requiredComponents) {
+      if (!byId.has(id)) return [null, `repo graph is missing subsystem ${id}`]
+    }
+
+    const requiredFiles = [
+      "FILE-SRC-CHANGE-OPERATIONS-TS",
+      "FILE-SRC-CORE-SDOC-TS",
+      "FILE-SRC-WORKBENCH-SERVICE-TS",
+      "FILE-PLUGIN-OPENCODE-SRC-TOOLS-TS",
+    ]
+    for (const id of requiredFiles) {
+      if (!byId.has(id)) return [null, `repo graph is missing file ${id}`]
+    }
+
+    const operations = byId.get("FILE-SRC-CHANGE-OPERATIONS-TS")
+    if (!this.hasLink(operations, "depends_on", "FILE-SRC-CORE-RESULT-TS")) {
+      return [null, "repo graph is missing the operations -> result file dependency"]
+    }
+    if (!this.hasLink(operations, "part_of", "CMP-SRC-CHANGE")) {
+      return [null, "repo graph is missing the operations file containment"]
+    }
+    const change = byId.get("CMP-SRC-CHANGE")
+    if (!this.hasLink(change, "depends_on", "CMP-SRC-CORE")) {
+      return [null, "repo graph is missing the change -> core subsystem dependency"]
+    }
+
+    const files = report.elements.filter((element) => element.kind === "module").length
+    const components = report.elements.filter((element) => element.kind === "component").length
+    if (files < 100) return [null, `repo graph has too few file nodes: ${files}`]
+    if (components < requiredComponents.length) {
+      return [null, `repo graph has too few components: ${components}`]
+    }
+
+    return [
+      {
+        elements: report.elements.length,
+        relations: report.summary.relations,
+        components,
+        files,
+      },
+      null,
+    ]
+  }
+
+  static async isolatedDraft(target: string, root: string): Promise<Result<string, string>> {
+    const source = join(target, "spec", "architecture", "draft.gen.c4")
+    const directory = join(root, "draft-check", "spec", "architecture")
+    const [, error] = await attemptAsync(async () => {
+      await mkdir(directory, { recursive: true })
+      await cp(source, join(directory, "draft.gen.c4"))
+    })
+    if (error !== null) return [null, `cannot isolate draft graph: ${error}`]
+
+    return [directory, null]
+  }
+
+  static like4Validation(output: string): Result<true, string> {
+    const [report, parseError] = attempt(() => JSON.parse(output) as { valid?: unknown })
+    if (parseError !== null || report === null) return [null, "likec4 output is not valid JSON"]
+    if (report.valid !== true) return [null, "likec4 rejected the draft graph"]
+
+    return [true, null]
+  }
+
+  static async draft(target: string): Promise<Result<string, string>> {
+    const path = join(target, "spec", "architecture", "draft.gen.c4")
+    const [text, readError] = await attemptAsync(() => Bun.file(path).text())
+    if (readError !== null || text === null)
+      return [null, readError ?? "draft graph is unavailable"]
+    for (const required of [
+      "view mapDraft",
+      "element module",
+      "// CMP-SRC-CHANGE",
+      "// FILE-SRC-CHANGE-OPERATIONS-TS",
+      "'depends_on'",
+    ]) {
+      if (!text.includes(required)) return [null, `draft graph is missing ${required}`]
+    }
+
+    return [path, null]
   }
 
   static query(output: string): Result<true, string> {
@@ -139,6 +260,10 @@ export class MvpVerification {
     }
 
     return [true, null]
+  }
+
+  private static hasLink(element: MapElement | undefined, type: string, to: string): boolean {
+    return element?.links.some((link) => link.type === type && link.to === to) ?? false
   }
 
   private static async json<Value>(path: string): Promise<Result<Value, string>> {

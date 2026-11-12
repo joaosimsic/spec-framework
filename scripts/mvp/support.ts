@@ -119,6 +119,7 @@ export class MvpRunner {
       PATH: [
         join(repoRoot, ".spec", "tools", "bin"),
         join(repoRoot, ".spec", "tools", "node_modules", ".bin"),
+        join(repoRoot, "node_modules", ".bin"),
         process.env.PATH ?? "",
       ]
         .filter(Boolean)
@@ -138,6 +139,10 @@ export class MvpRunner {
     options: CommandOptions = {},
   ): Promise<Result<CommandResult, string>> {
     return this.run("git", argumentsList, options)
+  }
+
+  async tool(command: string, argumentsList: string[]): Promise<Result<CommandResult, string>> {
+    return this.run(command, argumentsList, {})
   }
 
   async initializeGit(): Promise<Result<CommandResult, string>> {

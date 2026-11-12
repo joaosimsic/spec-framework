@@ -5,6 +5,7 @@ import { elementId } from "../discovery/ids"
 import { renderDraftModel } from "../discovery/render"
 import { buildMapReport, formatMapReport, renderMapJson } from "../discovery/report"
 import { RustDiscovery } from "../discovery/rust"
+import { TypeScriptDiscovery } from "../discovery/typescript"
 import type { DraftElement, DraftLink, MapReport } from "../discovery/types"
 import { SpecConfigLoader } from "./config"
 import { parseSdoc, requirementBlocks } from "./sdoc"
@@ -45,8 +46,14 @@ export async function runMap(target: string, options: MapOptions = {}): Promise<
     options.processRunner ?? new BunProcessRunner(),
     options.toolLocator ?? new ToolResolver(target),
   ).discover(target, system.id)
+  const typescript = await new TypeScriptDiscovery().discover(target, system.id)
 
-  const elements = mergeElements([system, ...generic.elements, ...rust.elements])
+  const elements = mergeElements([
+    system,
+    ...generic.elements,
+    ...rust.elements,
+    ...typescript.elements,
+  ])
   const unresolvedRequirementLinks = await findUnresolvedRequirementLinks(target, elements)
 
   let draftPath: string | null = null
@@ -67,8 +74,12 @@ export async function runMap(target: string, options: MapOptions = {}): Promise<
 
   const report = buildMapReport(
     elements,
-    [...generic.findings, ...rust.findings],
-    [...generic.externalDependencies, ...rust.externalDependencies],
+    [...generic.findings, ...rust.findings, ...typescript.findings],
+    [
+      ...generic.externalDependencies,
+      ...rust.externalDependencies,
+      ...typescript.externalDependencies,
+    ],
     unresolvedRequirementLinks,
     draftPath,
   )

@@ -118,6 +118,65 @@ export interface WorkbenchMappingView {
   next: string[]
 }
 
+export interface WorkbenchArchitectureGraphNode {
+  ref: string
+  label: string
+  kindLabel: string
+  parentRef: string | null
+  groupRef: string
+  childCount: number
+  confidenceLabel: string
+  stateLabel: string
+}
+
+export interface WorkbenchArchitectureGraphEdge {
+  ref: string
+  sourceRef: string
+  targetRef: string
+  label: string
+}
+
+export interface WorkbenchArchitectureGraphView {
+  nodes: WorkbenchArchitectureGraphNode[]
+  edges: WorkbenchArchitectureGraphEdge[]
+  summary: {
+    nodes: number
+    relations: number
+    groups: number
+    roots: number
+  }
+}
+
+export interface WorkbenchRepoGraphNode {
+  ref: string
+  label: string
+  kindLabel: string
+  level: "system" | "component" | "file" | "other"
+  confidenceLabel: string
+  path?: string
+}
+
+export interface WorkbenchRepoGraphEdge {
+  ref: string
+  sourceRef: string
+  targetRef: string
+  type: string
+  label: string
+  level: "component" | "file" | "other"
+}
+
+export interface WorkbenchRepoGraphView {
+  nodes: WorkbenchRepoGraphNode[]
+  edges: WorkbenchRepoGraphEdge[]
+  summary: {
+    nodes: number
+    edges: number
+    components: number
+    files: number
+    externalDependencies: number
+  }
+}
+
 export interface WorkbenchCheckFinding {
   level: "error" | "warning"
   message: string

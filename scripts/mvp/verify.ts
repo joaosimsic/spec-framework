@@ -166,7 +166,7 @@ export class MvpVerification {
   }
 
   static async isolatedDraft(target: string, root: string): Promise<Result<string, string>> {
-    const source = join(target, "spec", "architecture", "draft.gen.c4")
+    const source = join(target, "spec", "generated", "draft.gen.c4")
     const directory = join(root, "draft-check", "spec", "architecture")
     const [, error] = await attemptAsync(async () => {
       await mkdir(directory, { recursive: true })
@@ -186,7 +186,7 @@ export class MvpVerification {
   }
 
   static async draft(target: string): Promise<Result<string, string>> {
-    const path = join(target, "spec", "architecture", "draft.gen.c4")
+    const path = join(target, "spec", "generated", "draft.gen.c4")
     const [text, readError] = await attemptAsync(() => Bun.file(path).text())
     if (readError !== null || text === null)
       return [null, readError ?? "draft graph is unavailable"]

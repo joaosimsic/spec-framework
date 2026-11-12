@@ -44,6 +44,11 @@ export class WorkbenchRouter {
     if (this.matches(path, ["change"])) return this.method(method, "GET", () => this.change())
     if (this.matches(path, ["impact"])) return this.method(method, "GET", () => this.impact())
     if (this.matches(path, ["diff"])) return this.method(method, "GET", () => this.diff())
+    if (this.matches(path, ["architecture-graph"])) {
+      return this.method(method, "GET", () => this.architectureGraph())
+    }
+    if (this.matches(path, ["repo-graph"]))
+      return this.method(method, "GET", () => this.repoGraph())
     if (this.matches(path, ["mapping"])) return this.method(method, "GET", () => this.mapping())
     if (this.matches(path, ["check"])) return this.method(method, "POST", () => this.check(request))
     if (this.matches(path, ["mapping", "actions"])) {
@@ -110,6 +115,24 @@ export class WorkbenchRouter {
     const [view, viewError] = await this.options.service.diff()
     if (viewError !== null) return [null, viewError]
     if (view === null) return [null, WorkbenchFailureFactory.internal("diff unavailable")]
+
+    return [this.json(view), null]
+  }
+
+  private async architectureGraph(): Promise<Result<Response, WorkbenchFailure>> {
+    const [view, viewError] = await this.options.service.architectureGraph()
+    if (viewError !== null) return [null, viewError]
+    if (view === null) {
+      return [null, WorkbenchFailureFactory.internal("architecture graph unavailable")]
+    }
+
+    return [this.json(view), null]
+  }
+
+  private async repoGraph(): Promise<Result<Response, WorkbenchFailure>> {
+    const [view, viewError] = await this.options.service.repoGraph()
+    if (viewError !== null) return [null, viewError]
+    if (view === null) return [null, WorkbenchFailureFactory.internal("repo graph unavailable")]
 
     return [this.json(view), null]
   }

@@ -6,9 +6,11 @@ import { runStart } from "../src/change/start"
 import { runMapReview } from "../src/core/map-review"
 import { WorkbenchServer } from "../src/workbench/server"
 import type {
+  WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
   WorkbenchContextView,
   WorkbenchMappingView,
+  WorkbenchRepoGraphView,
   WorkbenchSession,
 } from "../src/workbench/types"
 
@@ -93,7 +95,99 @@ describe("WorkbenchServer integration", () => {
         expect(response.status).toBe(200)
         expect(session.mode).toBe("read-only")
         expect(session.proposal).toBeNull()
-        expect(session.views).toEqual(["overview"])
+        expect(session.views).toEqual(["architecture", "code", "overview"])
+      } finally {
+        handle.close()
+      }
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("serves the curated architecture graph without a proposal", async () => {
+    const target = await createTarget()
+
+    try {
+      await mkdir(join(target, "spec", "architecture"), { recursive: true })
+      await writeFile(
+        join(target, "spec", "architecture", "model.c4"),
+        `specification {
+  element system
+  element component
+  relationship depends_on
+}
+
+model {
+  // SYS-SAMPLE observed human:tester@2026-11-12
+  sample = system 'Sample system'
+  // CMP-SAMPLE-CORE observed human:tester@2026-11-12
+  core = component 'Core'
+  sample -> core 'contains'
+  core -> sample 'reports to'
+}
+`,
+      )
+
+      const server = new WorkbenchServer({
+        target,
+        port: 0,
+        logger: { log: () => undefined },
+      })
+      const [handle, startError] = await server.start()
+      expect(startError).toBeNull()
+      if (handle === null) throw new Error("workbench server did not start")
+
+      try {
+        const response = await fetch(`${handle.url}/api/architecture-graph`)
+        const view = (await response.json()) as WorkbenchArchitectureGraphView
+        expect(response.status).toBe(200)
+        expect(view.nodes.map((node) => node.label).sort()).toEqual(["Core", "Sample system"])
+        expect(view.nodes.find((node) => node.label === "Core")?.parentRef).not.toBeNull()
+        expect(view.edges.map((edge) => edge.label)).toEqual(["reports to"])
+        expect(JSON.stringify(view)).not.toMatch(/\b(?:SYS|CMP)-/)
+      } finally {
+        handle.close()
+      }
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("serves the repo graph without a proposal", async () => {
+    const target = await createTarget()
+
+    try {
+      await mkdir(join(target, "src", "core"), { recursive: true })
+      await mkdir(join(target, "src", "change"), { recursive: true })
+      await writeFile(join(target, "src", "core", "result.ts"), "export const result = 1\n")
+      await writeFile(
+        join(target, "src", "change", "operations.ts"),
+        'import { result } from "../core/result"\nexport const value = result\n',
+      )
+
+      const server = new WorkbenchServer({
+        target,
+        port: 0,
+        logger: { log: () => undefined },
+      })
+      const [handle, startError] = await server.start()
+      expect(startError).toBeNull()
+      if (handle === null) throw new Error("workbench server did not start")
+
+      try {
+        const response = await fetch(`${handle.url}/api/repo-graph`)
+        const view = (await response.json()) as WorkbenchRepoGraphView
+        expect(response.status).toBe(200)
+        expect(view.nodes.some((node) => node.label === "core")).toBe(true)
+        expect(view.nodes.some((node) => node.label === "operations.ts")).toBe(true)
+        expect(
+          view.edges.some(
+            (edge) =>
+              edge.type === "depends_on" &&
+              view.nodes.find((node) => node.ref === edge.sourceRef)?.label === "operations.ts",
+          ),
+        ).toBe(true)
+        expect(view.summary.files).toBe(2)
       } finally {
         handle.close()
       }

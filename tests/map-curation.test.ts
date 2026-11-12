@@ -161,7 +161,7 @@ describe("mapping curation", () => {
           boundary: "In: runtime. Out: deployment.",
         }),
       )
-      expect(report.curation.draftPath).toBe(join("spec", "architecture", "draft.gen.c4"))
+      expect(report.curation.draftPath).toBe(join("spec", "generated", "draft.gen.c4"))
 
       const snapshot = await readSnapshot(target)
       expect(snapshot.decisions).toHaveLength(6)
@@ -170,7 +170,7 @@ describe("mapping curation", () => {
       )
       expect(await Bun.file(join(target, "spec", "spec.lock")).exists()).toBe(false)
 
-      const draft = await readFile(join(target, "spec", "architecture", "draft.gen.c4"), "utf8")
+      const draft = await readFile(join(target, "spec", "generated", "draft.gen.c4"), "utf8")
       expect(draft).toContain('owner="platform"')
       expect(draft).toContain("human:tester@2026-11-11")
     } finally {
@@ -266,7 +266,7 @@ describe("mapping curation", () => {
         ),
       ).toBe(false)
 
-      const draft = await readFile(join(target, "spec", "architecture", "draft.gen.c4"), "utf8")
+      const draft = await readFile(join(target, "spec", "generated", "draft.gen.c4"), "utf8")
       expect(draft).not.toContain("'depends_on'")
     } finally {
       await rm(target, { recursive: true, force: true })
@@ -366,9 +366,7 @@ describe("mapping curation", () => {
       expect(run.code).toBe(1)
       expect(run.output).toContain("unknown area 'missing'")
       expect((await readSnapshot(target)).decisions).toHaveLength(before.decisions.length)
-      expect(await Bun.file(join(target, "spec", "architecture", "draft.gen.c4")).exists()).toBe(
-        false,
-      )
+      expect(await Bun.file(join(target, "spec", "generated", "draft.gen.c4")).exists()).toBe(false)
 
       const relationRun = await runMapReview(target, {
         actions: [{ kind: "accept-relation", source: "app", target: "missing" }],
@@ -380,9 +378,7 @@ describe("mapping curation", () => {
       expect(relationRun.code).toBe(1)
       expect(relationRun.output).toContain("unknown area 'missing'")
       expect((await readSnapshot(target)).decisions).toHaveLength(before.decisions.length)
-      expect(await Bun.file(join(target, "spec", "architecture", "draft.gen.c4")).exists()).toBe(
-        false,
-      )
+      expect(await Bun.file(join(target, "spec", "generated", "draft.gen.c4")).exists()).toBe(false)
     } finally {
       await rm(target, { recursive: true, force: true })
     }

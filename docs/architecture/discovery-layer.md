@@ -154,7 +154,7 @@ or equivalent terminal review over the same draft graph.
   from the draft.
 - Each action is recorded in `spec/proposals/<slug>.mapping.json` against the
   review snapshot on a same-worktree branch.
-- `spec/architecture/draft.gen.c4` is regenerated for inspection. The review
+- `spec/generated/draft.gen.c4` is regenerated for inspection. The review
   never writes `spec/architecture/model.c4`, `spec/spec.lock`, or approval state.
 - Default interaction uses names; technical details reveal IDs and provenance.
 - The review never approves. A human approves an explicit scope through the CLI.

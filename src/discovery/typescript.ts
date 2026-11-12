@@ -246,7 +246,8 @@ export class TypeScriptDiscovery {
             ? "js"
             : "ts"
     const transpiler = new Bun.Transpiler({ loader })
-    const [imports, parseError] = attempt(() => transpiler.scanImports(text))
+    const source = text.replace(/^#![^\n]*\n/, "")
+    const [imports, parseError] = attempt(() => transpiler.scanImports(source))
     if (parseError !== null || imports === null) {
       return [null, `${path}: ${parseError ?? "import scan failed"}`]
     }

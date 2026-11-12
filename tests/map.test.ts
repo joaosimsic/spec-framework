@@ -172,9 +172,9 @@ describe("runMap", () => {
 
       const run = await runMap(target, { draft: true })
       expect(run.code).toBe(0)
-      expect(run.draftPath).toBe(join("spec", "architecture", "draft.gen.c4"))
+      expect(run.draftPath).toBe(join("spec", "generated", "draft.gen.c4"))
 
-      const draft = await readFile(join(target, "spec", "architecture", "draft.gen.c4"), "utf8")
+      const draft = await readFile(join(target, "spec", "generated", "draft.gen.c4"), "utf8")
       expect(draft).toContain("view mapDraft")
       expect(draft).toContain("sysSample -> cmpRootApp 'contains'")
       expect(await readFile(join(target, "spec", "architecture", "model.c4"), "utf8")).toBe(

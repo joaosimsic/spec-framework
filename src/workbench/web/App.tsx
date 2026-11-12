@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { describeFailure, getGraph, getSession, setCsrfToken } from "./api"
 import { TechnicalDetails } from "./components/TechnicalDetails"
 import { WorkbenchErrorBoundary } from "./components/WorkbenchErrorBoundary"
+import { ArchitectureView } from "./views/ArchitectureView"
+import { CodeMapView } from "./views/CodeMapView"
 import { ComposeView } from "./views/ComposeView"
 import { MapView } from "./views/MapView"
 import { OverviewView } from "./views/OverviewView"
@@ -9,10 +11,12 @@ import { ReviewView } from "./views/ReviewView"
 import { ReworkView } from "./views/ReworkView"
 import type { WorkbenchGraphView, WorkbenchSession } from "../types"
 
-type ViewName = "overview" | "map" | "compose" | "rework" | "review"
+type ViewName = "overview" | "architecture" | "code" | "map" | "compose" | "rework" | "review"
 
 const VIEW_LABELS: Record<ViewName, string> = {
   overview: "Overview",
+  architecture: "Architecture",
+  code: "Code map",
   map: "Map",
   compose: "Compose",
   rework: "Rework",
@@ -67,6 +71,7 @@ export function App() {
 
   const views = session === null ? [] : availableViews(session)
   const proposalRef = session?.proposal?.ref ?? null
+  const graphView = view === "architecture" || view === "code"
   const stale =
     session?.proposal !== null &&
     session?.proposal !== undefined &&
@@ -108,7 +113,7 @@ export function App() {
       </header>
 
       {session !== null && graph !== null && (
-        <div className="shell">
+        <div className={graphView ? "shell shell-graph" : "shell"}>
           <nav aria-label="Views" className="side-nav">
             {views.map((item) => (
               <button
@@ -123,7 +128,12 @@ export function App() {
             ))}
           </nav>
 
-          <main id="main" ref={mainRef} tabIndex={-1}>
+          <main
+            id="main"
+            ref={mainRef}
+            tabIndex={-1}
+            className={graphView ? "graph-main" : undefined}
+          >
             <div aria-live="polite" aria-atomic="true" className="sr-only">
               {status}
             </div>
@@ -188,6 +198,10 @@ function ViewContent({
   onRefresh(): Promise<void>
 }) {
   switch (view) {
+    case "architecture":
+      return <ArchitectureView {...props} />
+    case "code":
+      return <CodeMapView {...props} />
     case "map":
       return <MapView {...props} />
     case "compose":
@@ -203,7 +217,10 @@ function ViewContent({
 
 function availableViews(session: WorkbenchSession): ViewName[] {
   const views = session.views.filter(isViewName)
-  const fallbacks: ViewName[] = session.proposal === null ? ["overview"] : ["overview", "review"]
+  const fallbacks: ViewName[] =
+    session.proposal === null
+      ? ["architecture", "code", "overview"]
+      : ["architecture", "code", "overview", "review"]
   for (const fallback of fallbacks) {
     if (!views.includes(fallback)) views.push(fallback)
   }
@@ -216,7 +233,7 @@ function initialView(session: WorkbenchSession): ViewName {
   if (session.mode === "scratch") return "compose"
   if (session.mode === "refactor") return "rework"
 
-  return "overview"
+  return "architecture"
 }
 
 function isViewName(value: string): value is ViewName {

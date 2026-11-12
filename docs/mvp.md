@@ -107,8 +107,8 @@ File nodes link to their subsystem with `part_of`. Local imports create
 `depends_on` edges between files. Cross-subsystem imports are aggregated into
 subsystem-to-subsystem `depends_on` edges.
 
-On this repository, expect roughly 200 elements, 660 relations, 18 components,
-and 185 file nodes.
+On this repository, expect roughly 200 elements, 670 relations, 18 components,
+and 190 file nodes.
 
 The graph is draft-only. It does not approve the full architecture and does not
 run `spec map --check` against it. `spec map --check` remains for curated,
@@ -121,12 +121,20 @@ spec map --json
 spec map --draft
 ```
 
-`spec map --draft` writes `spec/architecture/draft.gen.c4`. The draft declares
-its own LikeC4 element kinds, so it is validated in isolation by the MVP. Do not
-keep a generated draft beside `model.c4` while running a full `spec check`;
-remove or regenerate it first. The workbench Map view is a curation queue, not a
-visual canvas; open a mapping proposal with `spec map --review` to inspect the
-discovered areas and relations.
+`spec map --draft` writes `spec/generated/draft.gen.c4`. It lives outside the
+LikeC4 architecture directory, so `spec check` ignores it. The MVP validates the
+generated draft in isolation because it declares its own element kinds.
+
+The workbench Graph view renders the same discovery graph at subsystem and file
+level without requiring a proposal:
+
+```bash
+bun run build:workbench
+bun run spec workbench
+```
+
+The Map view remains the curation queue; use `spec map --review` to open a
+mapping proposal.
 
 ## Evaluate
 

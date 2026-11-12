@@ -1,5 +1,7 @@
+import { ArchitectureCatalogLoader } from "../approval/architecture"
 import { SpecConfigLoader } from "../core/config"
 import { runCheck } from "../core/check"
+import { runMap } from "../core/map"
 import { runMapReview } from "../core/map-review"
 import type { Result } from "../core/result"
 import type { ProcessRunner, ToolLocator } from "../core/runner"
@@ -9,13 +11,16 @@ import { ProposalReportReader } from "../change/review"
 import { ScratchBriefingFactory } from "../change/start"
 import type { ChangeReport, Proposal, ProposalOperation } from "../change/types"
 import type { SpecGraph } from "../model/types"
+import { WorkbenchArchitectureGraphDisplay } from "./architecture-graph-display"
 import { WorkbenchChangeDisplay } from "./change-display"
 import { WorkbenchFailureFactory, type WorkbenchFailure } from "./failure"
 import { WorkbenchGraphDisplay } from "./graph-display"
 import { WorkbenchMappingDisplay } from "./mapping-display"
 import { WorkbenchOperationResolver } from "./operation-resolver"
+import { WorkbenchRepoGraphDisplay } from "./repo-graph-display"
 import { WorkbenchStateReader, type WorkbenchStateOptions } from "./state"
 import type {
+  WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
   WorkbenchCheckView,
   WorkbenchContextView,
@@ -25,6 +30,7 @@ import type {
   WorkbenchImpactView,
   WorkbenchMappingView,
   WorkbenchProposalSummary,
+  WorkbenchRepoGraphView,
   WorkbenchSession,
   WorkbenchTechnicalView,
 } from "./types"
@@ -105,6 +111,30 @@ export class WorkbenchService {
     if (contextError !== null) return [null, this.displayFailure(contextError)]
 
     return [context, null]
+  }
+
+  async architectureGraph(): Promise<Result<WorkbenchArchitectureGraphView, WorkbenchFailure>> {
+    const [catalog, catalogError] = await new ArchitectureCatalogLoader(this.target).load()
+    if (catalogError !== null) {
+      return [null, WorkbenchFailureFactory.internal(catalogError)]
+    }
+    if (catalog === null) {
+      return [null, WorkbenchFailureFactory.internal("architecture model unavailable")]
+    }
+
+    return [new WorkbenchArchitectureGraphDisplay(catalog).view(), null]
+  }
+
+  async repoGraph(): Promise<Result<WorkbenchRepoGraphView, WorkbenchFailure>> {
+    const run = await runMap(this.target, {
+      processRunner: this.options.processRunner,
+      toolLocator: this.options.toolLocator,
+    })
+    if (run.code !== 0 || run.report === null) {
+      return [null, WorkbenchFailureFactory.internal(run.output)]
+    }
+
+    return [new WorkbenchRepoGraphDisplay(run.report).view(), null]
   }
 
   async mapping(): Promise<Result<WorkbenchMappingView, WorkbenchFailure>> {
@@ -322,11 +352,15 @@ export class WorkbenchService {
   }
 
   private views(proposal: Proposal | null): string[] {
-    if (proposal === null) return ["overview"]
-    if (proposal.mode === "mapping") return ["overview", "map", "review", "technical"]
-    if (proposal.mode === "scratch") return ["overview", "compose", "review", "technical"]
+    if (proposal === null) return ["architecture", "code", "overview"]
+    if (proposal.mode === "mapping") {
+      return ["architecture", "code", "overview", "map", "review", "technical"]
+    }
+    if (proposal.mode === "scratch") {
+      return ["architecture", "code", "overview", "compose", "review", "technical"]
+    }
 
-    return ["overview", "rework", "review", "technical"]
+    return ["architecture", "code", "overview", "rework", "review", "technical"]
   }
 
   private noProposal(): WorkbenchFailure {

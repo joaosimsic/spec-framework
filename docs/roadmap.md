@@ -68,9 +68,10 @@ interactive mapping curation are implemented, as is named-scope approval that
 resolves visible requirement titles to identity. The terminal equivalents are
 implemented: `spec next` reports guidance, and `spec start`,
 `spec map --review`, `spec change`, and `spec refactor` open guided TTY
-sessions that write proposals only. The React/Vite workbench, the opencode
-plugin, mapping promotion into proposed architecture, architecture approval,
-and `spec map --check` drift findings are implemented. The self-host MVP
+sessions that write proposals only. The React/Vite workbench includes a
+read-only repository graph at subsystem and file level, the opencode plugin,
+mapping promotion into proposed architecture, architecture approval, and
+`spec map --check` drift findings are implemented. The self-host MVP
 (`bun run mvp`) approves one pilot requirement and architecture slice in a
 temporary worktree, verifies a Quint property with Apalache, builds the audit
 bundle, and proves approval invalidation and re-approval. Draft repo graph
@@ -89,7 +90,8 @@ dependencies. Decision record
 - formal source collector (implemented);
 - `spec start` and `spec map --review` (implemented);
 - React/Vite workbench for scratch, mapping, and refactor (implemented; Compose
-  edits drafts and the rework view applies every typed operation);
+  edits drafts, the rework view applies every typed operation, and the read-only
+  Graph view renders the repository graph);
 - opencode plugin package and local self-hosting loader (implemented);
 - terminal interactive paths for the same modes (implemented; TTY-guided
   scratch, mapping, and refactor sessions plus `spec next`);

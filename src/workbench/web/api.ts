@@ -1,5 +1,6 @@
 import { attemptAsync } from "../../core/result"
 import type {
+  WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
   WorkbenchCheckView,
   WorkbenchContextView,
@@ -9,6 +10,7 @@ import type {
   WorkbenchGraphView,
   WorkbenchImpactView,
   WorkbenchMappingView,
+  WorkbenchRepoGraphView,
   WorkbenchSession,
   WorkbenchTechnicalView,
 } from "../types"
@@ -52,6 +54,14 @@ export async function getContext(names: string[] = []): Promise<ApiResult<Workbe
 
 export async function getMapping(): Promise<ApiResult<WorkbenchMappingView>> {
   return request<WorkbenchMappingView>("/api/mapping")
+}
+
+export async function getArchitectureGraph(): Promise<ApiResult<WorkbenchArchitectureGraphView>> {
+  return request<WorkbenchArchitectureGraphView>("/api/architecture-graph")
+}
+
+export async function getRepoGraph(): Promise<ApiResult<WorkbenchRepoGraphView>> {
+  return request<WorkbenchRepoGraphView>("/api/repo-graph")
 }
 
 export async function postMappingActions(

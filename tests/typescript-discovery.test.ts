@@ -23,6 +23,7 @@ async function createTarget(): Promise<string> {
     ].join("\n"),
   )
   await write(join(target, "src", "cli.ts"), 'import { parse } from "./change/operations"\n')
+  await write(join(target, "bin", "spec.ts"), '#!/usr/bin/env bun\nimport "../src/cli"\n')
   await write(
     join(target, "src", "workbench", "service.ts"),
     'import { parse } from "../change/operations"\n',
@@ -61,6 +62,7 @@ describe("TypeScriptDiscovery", () => {
         "FILE-SRC-CLI-TS",
         "FILE-SRC-WORKBENCH-SERVICE-TS",
         "FILE-PLUGIN-OPENCODE-SRC-TOOLS-TS",
+        "FILE-BIN-SPEC-TS",
       ]) {
         expect(byId.get(id)?.kind).toBe("module")
       }
@@ -76,6 +78,12 @@ describe("TypeScriptDiscovery", () => {
         to: "FILE-SRC-CORE-SDOC-TS",
         confidence: "observed",
         provenance: "code:src/change/operations.ts#imports",
+      })
+      expect(byId.get("FILE-BIN-SPEC-TS")?.links).toContainEqual({
+        type: "depends_on",
+        to: "FILE-SRC-CLI-TS",
+        confidence: "observed",
+        provenance: "code:bin/spec.ts#imports",
       })
       expect(byId.get("CMP-SRC-CHANGE")?.links).toContainEqual({
         type: "depends_on",

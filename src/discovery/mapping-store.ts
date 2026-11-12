@@ -10,7 +10,7 @@ import {
 import { renderDraftModel } from "./render"
 import type { DraftElement, MapReport } from "./types"
 
-export const MAPPING_DRAFT_PATH = join("spec", "architecture", "draft.gen.c4")
+export const MAPPING_DRAFT_PATH = join("spec", "generated", "draft.gen.c4")
 
 export class MappingSnapshotStore {
   private readonly directory: string

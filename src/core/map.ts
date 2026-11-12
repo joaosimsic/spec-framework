@@ -1,7 +1,8 @@
 import { mkdir, readdir } from "node:fs/promises"
-import { join, relative } from "node:path"
+import { dirname, join, relative } from "node:path"
 import { GenericDiscovery } from "../discovery/generic"
 import { elementId } from "../discovery/ids"
+import { MAPPING_DRAFT_PATH } from "../discovery/mapping-store"
 import { renderDraftModel } from "../discovery/render"
 import { buildMapReport, formatMapReport, renderMapJson } from "../discovery/report"
 import { RustDiscovery } from "../discovery/rust"
@@ -58,9 +59,9 @@ export async function runMap(target: string, options: MapOptions = {}): Promise<
 
   let draftPath: string | null = null
   if (options.draft) {
-    const draftFile = join(target, "spec", "architecture", "draft.gen.c4")
+    const draftFile = join(target, MAPPING_DRAFT_PATH)
     const [written, writeError] = await attemptAsync(async () => {
-      await mkdir(join(target, "spec", "architecture"), { recursive: true })
+      await mkdir(dirname(draftFile), { recursive: true })
       await Bun.write(draftFile, renderDraftModel(elements))
       return draftFile
     })

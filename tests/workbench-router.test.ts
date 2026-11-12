@@ -5,9 +5,11 @@ import { WorkbenchRouter } from "../src/workbench/router"
 import { WorkbenchSecurity } from "../src/workbench/security"
 import type { WorkbenchService } from "../src/workbench/service"
 import type {
+  WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
   WorkbenchCheckView,
   WorkbenchGraphView,
+  WorkbenchRepoGraphView,
   WorkbenchSession,
 } from "../src/workbench/types"
 
@@ -70,6 +72,28 @@ class FakeWorkbenchService {
     return [{ commit: "abc123", dirty: false, entries: [] }, null]
   }
 
+  async architectureGraph(): Promise<Result<WorkbenchArchitectureGraphView, WorkbenchFailure>> {
+    return [
+      {
+        nodes: [],
+        edges: [],
+        summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
+      },
+      null,
+    ]
+  }
+
+  async repoGraph(): Promise<Result<WorkbenchRepoGraphView, WorkbenchFailure>> {
+    return [
+      {
+        nodes: [],
+        edges: [],
+        summary: { nodes: 0, edges: 0, components: 0, files: 0, externalDependencies: 0 },
+      },
+      null,
+    ]
+  }
+
   async check(structural: boolean): Promise<Result<WorkbenchCheckView, WorkbenchFailure>> {
     return [
       {
@@ -120,6 +144,30 @@ describe("WorkbenchRouter", () => {
     expect(failure).toBeNull()
     expect(response?.status).toBe(200)
     expect(await response?.json()).toEqual({ commit: "abc123", dirty: false, entries: [] })
+  })
+
+  test("serves the architecture graph view", async () => {
+    const [response, failure] = await router.handle(request("/api/architecture-graph"))
+
+    expect(failure).toBeNull()
+    expect(response?.status).toBe(200)
+    expect(await response?.json()).toEqual({
+      nodes: [],
+      edges: [],
+      summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
+    })
+  })
+
+  test("serves the repo graph view", async () => {
+    const [response, failure] = await router.handle(request("/api/repo-graph"))
+
+    expect(failure).toBeNull()
+    expect(response?.status).toBe(200)
+    expect(await response?.json()).toEqual({
+      nodes: [],
+      edges: [],
+      summary: { nodes: 0, edges: 0, components: 0, files: 0, externalDependencies: 0 },
+    })
   })
 
   test("rejects the wrong method", async () => {

@@ -2,6 +2,9 @@ export { WorkbenchServer, type WorkbenchServerHandle, type WorkbenchServerOption
 export { WorkbenchService, type WorkbenchServiceOptions } from "./service"
 export { WorkbenchStateReader } from "./state"
 export type {
+  WorkbenchArchitectureGraphEdge,
+  WorkbenchArchitectureGraphNode,
+  WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
   WorkbenchCheckView,
   WorkbenchContextView,
@@ -10,6 +13,9 @@ export type {
   WorkbenchGraphView,
   WorkbenchImpactView,
   WorkbenchMappingView,
+  WorkbenchRepoGraphEdge,
+  WorkbenchRepoGraphNode,
+  WorkbenchRepoGraphView,
   WorkbenchSession,
   WorkbenchTechnicalView,
 } from "./types"

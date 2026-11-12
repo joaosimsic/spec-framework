@@ -59,6 +59,26 @@ files. A proposal records its base commit, baseline, and author.
 
 ## Views
 
+### Architecture
+
+The read-only system map. It shows the curated LikeC4 elements and relations,
+using `contains` relations as collapsible groups. Cross-group relations remain
+visible and de-emphasized. The view supports search, collapse and expand, wheel
+zoom, drag panning, node details, and a collapsible text node list. Element kinds
+and relation labels come from the project model. It never edits or approves
+anything and does not require a proposal. The canvas takes most of the viewport;
+identity and hashes stay behind technical details.
+
+### Code map
+
+The read-only repository graph. It shows subsystem nodes and file nodes
+discovered from TypeScript source. Subsystems appear by default; selecting a
+subsystem opens its files and their imports. Local import dependencies are
+aggregated into subsystem dependencies. The view supports search, level
+switching, wheel zoom, drag panning, node details, and a collapsible text node
+list. It is code-derived evidence, not the curated architecture, and does not
+require a proposal.
+
 ### Overview
 
 Systems, capabilities, requirements, checks, blockers, approved scope, and open
@@ -111,26 +131,29 @@ and never enabled by default.
 
 The API mirrors the CLI JSON contract:
 
-| Endpoint                       | Method | Purpose                            |
-| ------------------------------ | ------ | ---------------------------------- |
-| `/api/graph`                   | GET    | Display graph, filtered by focus   |
-| `/api/context`                 | GET    | Scoped context pack                |
-| `/api/impact`                  | GET    | Impact and invalidated evidence    |
-| `/api/diff`                    | GET    | Proposal versus baseline           |
-| `/api/check`                   | POST   | Run validation and return findings |
-| `/api/proposals/:id/ops`       | POST   | Apply typed proposal operations    |
-| `/api/proposals/:id/technical` | GET    | Full identity and hashes           |
+| Endpoint                       | Method | Purpose                              |
+| ------------------------------ | ------ | ------------------------------------ |
+| `/api/graph`                   | GET    | Display graph, filtered by focus     |
+| `/api/architecture-graph`      | GET    | Read-only curated architecture graph |
+| `/api/repo-graph`              | GET    | Read-only repository discovery graph |
+| `/api/context`                 | GET    | Scoped context pack                  |
+| `/api/impact`                  | GET    | Impact and invalidated evidence      |
+| `/api/diff`                    | GET    | Proposal versus baseline             |
+| `/api/check`                   | POST   | Run validation and return findings   |
+| `/api/proposals/:id/ops`       | POST   | Apply typed proposal operations      |
+| `/api/proposals/:id/technical` | GET    | Full identity and hashes             |
 
 The API does not expose approval, `spec.lock` writes, or arbitrary filesystem
 access. Requests are same-origin and carry a CSRF token.
 
 ## Mode behavior
 
-| Mode    | Workbench focus                                            |
-| ------- | ---------------------------------------------------------- |
-| Scratch | Compose view, decision queue, feature-slice coverage       |
-| Mapping | Map view, confidence queue, approved-scope selection       |
-| Refac   | Rework view, before/after simulation, impact and approvals |
+| Mode      | Workbench focus                                            |
+| --------- | ---------------------------------------------------------- |
+| Read-only | Architecture view, code map, overview, blockers            |
+| Scratch   | Compose view, decision queue, feature-slice coverage       |
+| Mapping   | Map view, confidence queue, approved-scope selection       |
+| Refac     | Rework view, before/after simulation, impact and approvals |
 
 Switching mode changes the default view and guardrails. It does not create a
 second graph or proposal.

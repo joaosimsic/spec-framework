@@ -2,32 +2,156 @@ specification {
   element actor
   element system
   element component
+  element data_store
+  element external_system
   relationship depends_on
 }
 
 model {
   // ACTOR-DEVELOPER observed human:joao@2026-11-11
   user = actor 'Developer'
+
   // SYS-SPEC-FRAMEWORK proposed observed human:joao@2026-11-11
   framework = system 'spec-framework'
-  // CMP-SPEC-FRAMEWORK-CLI proposed observed human:joao@2026-11-11
-  frameworkCli = component 'spec CLI package'
-  // CMP-SPEC-FRAMEWORK-OPENCODE-PLUGIN proposed observed human:joao@2026-11-11
-  frameworkPlugin = component 'opencode plugin'
-  // CMP-SPEC-CLI observed human:joao@2026-11-11
-  cli = component 'spec CLI'
-  // CMP-SPEC-CORE proposed observed human:joao@2026-11-11
-  core = component 'core'
-  // CMP-SPEC-ADAPTERS observed human:joao@2026-11-11
-  adapters = component 'adapters'
 
-  user -> framework 'uses'
-  framework -> cli 'contains'
-  framework -> frameworkCli 'contains'
-  frameworkCli -> frameworkPlugin 'contains'
-  frameworkPlugin -> frameworkCli 'depends_on'
-  cli -> core 'uses'
+  // CMP-SPEC-SURFACES proposed observed human:joao@2026-11-12
+  surfaces = component 'User surfaces'
+  // CMP-SPEC-CLI proposed observed human:joao@2026-11-11
+  cli = component 'spec CLI'
+  // CMP-SPEC-TERMINAL proposed observed human:joao@2026-11-12
+  terminal = component 'Terminal sessions'
+  // CMP-SPEC-WORKBENCH proposed observed human:joao@2026-11-12
+  workbench = component 'Workbench'
+  // CMP-SPEC-PLUGIN proposed observed human:joao@2026-11-12
+  plugin = component 'opencode plugin'
+
+  // CMP-SPEC-ENGINE proposed observed human:joao@2026-11-12
+  engine = component 'Spec engine'
+  // CMP-SPEC-CORE proposed observed human:joao@2026-11-11
+  core = component 'Core model'
+  // CMP-SPEC-MODEL proposed observed human:joao@2026-11-12
+  specGraph = component 'Spec graph model'
+  // CMP-SPEC-DISCOVERY proposed observed human:joao@2026-11-12
+  discovery = component 'Discovery and mapping'
+  // CMP-SPEC-CHANGE proposed observed human:joao@2026-11-12
+  change = component 'Proposal changes'
+  // CMP-SPEC-APPROVAL proposed observed human:joao@2026-11-12
+  approval = component 'Approval and scope'
+  // CMP-SPEC-QUERY proposed observed human:joao@2026-11-12
+  query = component 'Query and display'
+  // CMP-SPEC-EVIDENCE proposed observed human:joao@2026-11-12
+  evidence = component 'Evidence collection'
+  // CMP-SPEC-BUNDLE proposed observed human:joao@2026-11-12
+  bundle = component 'Audit bundle'
+
+  // CMP-SPEC-ADAPTERS proposed observed human:joao@2026-11-11
+  adapters = component 'Tool adapters'
+  // CMP-SPEC-ADAPTER-LIKEC4 proposed observed human:joao@2026-11-12
+  likec4Adapter = component 'LikeC4 adapter'
+  // CMP-SPEC-ADAPTER-STRICTDOC proposed observed human:joao@2026-11-12
+  strictdocAdapter = component 'StrictDoc adapter'
+  // CMP-SPEC-ADAPTER-QUINT proposed observed human:joao@2026-11-12
+  quintAdapter = component 'Quint adapter'
+  // CMP-SPEC-ADAPTER-CONTRACTS proposed observed human:joao@2026-11-12
+  contractsAdapter = component 'Contract adapters'
+  // CMP-SPEC-ADAPTER-IMPLEMENTATION proposed observed human:joao@2026-11-12
+  implementationAdapter = component 'Implementation adapter'
+
+  // CMP-SPEC-DATA proposed observed human:joao@2026-11-12
+  data = component 'Project data'
+  // DAT-SPEC-WORKSPACE proposed observed human:joao@2026-11-12
+  workspace = data_store 'Spec sources'
+  // DAT-SPEC-LOCK proposed observed human:joao@2026-11-12
+  lock = data_store 'Approval lock'
+  // DAT-SPEC-RUNS proposed observed human:joao@2026-11-12
+  runs = data_store 'Run journal'
+  // DAT-SPEC-BUNDLE proposed observed human:joao@2026-11-12
+  bundleOutput = data_store 'Audit output'
+
+  // EXT-BUN observed observed human:joao@2026-11-12
+  bun = external_system 'Bun runtime'
+  // EXT-GIT observed observed human:joao@2026-11-12
+  git = external_system 'Git'
+  // EXT-LIKEC4 observed observed human:joao@2026-11-12
+  likec4 = external_system 'LikeC4'
+  // EXT-STRICTDOC observed observed human:joao@2026-11-12
+  strictdoc = external_system 'StrictDoc'
+  // EXT-QUINT observed observed human:joao@2026-11-12
+  quint = external_system 'Quint'
+  // EXT-APALACHE observed observed human:joao@2026-11-12
+  apalache = external_system 'Apalache'
+  // EXT-OPENCODE observed observed human:joao@2026-11-12
+  opencode = external_system 'opencode'
+
+  framework -> surfaces 'contains'
+  framework -> engine 'contains'
+  framework -> adapters 'contains'
+  framework -> data 'contains'
+
+  surfaces -> cli 'contains'
+  surfaces -> terminal 'contains'
+  surfaces -> workbench 'contains'
+  surfaces -> plugin 'contains'
+
+  engine -> core 'contains'
+  engine -> specGraph 'contains'
+  engine -> discovery 'contains'
+  engine -> change 'contains'
+  engine -> approval 'contains'
+  engine -> query 'contains'
+  engine -> evidence 'contains'
+  engine -> bundle 'contains'
+
+  adapters -> likec4Adapter 'contains'
+  adapters -> strictdocAdapter 'contains'
+  adapters -> quintAdapter 'contains'
+  adapters -> contractsAdapter 'contains'
+  adapters -> implementationAdapter 'contains'
+
+  data -> workspace 'contains'
+  data -> lock 'contains'
+  data -> runs 'contains'
+  data -> bundleOutput 'contains'
+
+  user -> cli 'runs'
+  user -> workbench 'opens'
+  user -> plugin 'invokes'
+  cli -> terminal 'starts'
+  terminal -> core 'uses'
+  workbench -> core 'uses'
+  plugin -> cli 'invokes'
+  cli -> bun 'runs on'
+  workbench -> bun 'runs on'
+  plugin -> opencode 'runs inside'
+
+  core -> specGraph 'builds'
+  core -> discovery 'runs'
+  core -> change 'applies'
+  core -> approval 'checks'
+  core -> query 'queries'
   core -> adapters 'dispatches'
+  specGraph -> workspace 'reads'
+  discovery -> workspace 'reads'
+  discovery -> specGraph 'proposes'
+  change -> specGraph 'updates'
+  change -> approval 'requests'
+  change -> git 'commits to'
+  approval -> lock 'updates'
+  approval -> git 'reads baseline'
+  workbench -> change 'proposes'
+  workbench -> approval 'reads status'
+  workbench -> workspace 'reads'
+  query -> specGraph 'reads'
+  evidence -> runs 'appends'
+  bundle -> evidence 'collects'
+  bundle -> specGraph 'summarizes'
+  bundle -> bundleOutput 'writes'
+
+  likec4Adapter -> likec4 'validates with'
+  strictdocAdapter -> strictdoc 'validates with'
+  quintAdapter -> quint 'validates with'
+  quintAdapter -> apalache 'checks with'
+  implementationAdapter -> bun 'runs checks'
 }
 
 views {

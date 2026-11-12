@@ -22,8 +22,7 @@ export class ProposalReportReader {
 
   async read(options: ProposalReportOptions = {}): Promise<Result<ChangeReport, string>> {
     const git =
-      options.gitRepository ??
-      new GitProposalRepository(options.processRunner, options.toolLocator)
+      options.gitRepository ?? new GitProposalRepository(options.processRunner, options.toolLocator)
     const [state, stateError] = await git.readState(this.target)
     if (stateError !== null) return [null, `cannot read workspace: ${stateError}`]
     if (state === null) return [null, "workspace reader returned no metadata"]

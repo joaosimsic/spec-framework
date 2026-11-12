@@ -8,7 +8,7 @@
 > captured at proposal open; `spec refactor` enables it by default and `spec
 change` accepts `--simulate`. `spec refactor` is a thin alias that warns
 > without an approved baseline, and `spec start` opens a scratch-mode proposal.
-> The workbench remains design.
+> The local workbench surfaces the same change report and simulation.
 
 ## Principle
 
@@ -117,8 +117,9 @@ with the proposal. `spec refactor` enables simulation by default; `spec change`
 and `spec change --op` accept `--simulate`. The report lists added, removed, and
 modified elements with names in the default view; technical output and JSON keep
 IDs, changed fields, and baseline commits. A requested simulation fails closed
-when the baseline snapshot is missing. The workbench simulation remains design.
-The proposal cannot be implemented until a human approves the changed scope.
+when the baseline snapshot is missing. The workbench shows the same simulation
+from the stored snapshot. The proposal cannot be implemented until a human
+approves the changed scope.
 
 ## Impact analysis
 

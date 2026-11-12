@@ -20,9 +20,7 @@ export class WorkbenchOperationResolver {
     return [resolved, null]
   }
 
-  private operation(
-    operation: ProposalOperation,
-  ): Result<ProposalOperation, WorkbenchFailure> {
+  private operation(operation: ProposalOperation): Result<ProposalOperation, WorkbenchFailure> {
     switch (operation.kind) {
       case "rename":
         return this.rename(operation)
@@ -136,10 +134,7 @@ export class WorkbenchOperationResolver {
     const [from, fromError] = this.optionalHandle(operation.from)
     if (fromError !== null) return [null, fromError]
 
-    return [
-      { ...operation, target, to, ...(from === null ? {} : { from }) },
-      null,
-    ]
+    return [{ ...operation, target, to, ...(from === null ? {} : { from }) }, null]
   }
 
   private changeContract(

@@ -60,7 +60,10 @@ export class WorkbenchMappingDisplay {
   }
 
   view(): WorkbenchMappingView {
-    const review = MappingReviewFactory.build(this.mapping.snapshot.map, this.mapping.proposal.direction)
+    const review = MappingReviewFactory.build(
+      this.mapping.snapshot.map,
+      this.mapping.proposal.direction,
+    )
     const resolved = new Set(this.mapping.curation.resolvedIds)
     const relations = this.mapping.curation.relations.map((relation) => this.relation(relation))
     const pendingRelations = relations.filter(
@@ -270,7 +273,11 @@ export class WorkbenchMappingDisplay {
     return [areas, null]
   }
 
-  private findRelation(sourceId: string, targetId: string, type: string | undefined): MappingCurationRelation | null {
+  private findRelation(
+    sourceId: string,
+    targetId: string,
+    type: string | undefined,
+  ): MappingCurationRelation | null {
     const normalizedType = type?.trim().toLowerCase()
 
     return (
@@ -305,6 +312,8 @@ export class WorkbenchMappingDisplay {
 
     return {
       ref: this.relationRef(relation),
+      sourceRef: this.areaRef(relation.sourceId),
+      targetRef: this.areaRef(relation.targetId),
       label: `${label} (${type})`,
       confidenceLabel: CONFIDENCE_LABELS[relation.confidence] ?? "Needs review",
       prompt:
@@ -317,7 +326,11 @@ export class WorkbenchMappingDisplay {
 
   private state(unresolved: number, pendingRelations: number): string {
     const decisions = this.mapping.curation.decisions.length
-    if (unresolved === 0 && pendingRelations === 0 && (decisions > 0 || this.areasById.size === 0)) {
+    if (
+      unresolved === 0 &&
+      pendingRelations === 0 &&
+      (decisions > 0 || this.areasById.size === 0)
+    ) {
       return "Curation complete"
     }
     if (decisions > 0) return "Curation in progress"

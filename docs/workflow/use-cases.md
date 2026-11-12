@@ -7,9 +7,9 @@
 > baseline exists. `spec start` opens a scratch-mode
 > proposal for a greenfield repository. `spec map --review` opens or resumes a
 > mapping proposal, prints the area and relation confidence queues, and records
-> typed area and relation curation actions. Promotion into approved
-> architecture, the workbench, and the opencode plugin are not implemented. The
-> mode model is accepted in decision record
+> typed area and relation curation actions. The local React/Vite workbench is
+> implemented. Promotion into approved architecture and the opencode plugin are
+> not implemented. The mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle
@@ -143,7 +143,7 @@ must run first. A draft-only refactor is allowed only with an explicit warning.
    deprecate, replace, or change contract.
 4. The CLI simulates before and after states and shows the named impact:
    affected requirements, contracts, checks, evidence, and approvals. The
-   workbench simulation remains design.
+   workbench shows the same simulation.
 5. Chat and workbench edits update the same proposal.
 6. `spec check` validates the proposal.
 7. The human approves the changed named scope in the CLI.

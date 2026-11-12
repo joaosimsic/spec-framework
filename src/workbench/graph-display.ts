@@ -17,7 +17,8 @@ import type {
   WorkbenchProposalSummary,
 } from "./types"
 
-const INTERNAL_ID = /\b(?:REQ|AC|CMP|CAP|VOBJ|VER|PROP|CON|EVD|UNK|WVR|DEC|SYS|MOD|IFACE|ENT|TERM|ONT|CS|SEM)-[A-Z0-9][A-Z0-9-]*\b/g
+const INTERNAL_ID =
+  /\b(?:REQ|AC|CMP|CAP|VOBJ|VER|PROP|CON|EVD|UNK|WVR|DEC|SYS|MOD|IFACE|ENT|TERM|ONT|CS|SEM)-[A-Z0-9][A-Z0-9-]*\b/g
 
 export class WorkbenchGraphDisplay {
   private readonly projection: DisplayProjection

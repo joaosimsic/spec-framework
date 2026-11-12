@@ -2,7 +2,6 @@ import { ProposalOperationParser } from "../change/operation-parser"
 import type { ProposalOperation } from "../change/types"
 import { attempt, attemptAsync, type Result } from "../core/result"
 import { CurationParser } from "../discovery/curation-parser"
-import type { CurationAction } from "../discovery/curation-types"
 import { WorkbenchFailureFactory, type WorkbenchFailure } from "./failure"
 import type { WorkbenchSecurity } from "./security"
 import type { WorkbenchService } from "./service"
@@ -23,7 +22,7 @@ export class WorkbenchRouter {
     const url = new URL(request.url)
     const segments = url.pathname.split("/").filter(Boolean)
     const mutation = request.method !== "GET" && request.method !== "HEAD"
-    const [securityFailure] = this.options.security.check(request, mutation)
+    const [, securityFailure] = this.options.security.check(request, mutation)
     if (securityFailure !== null) return [null, securityFailure]
 
     return this.route(request, url, segments)
@@ -126,7 +125,8 @@ export class WorkbenchRouter {
   private async check(request: Request): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
     if (bodyError !== null) return [null, bodyError]
-    if (!this.isRecord(body)) return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+    if (!this.isRecord(body))
+      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
     if (body["structural"] !== undefined && typeof body["structural"] !== "boolean") {
       return [null, WorkbenchFailureFactory.badRequest("structural must be a boolean")]
     }
@@ -141,7 +141,8 @@ export class WorkbenchRouter {
   private async mappingActions(request: Request): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
     if (bodyError !== null) return [null, bodyError]
-    if (!this.isRecord(body)) return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+    if (!this.isRecord(body))
+      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
 
     const [actions, actionsError] = CurationParser.parseList(body["actions"])
     if (actionsError !== null) return [null, WorkbenchFailureFactory.badRequest(actionsError)]
@@ -162,7 +163,8 @@ export class WorkbenchRouter {
   ): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
     if (bodyError !== null) return [null, bodyError]
-    if (!this.isRecord(body)) return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+    if (!this.isRecord(body))
+      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
     if (body["simulate"] !== undefined && typeof body["simulate"] !== "boolean") {
       return [null, WorkbenchFailureFactory.badRequest("simulate must be a boolean")]
     }
@@ -171,7 +173,8 @@ export class WorkbenchRouter {
     if (operationsError !== null) {
       return [null, WorkbenchFailureFactory.badRequest(operationsError)]
     }
-    if (operations === null) return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
+    if (operations === null)
+      return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
 
     const [view, viewError] = await this.options.service.operations(
       proposalRef,
@@ -234,11 +237,13 @@ export class WorkbenchRouter {
   }
 
   private matches(path: string[], expected: string[]): boolean {
-    return path.length === expected.length && expected.every((segment, index) => path[index] === segment)
+    return (
+      path.length === expected.length && expected.every((segment, index) => path[index] === segment)
+    )
   }
 
   private isProposalRoute(path: string[]): boolean {
-    return path.length === 4 && path[0] === "proposals" && path[1] !== undefined
+    return path.length === 3 && path[0] === "proposals" && path[1] !== undefined
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

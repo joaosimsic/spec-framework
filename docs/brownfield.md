@@ -1,8 +1,9 @@
 # Brownfield mapping
 
-> Status: `spec map --draft` and the `spec map --review` entry with area and
-> relation curation are implemented. The workbench and drift checks are design
-> only. See [use-case modes](workflow/use-cases.md).
+> Status: `spec map --draft`, the `spec map --review` entry with area and
+> relation curation, and the local workbench are implemented. Drift checks and
+> promotion into approved architecture are design only. See
+> [use-case modes](workflow/use-cases.md).
 
 ## Principle
 

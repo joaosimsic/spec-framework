@@ -11,6 +11,7 @@ export interface WorkbenchProposalSummary {
   mode: ProposalMode
   state: string
   author: string
+  baseCommit: string
 }
 
 export interface WorkbenchSession {
@@ -89,6 +90,8 @@ export interface WorkbenchMappingArea {
 
 export interface WorkbenchMappingRelation {
   ref: string
+  sourceRef: string
+  targetRef: string
   label: string
   confidenceLabel: string
   prompt: string

@@ -38,8 +38,7 @@ export class WorkbenchStateReader {
     options: WorkbenchStateOptions = {},
   ) {
     this.git =
-      options.gitRepository ??
-      new GitProposalRepository(options.processRunner, options.toolLocator)
+      options.gitRepository ?? new GitProposalRepository(options.processRunner, options.toolLocator)
   }
 
   get repository(): ProposalGit {
@@ -78,7 +77,8 @@ export class WorkbenchStateReader {
     if (workspaceError !== null) return [null, workspaceError]
     if (workspace === null) return [null, "workspace unavailable"]
     if (workspace.proposal === null) return [null, "no active mapping proposal"]
-    if (workspace.proposal.mode !== "mapping") return [null, "active proposal is not a mapping review"]
+    if (workspace.proposal.mode !== "mapping")
+      return [null, "active proposal is not a mapping review"]
 
     const [snapshot, snapshotError] = await new MappingSnapshotStore(this.target).load(
       workspace.proposal.branch,

@@ -34,6 +34,7 @@ export class WorkbenchLabeler {
       mode: proposal.mode,
       state: STATUS_LABELS[proposal.status],
       author: proposal.author,
+      baseCommit: proposal.base_commit,
     }
   }
 

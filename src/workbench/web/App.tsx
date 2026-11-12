@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import type { ApiFailure } from "./api"
-import { getGraph, getSession, setCsrfToken } from "./api"
+import { describeFailure, getGraph, getSession, setCsrfToken } from "./api"
 import { TechnicalDetails } from "./components/TechnicalDetails"
+import { WorkbenchErrorBoundary } from "./components/WorkbenchErrorBoundary"
 import { ComposeView } from "./views/ComposeView"
 import { MapView } from "./views/MapView"
 import { OverviewView } from "./views/OverviewView"
@@ -39,14 +39,14 @@ export function App() {
   async function load(): Promise<void> {
     const [loadedSession, sessionError] = await getSession()
     if (sessionError !== null || loadedSession === null) {
-      setError(describe(sessionError))
+      setError(describeFailure(sessionError))
       return
     }
 
     setCsrfToken(loadedSession.csrf_token)
     const [loadedGraph, graphError] = await getGraph()
     if (graphError !== null || loadedGraph === null) {
-      setError(describe(graphError))
+      setError(describeFailure(graphError))
       return
     }
 
@@ -58,7 +58,7 @@ export function App() {
   async function refresh(): Promise<void> {
     const [loadedGraph, graphError] = await getGraph()
     if (graphError !== null || loadedGraph === null) {
-      setError(describe(graphError))
+      setError(describeFailure(graphError))
       return
     }
 
@@ -67,6 +67,10 @@ export function App() {
 
   const views = session === null ? [] : availableViews(session)
   const proposalRef = session?.proposal?.ref ?? null
+  const stale =
+    session?.proposal !== null &&
+    session?.proposal !== undefined &&
+    session.proposal.baseCommit !== session.commit
 
   return (
     <>
@@ -93,7 +97,11 @@ export function App() {
           </div>
         )}
         <div className="header-actions">
-          <button type="button" onClick={() => setTechnicalOpen(true)} disabled={proposalRef === null}>
+          <button
+            type="button"
+            onClick={() => setTechnicalOpen(true)}
+            disabled={proposalRef === null}
+          >
             Technical details
           </button>
         </div>
@@ -127,14 +135,24 @@ export function App() {
                 </button>
               </div>
             )}
-            <ViewContent
-              view={view}
-              graph={graph}
-              session={session}
-              onStatus={setStatus}
-              onError={(message) => setError(message)}
-              onRefresh={refresh}
-            />
+            {stale && session.proposal !== null && (
+              <div className="panel notice-warn" role="status">
+                <p>
+                  This proposal started from commit {session.proposal.baseCommit}, but the workspace
+                  is at {session.commit}. Reload or inspect the branch before editing.
+                </p>
+              </div>
+            )}
+            <WorkbenchErrorBoundary key={view}>
+              <ViewContent
+                view={view}
+                graph={graph}
+                session={session}
+                onStatus={setStatus}
+                onError={(message) => setError(message)}
+                onRefresh={refresh}
+              />
+            </WorkbenchErrorBoundary>
           </main>
         </div>
       )}
@@ -185,8 +203,9 @@ function ViewContent({
 
 function availableViews(session: WorkbenchSession): ViewName[] {
   const views = session.views.filter(isViewName)
-  for (const fallback of ["overview", "review", "technical"] as const) {
-    if (fallback !== "technical" && !views.includes(fallback)) views.push(fallback)
+  const fallbacks: ViewName[] = session.proposal === null ? ["overview"] : ["overview", "review"]
+  for (const fallback of fallbacks) {
+    if (!views.includes(fallback)) views.push(fallback)
   }
 
   return [...new Set(views)]
@@ -202,11 +221,4 @@ function initialView(session: WorkbenchSession): ViewName {
 
 function isViewName(value: string): value is ViewName {
   return value in VIEW_LABELS
-}
-
-function describe(failure: ApiFailure | null): string {
-  if (failure === null) return "The workbench could not load."
-  const choices = failure.choices?.map((choice) => `${choice.label} (${choice.context})`)
-
-  return [failure.message, ...(choices ?? [])].join("\n")
 }

@@ -1,10 +1,10 @@
 # Workbench
 
-> Status: design. The workbench is not implemented. The terminal mapping
-> curation path, including area and relation decisions, is implemented and
-> stores its proposal snapshot for a future workbench. The terminal refactor
-> simulation is implemented from the baseline graph snapshot stored with a
-> proposal. Decision record
+> Status: implemented. The local React/Vite workbench serves the display graph,
+> mapping curation, scratch context, refactor simulation, proposal review, and
+> technical details. The rework view applies `rename`, `deprecate`, and `move`;
+> structured record operations remain CLI and API operations. Approval and
+> `spec/spec.lock` writes remain CLI-only. Decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > interaction model and the write boundary.
 
@@ -87,7 +87,7 @@ and never enabled by default.
 
 ## API contract
 
-The API mirrors the CLI JSON contract. A proposed shape:
+The API mirrors the CLI JSON contract:
 
 | Endpoint                       | Method | Purpose                            |
 | ------------------------------ | ------ | ---------------------------------- |

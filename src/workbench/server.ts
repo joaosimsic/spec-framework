@@ -49,8 +49,7 @@ export class WorkbenchServer {
     this.logger = options.logger ?? console
     this.service =
       options.service ?? new WorkbenchService(options.target, options.serviceOptions ?? {})
-    this.assetDirectory =
-      options.assetDirectory ?? join(import.meta.dir, "web", "dist")
+    this.assetDirectory = options.assetDirectory ?? join(import.meta.dir, "web", "dist")
   }
 
   async start(): Promise<Result<WorkbenchServerHandle, string>> {
@@ -105,7 +104,9 @@ export class WorkbenchServer {
     const [response, responseError] = await attemptAsync(() => this.dispatch(request))
     if (responseError !== null || response === null) {
       this.log(request, 500)
-      return this.secure(errorResponse(WorkbenchFailureFactory.internal("workbench request failed")))
+      return this.secure(
+        errorResponse(WorkbenchFailureFactory.internal("workbench request failed")),
+      )
     }
 
     this.log(request, response.status)

@@ -4,8 +4,8 @@
 > applies typed SDoc, architecture, and contract operations, and reports impact
 > across requirements, architecture, formal sources, contracts, evidence, and
 > approvals. `spec start` opens the scratch-mode entry. `spec approve --scope`
-> resolves visible requirement titles to identity. The workbench and plugin
-> remain design.
+> resolves visible requirement titles to identity. The local workbench is
+> implemented; the plugin remains design.
 
 ## Principle
 

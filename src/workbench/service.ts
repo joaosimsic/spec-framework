@@ -46,7 +46,10 @@ export class WorkbenchService {
     this.state = new WorkbenchStateReader(target, options)
   }
 
-  async session(csrfToken: string, assetReady: boolean): Promise<Result<WorkbenchSession, WorkbenchFailure>> {
+  async session(
+    csrfToken: string,
+    assetReady: boolean,
+  ): Promise<Result<WorkbenchSession, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
     if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
     if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
@@ -56,7 +59,8 @@ export class WorkbenchService {
     if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
 
     const display = new WorkbenchGraphDisplay(graph)
-    const proposal = workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
+    const proposal =
+      workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
 
     return [
       {
@@ -94,7 +98,8 @@ export class WorkbenchService {
     if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
 
     const display = new WorkbenchGraphDisplay(graph)
-    const proposal = workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
+    const proposal =
+      workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
     const [prompts, next] = await this.contextGuidance(workspace.proposal, proposal)
     const [context, contextError] = display.context(proposal, names, prompts, next)
     if (contextError !== null) return [null, this.displayFailure(contextError)]
@@ -143,7 +148,8 @@ export class WorkbenchService {
 
     const [updated, updatedError] = await this.state.readMapping()
     if (updatedError !== null) return [null, WorkbenchFailureFactory.internal(updatedError)]
-    if (updated === null) return [null, WorkbenchFailureFactory.internal("mapping review unavailable")]
+    if (updated === null)
+      return [null, WorkbenchFailureFactory.internal("mapping review unavailable")]
 
     return [new WorkbenchMappingDisplay(updated).view(), null]
   }
@@ -165,7 +171,8 @@ export class WorkbenchService {
       gitRepository: this.options.gitRepository,
     })
     if (reportError !== null) return [null, WorkbenchFailureFactory.internal(reportError)]
-    if (report === null) return [null, WorkbenchFailureFactory.internal("proposal report unavailable")]
+    if (report === null)
+      return [null, WorkbenchFailureFactory.internal("proposal report unavailable")]
 
     return [new WorkbenchChangeDisplay(graph).view(report), null]
   }
@@ -227,7 +234,8 @@ export class WorkbenchService {
 
     const [resolved, resolveError] = new WorkbenchOperationResolver(display).resolve(operations)
     if (resolveError !== null) return [null, resolveError]
-    if (resolved === null) return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
+    if (resolved === null)
+      return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
 
     const run = await runProposalOperations(this.target, resolved, {
       simulate,
@@ -314,7 +322,7 @@ export class WorkbenchService {
   }
 
   private views(proposal: Proposal | null): string[] {
-    if (proposal === null) return ["overview", "review", "technical"]
+    if (proposal === null) return ["overview"]
     if (proposal.mode === "mapping") return ["overview", "map", "review", "technical"]
     if (proposal.mode === "scratch") return ["overview", "compose", "review", "technical"]
 

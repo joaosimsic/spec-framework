@@ -6,8 +6,9 @@
 > and contextual name resolution; `--technical` reveals identity. Terminal
 > mapping curation resolves visible names for areas and relations and hides
 > identity by default. `spec approve --scope` resolves visible requirement
-> titles to identity and expands acceptance criteria. The workbench and chat
-> views remain design.
+> titles to identity and expands acceptance criteria. The workbench uses the
+> same projection and keeps identity in its technical-details view; chat views
+> remain design.
 
 ## Purpose
 

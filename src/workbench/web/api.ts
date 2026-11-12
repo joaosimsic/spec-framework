@@ -21,6 +21,13 @@ export interface ApiFailure {
 
 export type ApiResult<Value> = [Value | null, ApiFailure | null]
 
+export function describeFailure(failure: ApiFailure | null): string {
+  if (failure === null) return "The request could not complete."
+  const choices = failure.choices?.map((choice) => `${choice.label}: ${choice.context}`)
+
+  return [failure.message, ...(choices ?? [])].join("\n")
+}
+
 let csrfToken = ""
 
 export function setCsrfToken(token: string): void {

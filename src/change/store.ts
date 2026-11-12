@@ -29,6 +29,7 @@ const OPERATION_KINDS = new Set([
   "change-contract",
   "record-decision",
   "record-open-question",
+  "add-record",
   "promote-mapping",
 ])
 

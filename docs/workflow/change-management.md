@@ -94,8 +94,15 @@ Refactoring uses typed operations, not free-form edits:
 | `change-contract`      | Change a boundary and record compatibility impact              |
 | `record-decision`      | Record a human-confirmed decision linked to an element         |
 | `record-open-question` | Record an open question linked to an element                   |
+| `add-record`           | Append a draft requirement or acceptance criterion             |
 
 `rename`, `deprecate`, `replace`, `split`, and `merge` apply to SDoc records.
+`add-record` appends a draft `[REQUIREMENT]` block to the requirements document;
+`recordKind` selects the prefix and optional `acceptanceOf` links a new
+acceptance criterion to its requirement. New records and extracted components
+may omit `UID` or set it to an empty string. The engine derives a stable ID from
+the visible title and resolves collisions with numeric suffixes. Explicit IDs
+remain supported for automation.
 `extract` creates an annotated LikeC4 component and moves one requirement's
 `COMPONENT` link to it. `move` either reparents a LikeC4 component or reassigns
 a requirement `COMPONENT` or `CAPABILITY` link. `change-contract` patches a

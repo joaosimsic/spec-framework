@@ -7,6 +7,8 @@ import type {
   ProposalRecordFields,
 } from "./types"
 
+const RECORD_KINDS = new Set(["requirement", "acceptance_criterion"])
+
 export class ProposalOperationParser {
   static parseJson(text: string): Result<ProposalOperation[], string> {
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
@@ -58,6 +60,8 @@ export class ProposalOperationParser {
         return this.readRecordDecision(value)
       case "record-open-question":
         return this.readRecordOpenQuestion(value)
+      case "add-record":
+        return this.readAddRecord(value)
       default:
         return [null, `unknown operation kind '${value["kind"]}'`]
     }
@@ -84,7 +88,7 @@ export class ProposalOperationParser {
     const target = this.readTarget(value["target"])
     if (target === null) return [null, "replace requires a target"]
 
-    const [replacement, error] = this.readFields(value["replacement"], "replacement")
+    const [replacement, error] = this.readNewFields(value["replacement"], "replacement")
     if (error !== null) return [null, error]
     if (replacement === null) return [null, "replace requires replacement fields"]
 
@@ -100,7 +104,7 @@ export class ProposalOperationParser {
 
     const parts: ProposalRecordFields[] = []
     for (const candidate of value["parts"]) {
-      const [fields, error] = this.readFields(candidate, "part")
+      const [fields, error] = this.readNewFields(candidate, "part")
       if (error !== null) return [null, error]
       if (fields === null) return [null, "split part failed"]
       parts.push(fields)
@@ -113,7 +117,7 @@ export class ProposalOperationParser {
     const targets = this.readTargets(value["targets"])
     if (targets === null) return [null, "merge requires at least two unique targets"]
 
-    const [result, error] = this.readFields(value["result"], "result")
+    const [result, error] = this.readNewFields(value["result"], "result")
     if (error !== null) return [null, error]
     if (result === null) return [null, "merge requires result fields"]
 
@@ -247,6 +251,34 @@ export class ProposalOperationParser {
     ]
   }
 
+  private static readAddRecord(value: Record<string, unknown>): Result<ProposalOperation, string> {
+    const recordKind = this.readTarget(value["recordKind"])
+    if (recordKind === null) return [null, "add-record requires a record kind"]
+    if (!RECORD_KINDS.has(recordKind)) {
+      return [null, `add-record kind '${recordKind}' is not supported`]
+    }
+
+    const [record, error] = this.readNewFields(value["record"], "record")
+    if (error !== null) return [null, error]
+    if (record === null) return [null, "add-record requires record fields"]
+    if ((record.TITLE ?? "").trim() === "") return [null, "add-record requires a title"]
+
+    const acceptanceOf = this.readOptionalTarget(value["acceptanceOf"])
+    if (acceptanceOf === null && value["acceptanceOf"] !== undefined) {
+      return [null, "add-record acceptanceOf must be a non-empty string"]
+    }
+
+    return [
+      {
+        kind: "add-record",
+        recordKind,
+        record,
+        ...(acceptanceOf === null ? {} : { acceptanceOf }),
+      },
+      null,
+    ]
+  }
+
   private static readText(value: unknown): string | null {
     if (typeof value !== "string") return null
     const text = value.replace(/\s+/g, " ").trim()
@@ -266,7 +298,6 @@ export class ProposalOperationParser {
     }
 
     const uid = (fields.UID ?? "").trim()
-    if (uid === "") return [null, "component fields require UID"]
     const title = (fields.TITLE ?? "").trim()
     if (title === "") return [null, "component fields require TITLE"]
 
@@ -287,6 +318,23 @@ export class ProposalOperationParser {
   private static readOptionalTarget(value: unknown): string | null {
     if (value === undefined) return null
     return this.readTarget(value)
+  }
+
+  private static readNewFields(
+    value: unknown,
+    label: string,
+  ): Result<ProposalRecordFields, string> {
+    if (!this.isRecord(value)) return [null, `${label} fields must be an object`]
+
+    const fields: ProposalRecordFields = {}
+    for (const [field, candidate] of Object.entries(value)) {
+      if (typeof candidate !== "string") {
+        return [null, `${label} field ${field} must be a string`]
+      }
+      fields[field] = candidate
+    }
+
+    return [fields, null]
   }
 
   private static readFields(value: unknown, label: string): Result<ProposalRecordFields, string> {

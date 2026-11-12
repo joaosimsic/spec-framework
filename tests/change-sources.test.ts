@@ -219,6 +219,27 @@ describe("workspace operations", () => {
     }
   })
 
+  test("generates a component ID from its visible name", async () => {
+    const target = await createTarget()
+    try {
+      const [applied, error] = await apply(target, [
+        {
+          kind: "extract",
+          target: "REQ-SAMPLE-001",
+          component: { UID: "", TITLE: "Token refresh" },
+        },
+      ])
+
+      expect(error).toBeNull()
+      expect(applied?.changes.map((change) => change.id)).toContain("CMP-TOKEN-REFRESH")
+
+      const architecture = await readFile(join(target, "spec", "architecture", "model.c4"), "utf8")
+      expect(architecture).toContain("// CMP-TOKEN-REFRESH proposed")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
   test("moves component containment and requirement ownership", async () => {
     const target = await createTarget()
     try {

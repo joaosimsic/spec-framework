@@ -9,8 +9,8 @@
 > mapping proposal, prints the area and relation confidence queues, and records
 > typed area and relation curation actions. Accepted areas are promoted into
 > proposed architecture and hash-locked by human approval. `spec map --check`
-> reports drift. The local React/Vite workbench and the opencode plugin are
-> implemented. The mode model is accepted in decision record
+> reports drift. The local React/Vite workbench edits drafts and applies every
+> typed proposal operation; the opencode plugin is implemented. The mode model is accepted in decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md).
 
 ## Principle

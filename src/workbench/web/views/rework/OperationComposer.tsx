@@ -1,8 +1,30 @@
 import { useState } from "react"
 import type { ProposalOperation } from "../../../../change"
 import type { DisplayEntry } from "../../../../model"
+import { ContractOperationFields } from "./ContractOperationFields"
+import { DecisionOperationFields } from "./DecisionOperationFields"
+import { MoveOperationFields } from "./MoveOperationFields"
+import { RecordOperationFields } from "./RecordOperationFields"
+import { buildOperation } from "./operation-builder"
+import {
+  canSubmit,
+  initialOperationForm,
+  type OperationForm,
+  type ReworkOperationKind,
+} from "./operation-form"
 
-type OperationKind = "rename" | "deprecate" | "move"
+const KINDS: Array<{ value: ReworkOperationKind; label: string }> = [
+  { value: "rename", label: "Rename" },
+  { value: "deprecate", label: "Retire" },
+  { value: "replace", label: "Replace" },
+  { value: "split", label: "Split" },
+  { value: "merge", label: "Merge" },
+  { value: "extract", label: "Extract component" },
+  { value: "move", label: "Move" },
+  { value: "change-contract", label: "Change contract" },
+  { value: "record-decision", label: "Record decision" },
+  { value: "record-open-question", label: "Record open question" },
+]
 
 export function OperationComposer({
   entries,
@@ -13,27 +35,29 @@ export function OperationComposer({
   busy: boolean
   onApply(operation: ProposalOperation): Promise<boolean>
 }) {
-  const [kind, setKind] = useState<OperationKind>("rename")
-  const [target, setTarget] = useState(entries[0]?.ref ?? "")
-  const [destination, setDestination] = useState(entries[1]?.ref ?? "")
-  const [title, setTitle] = useState("")
+  const [form, setForm] = useState<OperationForm>(() =>
+    initialOperationForm(entries[0]?.ref ?? "", entries[1]?.ref ?? ""),
+  )
   const [confirmed, setConfirmed] = useState(false)
-  const canSubmit =
-    target !== "" &&
-    (kind !== "rename" || title.trim() !== "") &&
-    (kind !== "move" || destination !== "") &&
-    (kind !== "deprecate" || confirmed)
+
+  function update(patch: Partial<OperationForm>): void {
+    setForm((current) => ({ ...current, ...patch }))
+    if (patch.kind !== undefined) setConfirmed(false)
+  }
 
   async function submit(): Promise<void> {
-    const operation = buildOperation(kind, target, destination, title)
+    const operation = buildOperation(form)
     if (operation === null) return
 
     const succeeded = await onApply(operation)
     if (!succeeded) return
 
-    setTitle("")
+    update({ title: "", statement: "", parts: "", question: "", extraTargets: [] })
     setConfirmed(false)
   }
+
+  const optionalTarget = form.kind === "record-decision" || form.kind === "record-open-question"
+  const ready = canSubmit(form) && (form.kind !== "deprecate" || confirmed)
 
   return (
     <section aria-labelledby="operation-heading" className="panel">
@@ -45,21 +69,21 @@ export function OperationComposer({
         <label>
           Operation
           <select
-            value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as OperationKind)
-              setConfirmed(false)
-            }}
+            value={form.kind}
+            onChange={(event) => update({ kind: event.target.value as ReworkOperationKind })}
           >
-            <option value="rename">Rename</option>
-            <option value="deprecate">Retire</option>
-            <option value="move">Move</option>
+            {KINDS.map((kind) => (
+              <option key={kind.value} value={kind.value}>
+                {kind.label}
+              </option>
+            ))}
           </select>
         </label>
 
         <label>
-          Item
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
+          {optionalTarget ? "Linked item" : "Item"}
+          <select value={form.target} onChange={(event) => update({ target: event.target.value })}>
+            {optionalTarget && <option value="">No linked item</option>}
             {entries.map((entry) => (
               <option key={entry.ref} value={entry.ref}>
                 {entry.label} ({entry.kindLabel})
@@ -68,27 +92,16 @@ export function OperationComposer({
           </select>
         </label>
 
-        {kind === "rename" && (
+        {form.kind === "rename" && (
           <label>
             New name
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input value={form.title} onChange={(event) => update({ title: event.target.value })} />
           </label>
         )}
 
-        {kind === "move" && (
-          <label>
-            Move under
-            <select value={destination} onChange={(event) => setDestination(event.target.value)}>
-              {entries.map((entry) => (
-                <option key={entry.ref} value={entry.ref}>
-                  {entry.label} ({entry.kindLabel})
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <OperationFields entries={entries} form={form} update={update} />
 
-        {kind === "deprecate" && (
+        {form.kind === "deprecate" && (
           <label className="checkbox">
             <input
               checked={confirmed}
@@ -99,25 +112,31 @@ export function OperationComposer({
           </label>
         )}
       </div>
-      <button disabled={busy || !canSubmit} type="button" onClick={() => void submit()}>
+      <button disabled={busy || !ready} type="button" onClick={() => void submit()}>
         Apply to proposal
       </button>
     </section>
   )
 }
 
-function buildOperation(
-  kind: OperationKind,
-  target: string,
-  destination: string,
-  title: string,
-): ProposalOperation | null {
-  switch (kind) {
-    case "rename":
-      return { kind: "rename", target, title: title.trim() }
-    case "deprecate":
-      return { kind: "deprecate", target }
-    case "move":
-      return { kind: "move", target, to: destination }
+function OperationFields(props: {
+  entries: DisplayEntry[]
+  form: OperationForm
+  update(patch: Partial<OperationForm>): void
+}) {
+  const { form } = props
+  if (
+    form.kind === "replace" ||
+    form.kind === "split" ||
+    form.kind === "merge" ||
+    form.kind === "extract"
+  ) {
+    return <RecordOperationFields {...props} />
   }
+  if (form.kind === "move") return <MoveOperationFields {...props} />
+  if (form.kind === "change-contract") return <ContractOperationFields {...props} />
+  if (form.kind === "record-decision" || form.kind === "record-open-question") {
+    return <DecisionOperationFields {...props} />
+  }
+  return null
 }

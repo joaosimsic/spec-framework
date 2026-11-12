@@ -53,8 +53,9 @@ annotated LikeC4 architecture elements, annotated Quint modules and properties,
 contract sidecars, and evidence. The presentation projection with opaque refs is
 implemented. The proposal engine core, same-worktree proposal branches, and
 typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
-`move`, `change-contract`, `record-decision`, and `record-open-question` are
-implemented. Change reports include
+`move`, `change-contract`, `record-decision`, `record-open-question`, and
+`add-record` are implemented. New records may derive their ID from the visible
+name. Change reports include
 deterministic impact analysis over the graph, invalidated evidence, approvals to
 renew, and open questions. The `spec refactor` alias is implemented and warns
 when no approved baseline exists. Refactor before/after simulation is
@@ -78,7 +79,8 @@ implemented. Decision record
   graph (implemented);
 - formal source collector (implemented);
 - `spec start` and `spec map --review` (implemented);
-- React/Vite workbench for scratch, mapping, and refactor (implemented);
+- React/Vite workbench for scratch, mapping, and refactor (implemented; Compose
+  edits drafts and the rework view applies every typed operation);
 - opencode plugin package and local self-hosting loader (implemented);
 - terminal interactive paths for the same modes;
 

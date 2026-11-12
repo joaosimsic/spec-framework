@@ -17,6 +17,7 @@ export type ProposalOperationKind =
   | "change-contract"
   | "record-decision"
   | "record-open-question"
+  | "add-record"
   | "promote-mapping"
 
 export interface ProposalRecordFields {
@@ -67,6 +68,12 @@ export type ProposalOperation =
       question: string
       target?: string
       owner?: string
+    }
+  | {
+      kind: "add-record"
+      recordKind: string
+      record: ProposalRecordFields
+      acceptanceOf?: string
     }
 
 export interface ProposalBaseline {

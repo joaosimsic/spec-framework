@@ -102,9 +102,143 @@ describe("ProposalOperationParser", () => {
       },
     ])
   })
+
+  test("parses add-record and allows generated IDs", () => {
+    const [operations, error] = ProposalOperationParser.parseList([
+      {
+        kind: "add-record",
+        recordKind: "requirement",
+        record: { TITLE: "New behavior", STATEMENT: "The component shall respond." },
+      },
+      {
+        kind: "replace",
+        target: "REQ-SAMPLE-001",
+        replacement: { TITLE: "Replacement behavior" },
+      },
+    ])
+
+    expect(error).toBeNull()
+    expect(operations?.[0]).toMatchObject({ kind: "add-record", recordKind: "requirement" })
+    expect(operations?.[1]).toMatchObject({ kind: "replace", target: "REQ-SAMPLE-001" })
+
+    const [invalid, invalidError] = ProposalOperationParser.parseList({
+      kind: "add-record",
+      recordKind: "unknown-kind",
+      record: { TITLE: "Bad" },
+    })
+    expect(invalid).toBeNull()
+    expect(invalidError).toContain("not supported")
+  })
 })
 
 describe("SdocOperationApplier", () => {
+  test("adds records with generated IDs and links acceptance criteria", async () => {
+    const target = await createTarget()
+    try {
+      const [applied, error] = await apply(target, [
+        {
+          kind: "add-record",
+          recordKind: "requirement",
+          record: {
+            TITLE: "Login behavior",
+            STATUS: "Draft",
+            STATEMENT: "The component shall accept a valid login.",
+          },
+        },
+        {
+          kind: "add-record",
+          recordKind: "acceptance_criterion",
+          record: {
+            TITLE: "Valid login succeeds",
+            STATUS: "Draft",
+            STATEMENT: "Given a valid login, the component returns success.",
+          },
+          acceptanceOf: "REQ-LOGIN-BEHAVIOR",
+        },
+      ])
+
+      expect(error).toBeNull()
+      expect(applied?.changes.map((change) => [change.id, change.action])).toEqual([
+        ["AC-VALID-LOGIN-SUCCEEDS", "added"],
+        ["REQ-LOGIN-BEHAVIOR", "modified"],
+      ])
+
+      const text = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
+      expect(text).toContain("UID: REQ-LOGIN-BEHAVIOR")
+      expect(text).toContain("UID: AC-VALID-LOGIN-SUCCEEDS")
+      expect(text).toContain("ACCEPTANCE: AC-VALID-LOGIN-SUCCEEDS")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("generates IDs for split parts and merge results", async () => {
+    const target = await createTarget()
+    try {
+      const [split, splitError] = await apply(target, [
+        {
+          kind: "split",
+          target: "REQ-SAMPLE-001",
+          parts: [
+            { TITLE: "First part", STATEMENT: "The component shall return the first result." },
+            { TITLE: "Second part", STATEMENT: "The component shall return the second result." },
+          ],
+        },
+      ])
+      expect(splitError).toBeNull()
+      expect(split?.changes.map((change) => change.id)).toContain("REQ-FIRST-PART")
+      expect(split?.changes.map((change) => change.id)).toContain("REQ-SECOND-PART")
+
+      const [merged, mergeError] = await apply(target, [
+        {
+          kind: "merge",
+          targets: ["REQ-SAMPLE-002", "REQ-FIRST-PART"],
+          result: { TITLE: "Combined behavior", STATEMENT: "The component shall respond." },
+        },
+      ])
+      expect(mergeError).toBeNull()
+      expect(merged?.changes.map((change) => change.id)).toContain("REQ-COMBINED-BEHAVIOR")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  test("generates unique IDs for repeated visible names", async () => {
+    const target = await createTarget()
+    try {
+      const [applied, error] = await apply(target, [
+        {
+          kind: "add-record",
+          recordKind: "requirement",
+          record: { TITLE: "Duplicate behavior", STATEMENT: "The component shall respond." },
+        },
+        {
+          kind: "add-record",
+          recordKind: "requirement",
+          record: { TITLE: "Duplicate behavior", STATEMENT: "The component shall respond again." },
+        },
+        {
+          kind: "replace",
+          target: "REQ-SAMPLE-001",
+          replacement: {
+            TITLE: "Replacement behavior",
+            STATEMENT: "The component shall return a replacement result.",
+          },
+        },
+      ])
+
+      expect(error).toBeNull()
+      expect(applied?.changes.map((change) => change.id)).toContain("REQ-DUPLICATE-BEHAVIOR")
+      expect(applied?.changes.map((change) => change.id)).toContain("REQ-DUPLICATE-BEHAVIOR-2")
+      expect(applied?.changes.map((change) => change.id)).toContain("REQ-REPLACEMENT-BEHAVIOR")
+
+      const text = await readFile(join(target, "spec", "requirements", "core.sdoc"), "utf8")
+      expect(text).toContain("REPLACES: REQ-SAMPLE-001")
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
   test("renames an approved element without changing its id", async () => {
     const target = await createTarget()
     try {

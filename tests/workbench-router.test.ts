@@ -5,12 +5,49 @@ import { WorkbenchRouter } from "../src/workbench/router"
 import { WorkbenchSecurity } from "../src/workbench/security"
 import type { WorkbenchService } from "../src/workbench/service"
 import type {
+  WorkbenchChangeView,
   WorkbenchCheckView,
   WorkbenchGraphView,
   WorkbenchSession,
 } from "../src/workbench/types"
 
 class FakeWorkbenchService {
+  lastOperations: unknown[] = []
+
+  async operations(
+    proposalRef: string,
+    operations: unknown[],
+    simulate: boolean,
+  ): Promise<Result<WorkbenchChangeView, WorkbenchFailure>> {
+    void proposalRef
+    void simulate
+    this.lastOperations = operations
+
+    return [
+      {
+        proposal: {
+          ref: "proposal_123",
+          label: "Add login",
+          mode: "scratch",
+          state: "Waiting for decisions",
+          author: "tester",
+          baseCommit: "abc123",
+        },
+        operations: [],
+        diff: { available: false, added: [], removed: [], modified: [] },
+        impact: {
+          available: false,
+          changed: [],
+          affected: [],
+          invalidatedEvidence: [],
+          approvalsToRenew: [],
+          openQuestions: [],
+        },
+      },
+      null,
+    ]
+  }
+
   async session(
     csrfToken: string,
     assetReady: boolean,
@@ -51,8 +88,9 @@ const security = new WorkbenchSecurity({
   token: "test-token",
 })
 
+const service = new FakeWorkbenchService()
 const router = new WorkbenchRouter({
-  service: new FakeWorkbenchService() as unknown as WorkbenchService,
+  service: service as unknown as WorkbenchService,
   security,
   assetReady: true,
 })
@@ -133,6 +171,31 @@ describe("WorkbenchRouter", () => {
     expect(response).toBeNull()
     expect(failure?.status).toBe(400)
     expect(failure?.message).toBe("no operations supplied")
+  })
+
+  test("forwards add-record operations with generated IDs", async () => {
+    const [response, failure] = await router.handle(
+      request("/api/proposals/proposal_123/ops", {
+        method: "POST",
+        headers: mutationHeaders(),
+        body: JSON.stringify({
+          operations: [
+            {
+              kind: "add-record",
+              recordKind: "requirement",
+              record: { TITLE: "Login behavior", STATEMENT: "The component shall respond." },
+            },
+          ],
+        }),
+      }),
+    )
+
+    expect(failure).toBeNull()
+    expect(response?.status).toBe(200)
+    expect(service.lastOperations[0]).toMatchObject({
+      kind: "add-record",
+      recordKind: "requirement",
+    })
   })
 
   test("rejects unknown endpoints", async () => {

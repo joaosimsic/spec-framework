@@ -1,10 +1,12 @@
 # Workbench
 
 > Status: implemented. The local React/Vite workbench serves the display graph,
-> mapping curation, scratch context, refactor simulation, proposal review, and
-> technical details. The rework view applies `rename`, `deprecate`, and `move`;
-> structured record operations remain CLI and API operations. Approval and
-> `spec/spec.lock` writes remain CLI-only. Decision record
+> mapping curation, Compose draft editing, refactor simulation, proposal review,
+> and technical details. The rework view applies every typed proposal operation.
+> The Compose view adds draft requirements and acceptance criteria, revises or
+> retires drafts, and records decisions and open questions; new IDs are derived
+> from visible names and never typed by a human. Approval and `spec/spec.lock`
+> writes remain CLI-only. Decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > interaction model and the write boundary.
 
@@ -66,12 +68,19 @@ responsibility, boundary, and open-question actions.
 
 The scratch-mode view. Shows the proposed feature slice, missing decisions,
 requirements, acceptance criteria, verification path, contracts, and expected
-evidence.
+evidence. The editor adds requirement and acceptance-criterion drafts, links an
+acceptance criterion to its requirement, revises or retires a draft, and records
+decisions and open questions. New identifiers are generated from the visible
+name. Other layer links are selected by visible name when matching items exist.
 
 ### Rework
 
 The refactor-mode view. Shows before and after states, typed operations,
-affected named requirements, contracts, checks, evidence, and approvals.
+affected named requirements, contracts, checks, evidence, and approvals. The
+editor applies `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
+`move`, `change-contract`, `record-decision`, and `record-open-question`.
+New record and component IDs are generated from visible names; the server
+resolves names and refs to identity.
 
 ### Review
 

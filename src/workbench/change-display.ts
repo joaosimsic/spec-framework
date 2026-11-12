@@ -22,6 +22,7 @@ const OPERATION_LABELS: Record<ProposalOperationKind, string> = {
   "change-contract": "Changed contract",
   "record-decision": "Recorded decision",
   "record-open-question": "Recorded open question",
+  "add-record": "Added",
   "promote-mapping": "Promoted",
 }
 

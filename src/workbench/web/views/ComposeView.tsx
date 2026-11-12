@@ -1,13 +1,37 @@
-import { useCallback } from "react"
-import { getContext } from "../api"
+import { useCallback, useState } from "react"
+import type { ProposalOperation } from "../../../change"
+import type { ApiFailure } from "../api"
+import { getContext, postOperations } from "../api"
 import { EntryList } from "../components/EntryList"
 import { EmptyPanel, FailurePanel, LoadingPanel } from "../components/Panels"
 import { useApiResource } from "../components/useApiResource"
+import { DraftEditor } from "./compose/DraftEditor"
 import type { WorkbenchViewProps } from "./types"
 
-export function ComposeView({ session, onStatus }: WorkbenchViewProps) {
+export function ComposeView({ graph, session, onStatus, onRefresh }: WorkbenchViewProps) {
   const load = useCallback(() => getContext([]), [])
   const context = useApiResource(load)
+  const [busy, setBusy] = useState(false)
+  const [actionFailure, setActionFailure] = useState<ApiFailure | null>(null)
+  const proposal = session.proposal
+
+  async function apply(operation: ProposalOperation): Promise<boolean> {
+    if (proposal === null || busy) return false
+
+    setBusy(true)
+    setActionFailure(null)
+    const [view, failure] = await postOperations(proposal.ref, [operation], true)
+    setBusy(false)
+    if (failure !== null || view === null) {
+      setActionFailure(failure)
+      return false
+    }
+
+    onStatus("Draft updated in the proposal.")
+    await context.reload()
+    await onRefresh()
+    return true
+  }
 
   if (context.loading) return <LoadingPanel label="Loading the scratch context." />
   if (context.failure !== null) {
@@ -27,6 +51,19 @@ export function ComposeView({ session, onStatus }: WorkbenchViewProps) {
           from the CLI.
         </p>
       </section>
+
+      {busy && <p role="status">Saving the draft change.</p>}
+      {actionFailure !== null && (
+        <FailurePanel
+          failure={actionFailure}
+          actionLabel="Dismiss"
+          onRetry={() => {
+            setActionFailure(null)
+          }}
+        />
+      )}
+
+      {proposal !== null && <DraftEditor busy={busy} entries={graph.entries} onApply={apply} />}
 
       {view.prompts.length > 0 && (
         <section aria-labelledby="prompts-heading" className="panel">

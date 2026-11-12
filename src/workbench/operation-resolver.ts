@@ -4,6 +4,8 @@ import type { DisplayFailure } from "../model"
 import type { WorkbenchFailure } from "./failure"
 import { WorkbenchGraphDisplay } from "./graph-display"
 
+const LINK_FIELDS = ["ACCEPTANCE", "COMPONENT", "CAPABILITY", "FORMAL", "CONTRACTS", "EVIDENCE"]
+
 export class WorkbenchOperationResolver {
   constructor(private readonly display: WorkbenchGraphDisplay) {}
 
@@ -42,6 +44,8 @@ export class WorkbenchOperationResolver {
         return this.recordDecision(operation)
       case "record-open-question":
         return this.recordOpenQuestion(operation)
+      case "add-record":
+        return this.addRecord(operation)
     }
   }
 
@@ -179,6 +183,60 @@ export class WorkbenchOperationResolver {
       },
       null,
     ]
+  }
+
+  private addRecord(
+    operation: Extract<ProposalOperation, { kind: "add-record" }>,
+  ): Result<ProposalOperation, WorkbenchFailure> {
+    const [record, recordError] = this.recordFields(operation.record)
+    if (recordError !== null) return [null, recordError]
+    if (record === null) return [null, this.notFound(operation.record.TITLE ?? "record")]
+
+    const [acceptanceOf, acceptanceError] = this.optionalHandle(operation.acceptanceOf)
+    if (acceptanceError !== null) return [null, acceptanceError]
+
+    return [
+      {
+        ...operation,
+        record,
+        ...(acceptanceOf === null ? {} : { acceptanceOf }),
+      },
+      null,
+    ]
+  }
+
+  private recordFields(
+    fields: Record<string, string>,
+  ): Result<Record<string, string>, WorkbenchFailure> {
+    const resolved: Record<string, string> = { ...fields }
+
+    for (const field of LINK_FIELDS) {
+      const value = resolved[field]
+      if (value === undefined) continue
+
+      const [links, linkError] = this.linkValue(value)
+      if (linkError !== null) return [null, linkError]
+      if (links === null) return [null, this.notFound(value)]
+
+      resolved[field] = links
+    }
+
+    return [resolved, null]
+  }
+
+  private linkValue(value: string): Result<string | null, WorkbenchFailure> {
+    const handles = value.split(/[,\s]+/).filter(Boolean)
+    if (handles.length === 0) return [null, null]
+
+    const ids: string[] = []
+    for (const handle of handles) {
+      const [resolved, error] = this.handle(handle)
+      if (error !== null) return [null, error]
+      if (resolved === null) return [null, null]
+      ids.push(resolved)
+    }
+
+    return [ids.join(" "), null]
   }
 
   private optionalTarget(value: string | undefined): {

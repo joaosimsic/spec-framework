@@ -3,6 +3,7 @@ import { collectC4Files } from "../core/c4"
 import { loadRequirementSources } from "../core/requirements"
 import { attemptAsync, type Result } from "../core/result"
 import type { SdocBlock } from "../core/types"
+import { elementId } from "../discovery/ids"
 import { join } from "node:path"
 import { ArchitectureEditor } from "./architecture-editor"
 import { collectContractFiles, ContractEditor } from "./contract-editor"
@@ -33,6 +34,27 @@ const KIND_BY_PREFIX: Record<string, string> = {
   DEC: "decision",
 }
 
+const ADDABLE_RECORD_KINDS = new Set(["requirement", "acceptance_criterion"])
+
+const PREFIX_BY_KIND: Record<string, string> = {
+  requirement: "REQ",
+  acceptance_criterion: "AC",
+  component: "CMP",
+  system: "SYS",
+  data_store: "DAT",
+  external: "EXT",
+  actor: "ACTOR",
+  capability: "CAP",
+  verification_objective: "VOBJ",
+  verification_case: "VER",
+  formal_property: "PROP",
+  contract: "CON",
+  evidence: "EVD",
+  unknown: "UNK",
+  waiver: "WVR",
+  decision: "DEC",
+}
+
 interface WritableFile {
   text: string
   original: string
@@ -47,6 +69,7 @@ export class WorkspaceOperationApplier {
   private readonly documents = new Map<string, SdocDocument>()
   private readonly pathsByUid = new Map<string, string>()
   private readonly changes = new Map<string, ChangeEntry>()
+  private readonly allocatedIds = new Set<string>()
   private architecture: ArchitectureEditor | null = null
   private contracts: ContractEditor | null = null
   private decisions: SdocDocument | null = null
@@ -188,16 +211,20 @@ export class WorkspaceOperationApplier {
     if (prepareError !== null) return [null, prepareError]
     if (!prepared) return [null, "operation sources failed to load"]
 
-    const targets = this.targetsFor(operation)
-    const ids = this.idsFor(operation)
+    const [normalized, normalizeError] = this.normalize(operation)
+    if (normalizeError !== null) return [null, normalizeError]
+    if (normalized === null) return [null, "operation normalization failed"]
+
+    const targets = this.targetsFor(normalized)
+    const ids = this.idsFor(normalized)
     const beforeHashes = this.hashesFor(ids)
-    const [applied, applyError] = this.applyOne(operation)
+    const [applied, applyError] = this.applyOne(normalized)
     if (applyError !== null) return [null, applyError]
     if (!applied) return [null, "operation did not apply"]
 
     return [
       {
-        kind: operation.kind,
+        kind: normalized.kind,
         at: this.now().toISOString(),
         targets,
         before_hashes: beforeHashes,
@@ -205,6 +232,115 @@ export class WorkspaceOperationApplier {
       },
       null,
     ]
+  }
+
+  private normalize(operation: ProposalOperation): Result<ProposalOperation, string> {
+    switch (operation.kind) {
+      case "replace": {
+        const [replacement, error] = this.withUid(
+          operation.replacement,
+          this.prefixFor(operation.target),
+          "replacement",
+        )
+        if (error !== null) return [null, error]
+        if (replacement === null) return [null, "replacement fields failed"]
+
+        return [{ ...operation, replacement }, null]
+      }
+      case "split": {
+        const prefix = this.prefixFor(operation.target)
+        const parts: ProposalRecordFields[] = []
+        for (const part of operation.parts) {
+          const [next, error] = this.withUid(part, prefix, "part")
+          if (error !== null) return [null, error]
+          if (next === null) return [null, "split part fields failed"]
+          parts.push(next)
+        }
+
+        return [{ ...operation, parts }, null]
+      }
+      case "merge": {
+        const prefix = this.prefixFor(operation.targets[0] ?? "")
+        const [result, error] = this.withUid(operation.result, prefix, "result")
+        if (error !== null) return [null, error]
+        if (result === null) return [null, "merge result fields failed"]
+
+        return [{ ...operation, result }, null]
+      }
+      case "extract": {
+        const [component, error] = this.withComponentUid(operation.component)
+        if (error !== null) return [null, error]
+        if (component === null) return [null, "component fields failed"]
+
+        return [{ ...operation, component }, null]
+      }
+      case "add-record": {
+        const prefix = PREFIX_BY_KIND[operation.recordKind]
+        if (prefix === undefined || !ADDABLE_RECORD_KINDS.has(operation.recordKind)) {
+          return [null, `add-record kind '${operation.recordKind}' is not supported`]
+        }
+        const [record, error] = this.withUid(operation.record, prefix, "record")
+        if (error !== null) return [null, error]
+        if (record === null) return [null, "record fields failed"]
+
+        return [{ ...operation, record }, null]
+      }
+      default:
+        return [operation, null]
+    }
+  }
+
+  private withUid(
+    fields: ProposalRecordFields,
+    prefix: string,
+    label: string,
+  ): Result<ProposalRecordFields, string> {
+    const uid = (fields.UID ?? "").trim()
+    if (uid !== "") return [{ ...fields, UID: uid }, null]
+
+    const title = (fields.TITLE ?? "").trim()
+    if (title === "") return [null, `${label} requires a title when no ID is supplied`]
+
+    return [{ ...fields, UID: this.allocate(prefix, title) }, null]
+  }
+
+  private withComponentUid(
+    component: ProposalComponentFields,
+  ): Result<ProposalComponentFields, string> {
+    const uid = (component.UID ?? "").trim()
+    if (uid !== "") return [{ ...component, UID: uid }, null]
+
+    const title = (component.TITLE ?? "").trim()
+    if (title === "") return [null, "component requires a title when no ID is supplied"]
+
+    const kind = (component.KIND ?? "").toLowerCase()
+    const prefix = PREFIX_BY_KIND[kind] ?? "CMP"
+
+    return [{ ...component, UID: this.allocate(prefix, title) }, null]
+  }
+
+  private allocate(prefix: string, title: string): string {
+    const base = elementId(prefix, title)
+    let candidate = base
+    let suffix = 2
+
+    while (
+      this.pathsByUid.has(candidate) ||
+      this.allocatedIds.has(candidate) ||
+      this.hasAnyElement(candidate)
+    ) {
+      candidate = `${base}-${suffix}`
+      suffix += 1
+    }
+
+    this.allocatedIds.add(candidate)
+    return candidate
+  }
+
+  private prefixFor(uid: string): string {
+    const prefix = uid.split("-")[0] ?? ""
+
+    return prefix === "" ? "REQ" : prefix
   }
 
   private applyOne(operation: ProposalOperation): Result<boolean, string> {
@@ -229,6 +365,8 @@ export class WorkspaceOperationApplier {
         return this.recordDecision(operation)
       case "record-open-question":
         return this.recordOpenQuestion(operation)
+      case "add-record":
+        return this.addRecord(operation)
     }
   }
 
@@ -512,6 +650,83 @@ export class WorkspaceOperationApplier {
     this.recordAdded(uid)
 
     return [true, null]
+  }
+
+  private addRecord(
+    operation: Extract<ProposalOperation, { kind: "add-record" }>,
+  ): Result<boolean, string> {
+    const [document, documentError] = this.requirementsDocument()
+    if (documentError !== null) return [null, documentError]
+    if (document === null) return [null, "no requirements document is available"]
+
+    if (operation.acceptanceOf !== undefined && operation.recordKind !== "acceptance_criterion") {
+      return [null, "only an acceptance criterion can link to a requirement"]
+    }
+
+    const uid = (operation.record.UID ?? "").trim()
+    if (uid === "") return [null, "new record requires UID"]
+    if (this.hasAnyElement(uid)) return [null, `element '${uid}' already exists`]
+    const title = (operation.record.TITLE ?? "").trim()
+    if (title === "") return [null, "new record requires a title"]
+    const status = (operation.record.STATUS ?? "Draft").trim()
+    if (status !== "Draft" && status !== "Proposed") {
+      return [null, `new record '${uid}' must be Draft or Proposed`]
+    }
+
+    const [appendedUid, appendError] = document.appendRecord({
+      ...operation.record,
+      UID: uid,
+      TITLE: title,
+      STATUS: status,
+    })
+    if (appendError !== null) return [null, appendError]
+    if (appendedUid === null) return [null, "new record was not added"]
+
+    this.pathsByUid.set(appendedUid, document.sourcePath())
+    this.recordAdded(appendedUid)
+
+    if (operation.acceptanceOf !== undefined) {
+      const [linked, linkError] = this.linkAcceptance(operation.acceptanceOf, appendedUid)
+      if (linkError !== null) return [null, linkError]
+      if (!linked) return [null, "acceptance criterion was not linked"]
+    }
+
+    return [true, null]
+  }
+
+  private linkAcceptance(requirement: string, acceptance: string): Result<boolean, string> {
+    const fields = this.sdocFields(requirement)
+    if (fields === null) return [null, `unknown element '${requirement}'`]
+    if (!requirement.startsWith("REQ-")) {
+      return [null, `acceptance links require a requirement, not '${requirement}'`]
+    }
+
+    const [document, documentError] = this.documentFor(requirement)
+    if (documentError !== null) return [null, documentError]
+    if (document === null) return [null, `unknown element '${requirement}'`]
+
+    const current = this.splitList(fields.ACCEPTANCE ?? "")
+    const next = current.includes(acceptance) ? current : [...current, acceptance]
+    document.setField(requirement, "ACCEPTANCE", next.join(" "))
+    if (fields.STATUS === "Approved") document.setField(requirement, "STATUS", "Proposed")
+    this.recordChange(requirement, "modified", fields)
+
+    return [true, null]
+  }
+
+  private requirementsDocument(): Result<SdocDocument, string> {
+    const preferred = join(this.target, "spec", "requirements", "core.sdoc")
+    const document = this.documents.get(preferred)
+    if (document !== undefined) return [document, null]
+
+    const path = [...this.documents.keys()].sort()[0]
+    if (path === undefined) {
+      return [null, "no requirements document is available"]
+    }
+    const fallback = this.documents.get(path)
+    if (fallback === undefined) return [null, "requirements document failed to load"]
+
+    return [fallback, null]
   }
 
   private humanName(value: string | undefined): string {
@@ -798,6 +1013,11 @@ export class WorkspaceOperationApplier {
           ...(operation.target === undefined ? [] : [operation.target]),
           this.recordUid(operation),
         ])
+      case "add-record":
+        return this.uniqueIds([
+          operation.record.UID ?? "",
+          ...(operation.acceptanceOf === undefined ? [] : [operation.acceptanceOf]),
+        ])
     }
   }
 
@@ -814,6 +1034,11 @@ export class WorkspaceOperationApplier {
         return this.uniqueIds([
           ...(operation.target === undefined ? [] : [operation.target]),
           this.recordUid(operation),
+        ])
+      case "add-record":
+        return this.uniqueIds([
+          operation.record.UID ?? "",
+          ...(operation.acceptanceOf === undefined ? [] : [operation.acceptanceOf]),
         ])
       default:
         return [operation.target]

@@ -72,8 +72,9 @@ the required machinery.
    internal ID prefixes or diagnostic codes.
 4. **Progressive disclosure.** A “Technical details” surface reveals IDs,
    hashes, provenance, confidence, and diagnostic codes on demand.
-5. **No ID required for action.** A human can rename, merge, split, approve, or
-   reject by selecting a visible name. The tool resolves the identity.
+5. **No ID required for action.** A human can rename, merge, split, add,
+   approve, or reject by selecting or entering a visible name. The tool resolves
+   existing identity and derives a stable ID from the name for new elements.
 6. **Contextual disambiguation.** When two items share a name, show the
    surrounding system, owner, or summary. Never ask the human to choose between
    suffixes.

@@ -6,6 +6,8 @@ The discovery layer turns an existing repository into a draft specification inpu
 
 Implementation status: `spec map --draft` discovers generic package boundaries, TypeScript subsystems and file imports, and Rust workspace packages, writes a draft LikeC4 model, and reports gaps. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions. `spec map --promote` promotes accepted areas into proposed LikeC4 elements, and `spec approve` hash-locks annotated architecture elements. `spec map --check` reports drift between approved architecture and the current discovery graph. Rustdoc item mapping and contract import are not implemented.
 
+Planned extension: TypeScript symbol, call, entry-point, and data-access analysis moves to the separate [analysis engine](analysis-engine.md). The discovery non-goals below continue to apply to generic manifest-level discovery and to languages without an adapter. The new layer never approves and never infers intent.
+
 ## Commands
 
 | Command                 | Effect                                                      |

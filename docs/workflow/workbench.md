@@ -9,6 +9,11 @@
 > writes remain CLI-only. Decision record
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > interaction model and the write boundary.
+>
+> Planned extension: the workbench gains a default System view that joins
+> curated intent with observed implementation, flows, diagnostics, and coverage.
+> See [System workspace](system-workspace.md) and
+> [Architecture intelligence roadmap](../roadmap/architecture-intelligence.md).
 
 ## Purpose
 

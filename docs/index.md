@@ -34,6 +34,22 @@
 | [Workspace and branches](architecture/workspace-and-branches.md)       | How are multi-repo models and branch contexts composed?           |
 | [Audit bundle](architecture/audit-bundle.md)                           | What does the final readable artifact contain?                    |
 
+## Architecture intelligence (planned)
+
+| Document                                                                  | Question it answers                                        |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [Architecture intelligence roadmap](roadmap/architecture-intelligence.md) | What is planned, in what order, and what gates each phase? |
+| [Analysis engine](architecture/analysis-engine.md)                        | How does code become a language-neutral IR?                |
+| [Architecture graph](architecture/architecture-graph.md)                  | How are intent, implementation, and mapping joined?        |
+| [Functional flows](architecture/functional-flows.md)                      | How are entry points traced to outputs and side effects?   |
+| [Architectural diagnostics](architecture/architectural-diagnostics.md)    | How are architectural problems detected and reviewed?      |
+| [AI layer](architecture/ai-layer.md)                                      | What may AI interpret, and what must it never decide?      |
+| [Graph rendering](architecture/graph-rendering.md)                        | How does the System graph stay readable at scale?          |
+| [Analysis schemas](architecture/analysis-schemas.md)                      | What are the versioned JSON contracts?                     |
+| [System workspace](workflow/system-workspace.md)                          | What does the primary workbench view show?                 |
+| [Analysis jobs and snapshots](workflow/analysis-jobs-and-snapshots.md)    | How do analysis runs and comparisons work?                 |
+| [Architecture intelligence API](api/architecture-intelligence-api.md)     | What are the REST and SSE contracts?                       |
+
 ## Workflow
 
 | Document                                           | Question it answers                                   |
@@ -76,3 +92,6 @@
 - [0009 Reqvire feature adoption](design-decisions/0009-reqvire-feature-adoption.md)
 - [0010 Optional semantic layer](design-decisions/0010-optional-semantic-layer.md)
 - [0011 Interactive use-case modes](design-decisions/0011-interactive-use-case-modes.md)
+- [0012 Architecture intelligence direction](design-decisions/0012-architecture-intelligence.md)
+- [0013 Analysis persistence and snapshots](design-decisions/0013-analysis-persistence.md)
+- [0014 AI interpretation boundary](design-decisions/0014-ai-interpretation-boundary.md)

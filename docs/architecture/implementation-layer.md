@@ -2,6 +2,11 @@
 
 **Status:** implemented. This document specifies the compiler preflight adapter, implemented in `src/adapters/compiler.ts`.
 
+> Planned extension: the separate [analysis engine](analysis-engine.md) owns AST
+> parsing, symbol extraction, call graphs, entry points, and data access for the
+> architecture intelligence roadmap. Compiler preflight remains a narrow build
+> and typecheck gate and does not become a conformance verdict.
+
 ## Purpose
 
 The implementation layer turns the project's own build and typecheck commands into deterministic `spec check` diagnostics. It gives humans and agents a cheap preflight before semantic review.

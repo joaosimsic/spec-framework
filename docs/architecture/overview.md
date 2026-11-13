@@ -1,5 +1,10 @@
 # Architecture overview
 
+> Planned extension: the architecture intelligence roadmap adds a generated
+> implementation graph, conceptual-to-code mapping, static functional flows,
+> diagnostics, and a workbench System view. Intent and approval layers remain
+> unchanged. See [Architecture intelligence roadmap](../roadmap/architecture-intelligence.md).
+
 ## Layers
 
 ```mermaid

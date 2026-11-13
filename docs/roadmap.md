@@ -155,6 +155,25 @@ Exit criteria:
   a separate decision;
 - evaluation on real projects.
 
+## Architecture intelligence platform — planned
+
+Status: planned, not implemented. Full platform MVP.
+
+The next direction extends the framework from intent and code discovery into
+repository understanding:
+
+- language-neutral analysis IR for files, symbols, calls, entry points, and data access;
+- local SQLite snapshots with generated JSON export;
+- architecture reconstruction with direct conceptual-to-code traceability;
+- static functional flows from entry points to sources, sinks, and outputs;
+- deterministic architectural diagnostics plus clearly separated AI-assisted hypotheses;
+- an evidence-bound AI interpretation layer that never approves or passes a check;
+- a workbench System view with drill-down from components to files and functions;
+- a phased Obsidian-style graph with labels, radial expansion, and large-graph performance.
+
+The detailed execution checklist, phase gates, and acceptance criteria live in
+[Architecture intelligence roadmap](roadmap/architecture-intelligence.md).
+
 ## Self-hosting milestones
 
 1. Scaffold spec-framework with its own full profile.

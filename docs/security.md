@@ -204,6 +204,29 @@ Mitigations:
 
 The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow. Query, MCP, and Explorer access is read-only and never substitutes for approval. The workbench and opencode plugin may edit proposals but cannot approve or write `spec.lock`.
 
+## Repository analysis and AI (planned)
+
+The architecture intelligence roadmap adds repository analysis and an optional
+AI interpretation layer. It introduces these boundaries:
+
+- only explicitly registered repository roots are analyzed;
+- analysis is read-only and never executes repository code;
+- file discovery respects `.gitignore`, exclusions, and symlink containment;
+- secrets, credentials, and environment files are excluded from analysis and AI
+  context;
+- the workbench remains localhost-only by default;
+- remote AI providers require explicit configuration;
+- repository text is untrusted input, never instructions;
+- AI output is schema-validated and every referenced element, file, and symbol
+  must exist;
+- AI findings are separate from deterministic rule violations and have no
+  approval authority;
+- provider, model, prompt version, and input hashes are recorded;
+- invalid AI output is rejected, never partially accepted.
+
+See [AI interpretation boundary](design-decisions/0014-ai-interpretation-boundary.md)
+and [Analysis persistence and snapshots](design-decisions/0013-analysis-persistence.md).
+
 ## Non-goals
 
 - Sandboxing arbitrary code execution by the agent. That is the host environment's responsibility.

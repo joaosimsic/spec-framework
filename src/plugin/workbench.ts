@@ -1,5 +1,5 @@
 import { join } from "node:path"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { WorkbenchServer, type WorkbenchServerHandle } from "../workbench"
 
 interface OpenWorkbench {
@@ -12,8 +12,8 @@ export class PluginWorkbenchRegistry {
   async open(target: string): Promise<Result<string, string>> {
     const assetPath = join(import.meta.dir, "..", "workbench", "web", "dist", "index.html")
     const [assetReady, assetError] = await attemptAsync(() => Bun.file(assetPath).exists())
-    if (assetError !== null) return [null, `cannot read workbench assets: ${assetError}`]
-    if (!assetReady) return [null, "workbench assets are not built; run bun run build:workbench"]
+    if (assetError !== null) return fail(`cannot read workbench assets: ${assetError}`)
+    if (!assetReady) return fail("workbench assets are not built; run bun run build:workbench")
 
     let pending = this.servers.get(target)
     if (pending === undefined) {
@@ -24,10 +24,10 @@ export class PluginWorkbenchRegistry {
     const [opened, openError] = await attemptAsync(() => pending)
     if (openError !== null || opened === null) {
       this.servers.delete(target)
-      return [null, openError ?? "workbench did not start"]
+      return fail(openError ?? "workbench did not start")
     }
 
-    return [opened.handle.url, null]
+    return ok(opened.handle.url)
   }
 
   async dispose(): Promise<void> {

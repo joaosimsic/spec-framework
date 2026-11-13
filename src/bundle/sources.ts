@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises"
 import { join, relative, sep } from "node:path"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { BundleHasher } from "./hash"
 import type { BundleSource } from "./types"
 
@@ -25,12 +25,12 @@ export class BundleSourceCollector {
       const directory = join(target, "spec", group)
       const [files, readError] = await this.files(directory)
       if (readError !== null || files === null) {
-        return [null, readError ?? `cannot read ${directory}`]
+        return fail(readError ?? `cannot read ${directory}`)
       }
 
       for (const path of files) {
         const source = await this.source(target, group, path)
-        if (source === null) return [null, `cannot read source ${path}`]
+        if (source === null) return fail(`cannot read source ${path}`)
         sources.push(source)
       }
     }
@@ -39,11 +39,11 @@ export class BundleSourceCollector {
       const path = join(target, "spec", name)
       if (!(await Bun.file(path).exists())) continue
       const source = await this.source(target, "root", path)
-      if (source === null) return [null, `cannot read source ${path}`]
+      if (source === null) return fail(`cannot read source ${path}`)
       sources.push(source)
     }
 
-    return [sources, null]
+    return ok(sources)
   }
 
   private async files(directory: string): Promise<Result<string[], string>> {
@@ -55,7 +55,7 @@ export class BundleSourceCollector {
       if (entry.isDirectory()) {
         const [nested, nestedError] = await this.files(path)
         if (nestedError !== null || nested === null) {
-          return [null, nestedError ?? `cannot read ${path}`]
+          return fail(nestedError ?? `cannot read ${path}`)
         }
         files.push(...nested)
         continue
@@ -66,7 +66,7 @@ export class BundleSourceCollector {
       files.push(path)
     }
 
-    return [files, null]
+    return ok(files)
   }
 
   private async source(target: string, group: string, path: string): Promise<BundleSource | null> {

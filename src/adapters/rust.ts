@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { readdir } from "node:fs/promises"
 import { basename, isAbsolute, join, relative, resolve } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import type { Diagnostic } from "../core/types"
 import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
@@ -329,43 +329,43 @@ export class RustAdapter implements NativeAdapter {
   ): Result<RustContractPolicy, Diagnostic> {
     const [parsedValue, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError) {
-      return [null, this.policyFailure(contractFile, `invalid JSON: ${parseError}`)]
+      return fail(this.policyFailure(contractFile, `invalid JSON: ${parseError}`))
     }
     if (!this.isRecord(parsedValue)) {
-      return [null, this.policyFailure(contractFile, "contract sidecar must be an object")]
+      return fail(this.policyFailure(contractFile, "contract sidecar must be an object"))
     }
 
     const id = parsedValue["id"]
     if (typeof id !== "string" || id.trim() === "") {
-      return [null, this.policyFailure(contractFile, 'invalid field "id"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "id"'))
     }
     const owner = parsedValue["owner"]
     if (typeof owner !== "string" || owner.trim() === "") {
-      return [null, this.policyFailure(contractFile, 'invalid field "owner"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "owner"'))
     }
     const consumers = parsedValue["consumers"]
     if (!this.isStringList(consumers)) {
-      return [null, this.policyFailure(contractFile, 'invalid field "consumers"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "consumers"'))
     }
     const compatibility = parsedValue["compatibility"]
     if (!this.isCompatibility(compatibility)) {
-      return [null, this.policyFailure(contractFile, 'invalid field "compatibility"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "compatibility"'))
     }
     const packageName = parsedValue["package"]
     if (typeof packageName !== "string" || packageName.trim() === "") {
-      return [null, this.policyFailure(contractFile, 'invalid field "package"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "package"'))
     }
 
     const manifestValue = parsedValue["manifest"]
     if (manifestValue !== undefined && typeof manifestValue !== "string") {
-      return [null, this.policyFailure(contractFile, 'invalid field "manifest"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "manifest"'))
     }
     const manifestPath = this.resolveProjectPath(
       target,
       typeof manifestValue === "string" ? manifestValue : "Cargo.toml",
     )
     if (manifestPath === null) {
-      return [null, this.policyFailure(contractFile, 'invalid field "manifest"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "manifest"'))
     }
 
     const [baseline, baselineDiagnostic] = this.readBaseline(
@@ -373,26 +373,22 @@ export class RustAdapter implements NativeAdapter {
       contractFile,
       target,
     )
-    if (baselineDiagnostic !== null) return [null, baselineDiagnostic]
+    if (baselineDiagnostic !== null) return fail(baselineDiagnostic)
     if (compatibility !== "none" && baseline === null) {
-      return [
-        null,
+      return fail(
         this.policyFailure(contractFile, `compatibility '${compatibility}' requires a baseline`),
-      ]
+      )
     }
 
-    return [
-      {
-        id,
-        owner,
-        consumers,
-        compatibility,
-        packageName,
-        manifestPath,
-        baseline,
-      },
-      null,
-    ]
+    return ok({
+      id,
+      owner,
+      consumers,
+      compatibility,
+      packageName,
+      manifestPath,
+      baseline,
+    })
   }
 
   private readBaseline(
@@ -400,40 +396,39 @@ export class RustAdapter implements NativeAdapter {
     contractFile: string,
     target: string,
   ): Result<RustBaseline | null, Diagnostic> {
-    if (value === undefined) return [null, null]
+    if (value === undefined) return ok(null)
     if (!this.isRecord(value)) {
-      return [null, this.policyFailure(contractFile, 'invalid field "baseline"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "baseline"'))
     }
 
     const kinds: BaselineKind[] = ["version", "rev", "root"]
     const presentKinds = kinds.filter((kind) => value[kind] !== undefined)
     if (presentKinds.length !== 1) {
-      return [
-        null,
+      return fail(
         this.policyFailure(
           contractFile,
           'baseline must contain exactly one of "version", "rev", or "root"',
         ),
-      ]
+      )
     }
 
     const kind = presentKinds[0]
     if (kind === undefined) {
-      return [null, this.policyFailure(contractFile, 'invalid field "baseline"')]
+      return fail(this.policyFailure(contractFile, 'invalid field "baseline"'))
     }
     const rawValue = value[kind]
     if (typeof rawValue !== "string" || rawValue.trim() === "") {
-      return [null, this.policyFailure(contractFile, `invalid baseline field "${kind}"`)]
+      return fail(this.policyFailure(contractFile, `invalid baseline field "${kind}"`))
     }
 
-    if (kind !== "root") return [{ kind, value: rawValue }, null]
+    if (kind !== "root") return ok({ kind, value: rawValue })
 
     const rootPath = this.resolveProjectPath(target, rawValue)
     if (rootPath === null) {
-      return [null, this.policyFailure(contractFile, 'invalid baseline field "root"')]
+      return fail(this.policyFailure(contractFile, 'invalid baseline field "root"'))
     }
 
-    return [{ kind, value: rootPath }, null]
+    return ok({ kind, value: rootPath })
   }
 
   private resolveProjectPath(target: string, value: string): string | null {

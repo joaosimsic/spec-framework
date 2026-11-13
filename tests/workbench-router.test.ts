@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import type { WorkbenchFailure } from "../src/workbench/failure"
 import { WorkbenchRouter } from "../src/workbench/router"
 import { WorkbenchSecurity } from "../src/workbench/security"
@@ -25,85 +25,70 @@ class FakeWorkbenchService {
     void simulate
     this.lastOperations = operations
 
-    return [
-      {
-        proposal: {
-          ref: "proposal_123",
-          label: "Add login",
-          mode: "scratch",
-          state: "Waiting for decisions",
-          author: "tester",
-          baseCommit: "abc123",
-        },
-        operations: [],
-        diff: { available: false, added: [], removed: [], modified: [] },
-        impact: {
-          available: false,
-          changed: [],
-          affected: [],
-          invalidatedEvidence: [],
-          approvalsToRenew: [],
-          openQuestions: [],
-        },
+    return ok({
+      proposal: {
+        ref: "proposal_123",
+        label: "Add login",
+        mode: "scratch",
+        state: "Waiting for decisions",
+        author: "tester",
+        baseCommit: "abc123",
       },
-      null,
-    ]
+      operations: [],
+      diff: { available: false, added: [], removed: [], modified: [] },
+      impact: {
+        available: false,
+        changed: [],
+        affected: [],
+        invalidatedEvidence: [],
+        approvalsToRenew: [],
+        openQuestions: [],
+      },
+    })
   }
 
   async session(
     csrfToken: string,
     assetReady: boolean,
   ): Promise<Result<WorkbenchSession, WorkbenchFailure>> {
-    return [
-      {
-        csrf_token: csrfToken,
-        mode: "read-only",
-        commit: "abc123",
-        dirty: false,
-        proposal: null,
-        views: ["overview"],
-        asset_ready: assetReady,
-      },
-      null,
-    ]
+    return ok({
+      csrf_token: csrfToken,
+      mode: "read-only",
+      commit: "abc123",
+      dirty: false,
+      proposal: null,
+      views: ["overview"],
+      asset_ready: assetReady,
+    })
   }
 
   async graph(): Promise<Result<WorkbenchGraphView, WorkbenchFailure>> {
-    return [{ commit: "abc123", dirty: false, entries: [] }, null]
+    return ok({ commit: "abc123", dirty: false, entries: [] })
   }
 
   async architectureGraph(): Promise<Result<WorkbenchArchitectureGraphView, WorkbenchFailure>> {
-    return [
-      {
-        nodes: [],
-        edges: [],
-        warnings: [],
-        summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
-      },
-      null,
-    ]
+    return ok({
+      nodes: [],
+      edges: [],
+      warnings: [],
+      summary: { nodes: 0, relations: 0, groups: 0, roots: 0 },
+    })
   }
 
   async repoGraph(): Promise<Result<WorkbenchRepoGraphView, WorkbenchFailure>> {
-    return [
-      {
-        nodes: [],
-        edges: [],
-        summary: { nodes: 0, edges: 0, components: 0, files: 0, externalDependencies: 0 },
-      },
-      null,
-    ]
+    return ok({
+      nodes: [],
+      edges: [],
+      summary: { nodes: 0, edges: 0, components: 0, files: 0, externalDependencies: 0 },
+    })
   }
 
   async check(structural: boolean): Promise<Result<WorkbenchCheckView, WorkbenchFailure>> {
-    return [
-      {
-        errors: structural ? 0 : 1,
-        warnings: 0,
-        findings: [],
-      },
-      null,
-    ]
+    return ok({
+      errors: structural ? 0 : 1,
+      warnings: 0,
+      findings: [],
+    })
   }
 }
 

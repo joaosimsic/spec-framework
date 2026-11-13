@@ -1,5 +1,5 @@
 import { loadRequirementSources } from "../core/requirements"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   collectWorkspaceContributions,
   SpecGraphBuilder,
@@ -12,7 +12,7 @@ export class ProposalGraphLoader {
     const sources = await loadRequirementSources(target)
     const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
     if (sourceErrors.length > 0) {
-      return [null, sourceErrors.map((item) => item.message).join("\n")]
+      return fail(sourceErrors.map((item) => item.message).join("\n"))
     }
 
     const builder = new SpecGraphBuilder()
@@ -21,9 +21,9 @@ export class ProposalGraphLoader {
     }
 
     const [graph, buildError] = builder.build(workspace)
-    if (buildError !== null) return [null, `${buildError.code}: ${buildError.message}`]
-    if (graph === null) return [null, "graph builder returned no graph"]
+    if (buildError !== null) return fail(`${buildError.code}: ${buildError.message}`)
+    if (graph === null) return fail("graph builder returned no graph")
 
-    return [graph, null]
+    return ok(graph)
   }
 }

@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { WorkbenchService } from "../workbench/service"
 import type { WorkbenchFailure } from "../workbench/failure"
 import type {
@@ -27,38 +27,38 @@ export class TerminalCurationSession {
 
   async run(): Promise<Result<WorkbenchMappingView, string>> {
     const [initial, initialError] = await this.service.mapping()
-    if (initialError !== null) return [null, initialError.message]
-    if (initial === null) return [null, "mapping review unavailable"]
+    if (initialError !== null) return fail(initialError.message)
+    if (initial === null) return fail("mapping review unavailable")
 
     let view = initial
     this.renderer.mapping(view)
 
     for (const area of view.areas.filter((candidate) => candidate.state !== "Confirmed")) {
       const [step, stepError] = await this.curateArea(area, view)
-      if (stepError !== null) return [null, stepError]
-      if (step === null) return [null, "curation failed"]
+      if (stepError !== null) return fail(stepError)
+      if (step === null) return fail("curation failed")
       view = step.view
-      if (step.finished) return [view, null]
+      if (step.finished) return ok(view)
     }
 
     const [relationsView, relationsError] = await this.service.mapping()
-    if (relationsError !== null) return [null, relationsError.message]
-    if (relationsView === null) return [null, "mapping review unavailable"]
+    if (relationsError !== null) return fail(relationsError.message)
+    if (relationsView === null) return fail("mapping review unavailable")
 
     for (const relation of this.pendingRelations(relationsView)) {
       const [step, stepError] = await this.curateRelation(relation, relationsView)
-      if (stepError !== null) return [null, stepError]
-      if (step === null) return [null, "curation failed"]
+      if (stepError !== null) return fail(stepError)
+      if (step === null) return fail("curation failed")
       view = step.view
-      if (step.finished) return [view, null]
+      if (step.finished) return ok(view)
     }
 
     const [finalView, finalError] = await this.service.mapping()
-    if (finalError !== null) return [null, finalError.message]
-    if (finalView === null) return [null, "mapping review unavailable"]
+    if (finalError !== null) return fail(finalError.message)
+    if (finalView === null) return fail("mapping review unavailable")
 
     this.renderer.mapping(finalView)
-    return [finalView, null]
+    return ok(finalView)
   }
 
   private pendingRelations(view: WorkbenchMappingView): WorkbenchMappingRelation[] {
@@ -85,18 +85,18 @@ export class TerminalCurationSession {
         { value: "skip", label: "Skip for now" },
         { value: "done", label: "Finish curation" },
       ])
-      if (action === null) return [{ view, finished: true, applied: false }, null]
-      if (action === "skip") return [{ view, finished: false, applied: false }, null]
-      if (action === "done") return [{ view, finished: true, applied: false }, null]
+      if (action === null) return ok({ view, finished: true, applied: false })
+      if (action === "skip") return ok({ view, finished: false, applied: false })
+      if (action === "done") return ok({ view, finished: true, applied: false })
 
       const [request, requestError] = await this.areaRequest(action, area)
-      if (requestError !== null) return [null, requestError]
-      if (request === null) return [{ view, finished: true, applied: false }, null]
+      if (requestError !== null) return fail(requestError)
+      if (request === null) return ok({ view, finished: true, applied: false })
 
       const [step, stepError] = await this.apply(request, view)
-      if (stepError !== null) return [null, stepError]
-      if (step === null) return [null, "curation action failed"]
-      if (step.applied) return [step, null]
+      if (stepError !== null) return fail(stepError)
+      if (step === null) return fail("curation action failed")
+      if (step.applied) return ok(step)
     }
   }
 
@@ -114,9 +114,9 @@ export class TerminalCurationSession {
         { value: "skip", label: "Skip for now" },
         { value: "done", label: "Finish curation" },
       ])
-      if (action === null) return [{ view, finished: true, applied: false }, null]
-      if (action === "skip") return [{ view, finished: false, applied: false }, null]
-      if (action === "done") return [{ view, finished: true, applied: false }, null]
+      if (action === null) return ok({ view, finished: true, applied: false })
+      if (action === "skip") return ok({ view, finished: false, applied: false })
+      if (action === "done") return ok({ view, finished: true, applied: false })
 
       const request: WorkbenchCurationRequest = {
         kind: action === "accept" ? "accept-relation" : "reject-relation",
@@ -126,9 +126,9 @@ export class TerminalCurationSession {
       }
 
       const [step, stepError] = await this.apply(request, view)
-      if (stepError !== null) return [null, stepError]
-      if (step === null) return [null, "curation action failed"]
-      if (step.applied) return [step, null]
+      if (stepError !== null) return fail(stepError)
+      if (step === null) return fail("curation action failed")
+      if (step.applied) return ok(step)
     }
   }
 
@@ -138,43 +138,39 @@ export class TerminalCurationSession {
   ): Promise<Result<WorkbenchCurationRequest | null, string>> {
     switch (action) {
       case "accept":
-        return [{ kind: "accept", target: area.ref }, null]
+        return ok({ kind: "accept", target: area.ref })
       case "reject":
-        return [{ kind: "reject", target: area.ref }, null]
+        return ok({ kind: "reject", target: area.ref })
       case "rename": {
         const title = await this.prompt.required("New name")
-        return [title === null ? null : { kind: "rename", target: area.ref, title }, null]
+        return ok(title === null ? null : { kind: "rename", target: area.ref, title })
       }
       case "owner": {
         const owner = await this.prompt.required("Owner")
-        return [owner === null ? null : { kind: "set-owner", target: area.ref, owner }, null]
+        return ok(owner === null ? null : { kind: "set-owner", target: area.ref, owner })
       }
       case "responsibility": {
         const responsibility = await this.prompt.required("Responsibility")
-        return [
+        return ok(
           responsibility === null
             ? null
             : { kind: "set-responsibility", target: area.ref, responsibility },
-          null,
-        ]
+        )
       }
       case "boundary": {
         const boundary = await this.prompt.required("Boundary")
-        return [
-          boundary === null ? null : { kind: "set-boundary", target: area.ref, boundary },
-          null,
-        ]
+        return ok(boundary === null ? null : { kind: "set-boundary", target: area.ref, boundary })
       }
       case "question": {
         const question = await this.prompt.required("Open question")
-        if (question === null) return [null, null]
+        if (question === null) return ok(null)
         const blocking = await this.prompt.confirm("Does this block approval?")
-        if (blocking === null) return [null, null]
+        if (blocking === null) return ok(null)
 
-        return [{ kind: "open-question", question, target: area.ref, blocking }, null]
+        return ok({ kind: "open-question", question, target: area.ref, blocking })
       }
       default:
-        return [null, `unknown curation action '${action}'`]
+        return fail(`unknown curation action '${action}'`)
     }
   }
 
@@ -186,13 +182,13 @@ export class TerminalCurationSession {
     if (error !== null) {
       this.printFailure(error)
 
-      return [{ view, finished: false, applied: false }, null]
+      return ok({ view, finished: false, applied: false })
     }
-    if (updated === null) return [null, "mapping review unavailable"]
+    if (updated === null) return fail("mapping review unavailable")
 
     this.io.print(updated.state)
     this.renderer.mapping(updated)
-    return [{ view: updated, finished: false, applied: true }, null]
+    return ok({ view: updated, finished: false, applied: true })
   }
 
   private printFailure(failure: WorkbenchFailure): void {

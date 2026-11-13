@@ -1,6 +1,6 @@
 import { join } from "node:path"
 import type { Server } from "bun"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { errorResponse, WorkbenchRouter } from "./router"
 import { WorkbenchFailureFactory } from "./failure"
 import { WorkbenchSecurity } from "./security"
@@ -54,7 +54,7 @@ export class WorkbenchServer {
 
   async start(): Promise<Result<WorkbenchServerHandle, string>> {
     if (!this.isLoopback(this.host) && (this.options.allowedOrigins ?? []).length === 0) {
-      return [null, "non-local workbench access requires an explicit allowed origin"]
+      return fail("non-local workbench access requires an explicit allowed origin")
     }
 
     this.assets = new WorkbenchStaticAssets(this.assetDirectory)
@@ -68,7 +68,7 @@ export class WorkbenchServer {
       }),
     )
     if (serverError !== null || server === null) {
-      return [null, serverError ?? "workbench server did not start"]
+      return fail(serverError ?? "workbench server did not start")
     }
 
     const boundPort = server.port ?? this.port
@@ -85,14 +85,11 @@ export class WorkbenchServer {
       assetReady: this.assetReady,
     })
 
-    return [
-      {
-        url: this.url(boundPort),
-        port: boundPort,
-        close: () => this.close(),
-      },
-      null,
-    ]
+    return ok({
+      url: this.url(boundPort),
+      port: boundPort,
+      close: () => this.close(),
+    })
   }
 
   close(): void {

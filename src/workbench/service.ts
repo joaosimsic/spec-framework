@@ -3,7 +3,7 @@ import { SpecConfigLoader } from "../core/config"
 import { runCheck } from "../core/check"
 import { runMap } from "../core/map"
 import { runMapReview } from "../core/map-review"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { ProcessRunner, ToolLocator } from "../core/runner"
 import type { ProposalGit } from "../change/change"
 import { runProposalOperations } from "../change/change"
@@ -58,69 +58,66 @@ export class WorkbenchService {
     assetReady: boolean,
   ): Promise<Result<WorkbenchSession, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const display = new WorkbenchGraphDisplay(graph)
     const proposal =
       workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
 
-    return [
-      {
-        csrf_token: csrfToken,
-        mode: workspace.proposal?.mode ?? "read-only",
-        commit: workspace.state.commit,
-        dirty: !workspace.state.clean,
-        proposal,
-        views: this.views(workspace.proposal),
-        asset_ready: assetReady,
-      },
-      null,
-    ]
+    return ok({
+      csrf_token: csrfToken,
+      mode: workspace.proposal?.mode ?? "read-only",
+      commit: workspace.state.commit,
+      dirty: !workspace.state.clean,
+      proposal,
+      views: this.views(workspace.proposal),
+      asset_ready: assetReady,
+    })
   }
 
   async graph(): Promise<Result<WorkbenchGraphView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
-    return [new WorkbenchGraphDisplay(graph).view(), null]
+    return ok(new WorkbenchGraphDisplay(graph).view())
   }
 
   async context(names: string[]): Promise<Result<WorkbenchContextView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const display = new WorkbenchGraphDisplay(graph)
     const proposal =
       workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
     const [prompts, next] = await this.contextGuidance(workspace.proposal, proposal)
     const [context, contextError] = display.context(proposal, names, prompts, next)
-    if (contextError !== null) return [null, this.displayFailure(contextError)]
+    if (contextError !== null) return fail(this.displayFailure(contextError))
 
-    return [context, null]
+    return ok(context)
   }
 
   async architectureGraph(): Promise<Result<WorkbenchArchitectureGraphView, WorkbenchFailure>> {
     const [catalog, catalogError] = await new ArchitectureCatalogLoader(this.target).load()
     if (catalogError !== null) {
-      return [null, WorkbenchFailureFactory.internal(catalogError)]
+      return fail(WorkbenchFailureFactory.internal(catalogError))
     }
     if (catalog === null) {
-      return [null, WorkbenchFailureFactory.internal("architecture model unavailable")]
+      return fail(WorkbenchFailureFactory.internal("architecture model unavailable"))
     }
 
     const hasCodePaths = catalog.elements.some(
@@ -138,7 +135,7 @@ export class WorkbenchService {
       []
     const symbolsByPath = await new TypeScriptSymbolReader(this.target).read(sourcePaths)
 
-    return [new WorkbenchArchitectureGraphDisplay(catalog, report, symbolsByPath).view(), null]
+    return ok(new WorkbenchArchitectureGraphDisplay(catalog, report, symbolsByPath).view())
   }
 
   async repoGraph(): Promise<Result<WorkbenchRepoGraphView, WorkbenchFailure>> {
@@ -147,40 +144,37 @@ export class WorkbenchService {
       toolLocator: this.options.toolLocator,
     })
     if (run.code !== 0 || run.report === null) {
-      return [null, WorkbenchFailureFactory.internal(run.output)]
+      return fail(WorkbenchFailureFactory.internal(run.output))
     }
 
-    return [new WorkbenchRepoGraphDisplay(run.report).view(), null]
+    return ok(new WorkbenchRepoGraphDisplay(run.report).view())
   }
 
   async mapping(): Promise<Result<WorkbenchMappingView, WorkbenchFailure>> {
     const [mapping, mappingError] = await this.state.readMapping()
-    if (mappingError !== null) return [null, WorkbenchFailureFactory.notFound(mappingError)]
-    if (mapping === null) return [null, WorkbenchFailureFactory.notFound("no mapping review")]
+    if (mappingError !== null) return fail(WorkbenchFailureFactory.notFound(mappingError))
+    if (mapping === null) return fail(WorkbenchFailureFactory.notFound("no mapping review"))
 
-    return [new WorkbenchMappingDisplay(mapping).view(), null]
+    return ok(new WorkbenchMappingDisplay(mapping).view())
   }
 
   async applyMapping(
     actions: WorkbenchCurationRequest[],
   ): Promise<Result<WorkbenchMappingView, WorkbenchFailure>> {
     const [mapping, mappingError] = await this.state.readMapping()
-    if (mappingError !== null) return [null, WorkbenchFailureFactory.notFound(mappingError)]
-    if (mapping === null) return [null, WorkbenchFailureFactory.notFound("no mapping review")]
+    if (mappingError !== null) return fail(WorkbenchFailureFactory.notFound(mappingError))
+    if (mapping === null) return fail(WorkbenchFailureFactory.notFound("no mapping review"))
 
     const [resolved, resolutionError] = new WorkbenchMappingDisplay(mapping).resolve(actions)
     if (resolutionError !== null) {
-      return [
-        null,
-        {
-          code: resolutionError.code,
-          message: resolutionError.message,
-          status: resolutionError.code === "WORKBENCH-AMBIGUOUS" ? 409 : 404,
-          ...(resolutionError.choices === undefined ? {} : { choices: resolutionError.choices }),
-        },
-      ]
+      return fail({
+        code: resolutionError.code,
+        message: resolutionError.message,
+        status: resolutionError.code === "WORKBENCH-AMBIGUOUS" ? 409 : 404,
+        ...(resolutionError.choices === undefined ? {} : { choices: resolutionError.choices }),
+      })
     }
-    if (resolved === null) return [null, WorkbenchFailureFactory.badRequest("no actions supplied")]
+    if (resolved === null) return fail(WorkbenchFailureFactory.badRequest("no actions supplied"))
 
     const run = await runMapReview(this.target, {
       actions: resolved,
@@ -190,25 +184,25 @@ export class WorkbenchService {
       toolLocator: this.options.toolLocator,
       gitRepository: this.options.gitRepository,
     })
-    if (run.code !== 0) return [null, WorkbenchFailureFactory.badRequest(run.output)]
+    if (run.code !== 0) return fail(WorkbenchFailureFactory.badRequest(run.output))
 
     const [updated, updatedError] = await this.state.readMapping()
-    if (updatedError !== null) return [null, WorkbenchFailureFactory.internal(updatedError)]
+    if (updatedError !== null) return fail(WorkbenchFailureFactory.internal(updatedError))
     if (updated === null)
-      return [null, WorkbenchFailureFactory.internal("mapping review unavailable")]
+      return fail(WorkbenchFailureFactory.internal("mapping review unavailable"))
 
-    return [new WorkbenchMappingDisplay(updated).view(), null]
+    return ok(new WorkbenchMappingDisplay(updated).view())
   }
 
   async change(): Promise<Result<WorkbenchChangeView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
-    if (workspace.proposal === null) return [null, this.noProposal()]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
+    if (workspace.proposal === null) return fail(this.noProposal())
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const [report, reportError] = await new ProposalReportReader(this.target).read({
       simulate: true,
@@ -216,37 +210,37 @@ export class WorkbenchService {
       toolLocator: this.options.toolLocator,
       gitRepository: this.options.gitRepository,
     })
-    if (reportError !== null) return [null, WorkbenchFailureFactory.internal(reportError)]
+    if (reportError !== null) return fail(WorkbenchFailureFactory.internal(reportError))
     if (report === null)
-      return [null, WorkbenchFailureFactory.internal("proposal report unavailable")]
+      return fail(WorkbenchFailureFactory.internal("proposal report unavailable"))
 
-    return [new WorkbenchChangeDisplay(graph).view(report), null]
+    return ok(new WorkbenchChangeDisplay(graph).view(report))
   }
 
   async impact(): Promise<Result<WorkbenchImpactView, WorkbenchFailure>> {
     const [view, viewError] = await this.change()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("change view unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("change view unavailable"))
 
-    return [view.impact, null]
+    return ok(view.impact)
   }
 
   async diff(): Promise<Result<WorkbenchDiffView, WorkbenchFailure>> {
     const [view, viewError] = await this.change()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("change view unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("change view unavailable"))
 
-    return [view.diff, null]
+    return ok(view.diff)
   }
 
   async check(structural: boolean): Promise<Result<WorkbenchCheckView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const run = await runCheck(this.target, {
       structural,
@@ -255,7 +249,7 @@ export class WorkbenchService {
       toolLocator: this.options.toolLocator,
     })
 
-    return [new WorkbenchGraphDisplay(graph).check(run.result), null]
+    return ok(new WorkbenchGraphDisplay(graph).check(run.result))
   }
 
   async operations(
@@ -264,24 +258,23 @@ export class WorkbenchService {
     simulate: boolean,
   ): Promise<Result<WorkbenchChangeView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
-    if (workspace.proposal === null) return [null, this.noProposal()]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
+    if (workspace.proposal === null) return fail(this.noProposal())
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const display = new WorkbenchGraphDisplay(graph)
     const expectedRef = display.labels.proposal(workspace.proposal).ref
     if (proposalRef !== expectedRef) {
-      return [null, WorkbenchFailureFactory.conflict("the proposal changed; reload the workbench")]
+      return fail(WorkbenchFailureFactory.conflict("the proposal changed; reload the workbench"))
     }
 
     const [resolved, resolveError] = new WorkbenchOperationResolver(display).resolve(operations)
-    if (resolveError !== null) return [null, resolveError]
-    if (resolved === null)
-      return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
+    if (resolveError !== null) return fail(resolveError)
+    if (resolved === null) return fail(WorkbenchFailureFactory.badRequest("no operations supplied"))
 
     const run = await runProposalOperations(this.target, resolved, {
       simulate,
@@ -291,44 +284,41 @@ export class WorkbenchService {
       now: this.options.now,
     })
     if (run.code !== 0 || run.report === null) {
-      return [null, WorkbenchFailureFactory.badRequest(run.output)]
+      return fail(WorkbenchFailureFactory.badRequest(run.output))
     }
 
-    return [this.changedView(run.report, graph), null]
+    return ok(this.changedView(run.report, graph))
   }
 
   async technical(proposalRef: string): Promise<Result<WorkbenchTechnicalView, WorkbenchFailure>> {
     const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return [null, WorkbenchFailureFactory.internal(workspaceError)]
-    if (workspace === null) return [null, WorkbenchFailureFactory.internal("workspace unavailable")]
-    if (workspace.proposal === null) return [null, this.noProposal()]
+    if (workspaceError !== null) return fail(WorkbenchFailureFactory.internal(workspaceError))
+    if (workspace === null) return fail(WorkbenchFailureFactory.internal("workspace unavailable"))
+    if (workspace.proposal === null) return fail(this.noProposal())
 
     const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return [null, WorkbenchFailureFactory.internal(graphError)]
-    if (graph === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (graphError !== null) return fail(WorkbenchFailureFactory.internal(graphError))
+    if (graph === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
     const expectedRef = new WorkbenchGraphDisplay(graph).labels.proposal(workspace.proposal).ref
     if (proposalRef !== expectedRef) {
-      return [null, WorkbenchFailureFactory.conflict("the proposal changed; reload the workbench")]
+      return fail(WorkbenchFailureFactory.conflict("the proposal changed; reload the workbench"))
     }
 
     const [config, configError] = await new SpecConfigLoader(this.target).load()
-    if (configError !== null) return [null, WorkbenchFailureFactory.internal(configError.message)]
-    if (config === null) return [null, WorkbenchFailureFactory.internal("config unavailable")]
+    if (configError !== null) return fail(WorkbenchFailureFactory.internal(configError.message))
+    if (config === null) return fail(WorkbenchFailureFactory.internal("config unavailable"))
 
     const [mapping] = await this.state.readMapping()
 
-    return [
-      {
-        proposal: workspace.proposal,
-        graph,
-        lock: workspace.lock,
-        mapping: mapping?.curation ?? null,
-        adapters: config?.adapters ?? null,
-        toolVersions: graph.tool_versions,
-      },
-      null,
-    ]
+    return ok({
+      proposal: workspace.proposal,
+      graph,
+      lock: workspace.lock,
+      mapping: mapping?.curation ?? null,
+      adapters: config?.adapters ?? null,
+      toolVersions: graph.tool_versions,
+    })
   }
 
   private changedView(report: ChangeReport, graph: SpecGraph): WorkbenchChangeView {

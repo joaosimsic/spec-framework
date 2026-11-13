@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { SpecLockLoader, specLockPath } from "../approval/lock"
 import type { SpecLock } from "../approval/types"
 import { SpecConfigLoader } from "../core/config"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import type { ToolLocator, ProcessRunner } from "../core/runner"
 import { GraphSimulator, type SimulationReport } from "../model"
 import type { SpecGraph } from "../model/types"
@@ -85,38 +85,38 @@ export async function openProposal(
   options: OpenProposalOptions = {},
 ): Promise<Result<OpenedProposal, string>> {
   const trimmed = direction.trim()
-  if (trimmed === "") return [null, "direction is required"]
+  if (trimmed === "") return fail("direction is required")
 
   const [config, configError] = await new SpecConfigLoader(target).load()
-  if (configError !== null) return [null, configError.message]
-  if (config === null) return [null, "config loader returned no configuration"]
+  if (configError !== null) return fail(configError.message)
+  if (config === null) return fail("config loader returned no configuration")
 
   const git =
     options.gitRepository ?? new GitProposalRepository(options.processRunner, options.toolLocator)
   const [state, stateError] = await git.readState(target)
-  if (stateError !== null) return [null, `cannot read workspace: ${stateError}`]
-  if (state === null) return [null, "workspace reader returned no metadata"]
-  if (!state.clean) return [null, "git tree is dirty; commit or stash changes first"]
+  if (stateError !== null) return fail(`cannot read workspace: ${stateError}`)
+  if (state === null) return fail("workspace reader returned no metadata")
+  if (!state.clean) return fail("git tree is dirty; commit or stash changes first")
   if (state.branch.startsWith("spec/")) {
-    return [null, `active proposal already exists on branch '${state.branch}'`]
+    return fail(`active proposal already exists on branch '${state.branch}'`)
   }
 
   const slug = ProposalNaming.slug(trimmed)
   const branch = `spec/${slug}`
   const [exists, existsError] = await git.branchExists(target, branch)
-  if (existsError !== null) return [null, `cannot check branch '${branch}': ${existsError}`]
-  if (exists === true) return [null, `proposal branch '${branch}' already exists`]
+  if (existsError !== null) return fail(`cannot check branch '${branch}': ${existsError}`)
+  if (exists === true) return fail(`proposal branch '${branch}' already exists`)
 
   const [lockHash, lockError] = await readLockHash(target)
-  if (lockError !== null) return [null, lockError]
-  if (lockHash === undefined) return [null, "lock hash failed"]
+  if (lockError !== null) return fail(lockError)
+  if (lockHash === undefined) return fail("lock hash failed")
 
   const [lock, lockLoadError] = await loadApprovalLock(target)
-  if (lockLoadError !== null) return [null, lockLoadError]
+  if (lockLoadError !== null) return fail(lockLoadError)
 
   const [author, authorError] = await resolveAuthor(git, options.author, target)
-  if (authorError !== null) return [null, authorError]
-  if (author === null) return [null, "proposal author unavailable"]
+  if (authorError !== null) return fail(authorError)
+  if (author === null) return fail("proposal author unavailable")
 
   const timestamp = (options.now ?? (() => new Date()))()
   const proposal: Proposal = {
@@ -139,17 +139,17 @@ export async function openProposal(
     dirty: false,
   })
   if (options.simulate === true && (graphError !== null || loadedGraph === null)) {
-    return [null, graphError ?? "baseline graph unavailable"]
+    return fail(graphError ?? "baseline graph unavailable")
   }
   const baselineGraph = graphError === null ? loadedGraph : null
 
   const [, createError] = await git.createBranch(target, branch, state.commit)
-  if (createError !== null) return [null, `cannot create '${branch}': ${createError}`]
+  if (createError !== null) return fail(`cannot create '${branch}': ${createError}`)
 
   const store = new ProposalStore(target)
   const [saved, saveError] = await store.save(proposal)
-  if (saveError !== null) return [null, saveError]
-  if (saved === null) return [null, "proposal was not saved"]
+  if (saveError !== null) return fail(saveError)
+  if (saved === null) return fail("proposal was not saved")
 
   if (baselineGraph !== null) {
     const [, snapshotError] = await new ProposalGraphSnapshotStore(target).save(
@@ -157,10 +157,10 @@ export async function openProposal(
       proposal.id,
       baselineGraph,
     )
-    if (snapshotError !== null && options.simulate === true) return [null, snapshotError]
+    if (snapshotError !== null && options.simulate === true) return fail(snapshotError)
   }
 
-  return [{ proposal, lock, baseline_graph: baselineGraph }, null]
+  return ok({ proposal, lock, baseline_graph: baselineGraph })
 }
 
 export async function runChange(
@@ -333,7 +333,7 @@ async function resolveAuthor(
   target: string,
 ): Promise<Result<string, string>> {
   const configured = explicit?.trim() ?? ""
-  if (configured !== "") return [configured, null]
+  if (configured !== "") return ok(configured)
 
   return git.resolveAuthor(target)
 }
@@ -341,23 +341,23 @@ async function resolveAuthor(
 async function readLockHash(target: string): Promise<Result<string | null, string>> {
   const path = specLockPath(target)
   const [exists, existsError] = await attemptAsync(() => Bun.file(path).exists())
-  if (existsError !== null) return [null, `cannot read ${path}: ${existsError}`]
-  if (!exists) return [null, null]
+  if (existsError !== null) return fail(`cannot read ${path}: ${existsError}`)
+  if (!exists) return ok(null)
 
   const [text, readError] = await attemptAsync(() => Bun.file(path).text())
   if (readError !== null || text === null) {
-    return [null, readError === null ? `cannot read ${path}` : readError]
+    return fail(readError === null ? `cannot read ${path}` : readError)
   }
 
-  return [`sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`, null]
+  return ok(`sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`)
 }
 
 async function loadApprovalLock(target: string): Promise<Result<SpecLock | null, string>> {
   const [lock, lockError] = await new SpecLockLoader(target).load()
-  if (lockError === null) return [lock, null]
-  if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
+  if (lockError === null) return ok(lock)
+  if (lockError.code === "SPEC-LOCK-NOT-FOUND") return ok(null)
 
-  return [null, lockError.message]
+  return fail(lockError.message)
 }
 
 class ChangeSimulation {
@@ -366,17 +366,17 @@ class ChangeSimulation {
     proposal: Proposal,
     enabled: boolean,
   ): Promise<Result<SpecGraph | null, string>> {
-    if (!enabled) return [null, null]
+    if (!enabled) return ok(null)
 
     const [snapshot, snapshotError] = await new ProposalGraphSnapshotStore(target).load(
       proposal.branch,
     )
-    if (snapshotError !== null) return [null, snapshotError]
+    if (snapshotError !== null) return fail(snapshotError)
     if (snapshot === null) {
-      return [null, "baseline graph snapshot unavailable; reopen the proposal to capture it"]
+      return fail("baseline graph snapshot unavailable; reopen the proposal to capture it")
     }
 
-    return [snapshot.graph, null]
+    return ok(snapshot.graph)
   }
 
   static async build(
@@ -386,19 +386,19 @@ class ChangeSimulation {
     after: SpecGraph,
     enabled: boolean,
   ): Promise<Result<SimulationReport | null, string>> {
-    if (!enabled) return [null, null]
+    if (!enabled) return ok(null)
 
     let before = baseline
     if (before === null) {
       const [resolved, baselineError] = await this.baseline(target, proposal, true)
-      if (baselineError !== null) return [null, baselineError]
+      if (baselineError !== null) return fail(baselineError)
       before = resolved
     }
     if (before === null) {
-      return [null, "baseline graph snapshot unavailable; reopen the proposal to capture it"]
+      return fail("baseline graph snapshot unavailable; reopen the proposal to capture it")
     }
 
-    return [new GraphSimulator().simulate(before, after), null]
+    return ok(new GraphSimulator().simulate(before, after))
   }
 }
 

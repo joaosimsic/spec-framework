@@ -1,4 +1,4 @@
-import { attemptAsync } from "../../core/result"
+import { attemptAsync, type Result, ok, fail } from "../../core/result"
 import type {
   WorkbenchArchitectureGraphView,
   WorkbenchChangeView,
@@ -21,7 +21,7 @@ export interface ApiFailure {
   choices?: Array<{ label: string; context: string }>
 }
 
-export type ApiResult<Value> = [Value | null, ApiFailure | null]
+export type ApiResult<Value> = Result<Value, ApiFailure>
 
 export function describeFailure(failure: ApiFailure | null): string {
   if (failure === null) return "The request could not complete."
@@ -119,28 +119,25 @@ async function request<Value>(path: string, init: RequestInit = {}): Promise<Api
 
   const [response, requestError] = await attemptAsync(() => fetch(path, { ...init, headers }))
   if (requestError !== null || response === null) {
-    return [null, { code: "WORKBENCH-NETWORK", message: requestError ?? "request failed" }]
+    return fail({ code: "WORKBENCH-NETWORK", message: requestError ?? "request failed" })
   }
 
   if (!response.ok) return thisFailure(response)
 
   const [body, bodyError] = await attemptAsync(() => response.json() as Promise<Value>)
   if (bodyError !== null || body === null) {
-    return [null, { code: "WORKBENCH-RESPONSE", message: bodyError ?? "empty response" }]
+    return fail({ code: "WORKBENCH-RESPONSE", message: bodyError ?? "empty response" })
   }
 
-  return [body, null]
+  return ok(body)
 }
 
 async function thisFailure(response: Response): Promise<ApiResult<never>> {
   const [body] = await attemptAsync(() => response.json() as Promise<WorkbenchErrorView>)
-  if (body !== null && body.error !== undefined) return [null, body.error]
+  if (body !== null && body.error !== undefined) return fail(body.error)
 
-  return [
-    null,
-    {
-      code: "WORKBENCH-RESPONSE",
-      message: `request failed with status ${response.status}`,
-    },
-  ]
+  return fail({
+    code: "WORKBENCH-RESPONSE",
+    message: `request failed with status ${response.status}`,
+  })
 }

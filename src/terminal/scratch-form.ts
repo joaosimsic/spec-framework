@@ -1,5 +1,5 @@
 import type { ProposalOperation } from "../change"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { DisplayEntry } from "../model"
 import {
   buildDraftOperation,
@@ -30,7 +30,7 @@ export class TerminalScratchForm {
     if (action === "decision") return this.decision(form, graphEntries)
     if (action === "question") return this.question(form, graphEntries)
 
-    return [null, `unknown scratch action '${action}'`]
+    return fail(`unknown scratch action '${action}'`)
   }
 
   private async requirement(
@@ -38,15 +38,15 @@ export class TerminalScratchForm {
     entries: DisplayEntry[],
   ): Promise<Result<ProposalOperation | null, string>> {
     const title = await this.prompt.required("Name")
-    if (title === null) return [null, null]
+    if (title === null) return ok(null)
     const statement = await this.prompt.required("Statement")
-    if (statement === null) return [null, null]
+    if (statement === null) return ok(null)
     form.title = title
     form.statement = statement
     const rationale = await this.optionalText("Rationale")
-    if (rationale === null) return [null, null]
+    if (rationale === null) return ok(null)
     const owner = await this.optionalText("Owner")
-    if (owner === null) return [null, null]
+    if (owner === null) return ok(null)
     form.rationale = rationale
     form.owner = owner
 
@@ -54,8 +54,8 @@ export class TerminalScratchForm {
       "component",
       "system",
     ])
-    if (componentError !== null) return [null, componentError]
-    if (component === null) return [null, null]
+    if (componentError !== null) return fail(componentError)
+    if (component === null) return ok(null)
     form.component = component
 
     const [capability, capabilityError] = await this.entries.optional(
@@ -63,8 +63,8 @@ export class TerminalScratchForm {
       entries,
       ["capability"],
     )
-    if (capabilityError !== null) return [null, capabilityError]
-    if (capability === null) return [null, null]
+    if (capabilityError !== null) return fail(capabilityError)
+    if (capability === null) return ok(null)
     form.capability = capability
 
     return this.operation(form)
@@ -75,17 +75,17 @@ export class TerminalScratchForm {
     entries: DisplayEntry[],
   ): Promise<Result<ProposalOperation | null, string>> {
     const title = await this.prompt.required("Name")
-    if (title === null) return [null, null]
+    if (title === null) return ok(null)
     const statement = await this.prompt.required("Statement")
-    if (statement === null) return [null, null]
+    if (statement === null) return ok(null)
     form.title = title
     form.statement = statement
 
     const [requirement, requirementError] = await this.entries.optional("Required by", entries, [
       "requirement",
     ])
-    if (requirementError !== null) return [null, requirementError]
-    if (requirement === null) return [null, null]
+    if (requirementError !== null) return fail(requirementError)
+    if (requirement === null) return ok(null)
     form.requirement = requirement
 
     return this.operation(form)
@@ -100,14 +100,14 @@ export class TerminalScratchForm {
       entries,
       EDITABLE_KINDS,
     )
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, null]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return ok(null)
     form.target = target
 
     const title = await this.prompt.required("New name")
-    if (title === null) return [null, null]
+    if (title === null) return ok(null)
     const statement = await this.prompt.required("New statement")
-    if (statement === null) return [null, null]
+    if (statement === null) return ok(null)
     form.title = title
     form.statement = statement
 
@@ -123,12 +123,12 @@ export class TerminalScratchForm {
       entries,
       EDITABLE_KINDS,
     )
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, null]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return ok(null)
 
     const confirmed = await this.prompt.confirm("Retire this item?")
-    if (confirmed === null) return [null, null]
-    if (!confirmed) return [null, null]
+    if (confirmed === null) return ok(null)
+    if (!confirmed) return ok(null)
     form.target = target
 
     return this.operation(form)
@@ -139,18 +139,18 @@ export class TerminalScratchForm {
     entries: DisplayEntry[],
   ): Promise<Result<ProposalOperation | null, string>> {
     const title = await this.prompt.required("Decision")
-    if (title === null) return [null, null]
+    if (title === null) return ok(null)
     const statement = await this.prompt.required("Statement")
-    if (statement === null) return [null, null]
+    if (statement === null) return ok(null)
     form.title = title
     form.statement = statement
     const owner = await this.optionalText("Owner")
-    if (owner === null) return [null, null]
+    if (owner === null) return ok(null)
     form.owner = owner
 
     const [target, targetError] = await this.entries.optional("Link an item?", entries)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, null]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return ok(null)
     form.target = target
 
     return this.operation(form)
@@ -161,15 +161,15 @@ export class TerminalScratchForm {
     entries: DisplayEntry[],
   ): Promise<Result<ProposalOperation | null, string>> {
     const statement = await this.prompt.required("Open question")
-    if (statement === null) return [null, null]
+    if (statement === null) return ok(null)
     form.statement = statement
     const owner = await this.optionalText("Owner")
-    if (owner === null) return [null, null]
+    if (owner === null) return ok(null)
     form.owner = owner
 
     const [target, targetError] = await this.entries.optional("Link an item?", entries)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, null]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return ok(null)
     form.target = target
 
     return this.operation(form)
@@ -181,8 +181,8 @@ export class TerminalScratchForm {
 
   private operation(form: DraftForm): Result<ProposalOperation | null, string> {
     const operation = buildDraftOperation(form)
-    if (operation === null) return [null, "draft is incomplete"]
+    if (operation === null) return fail("draft is incomplete")
 
-    return [operation, null]
+    return ok(operation)
   }
 }

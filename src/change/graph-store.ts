@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { GRAPH_VERSION, type SpecGraph } from "../model"
 
 export const PROPOSAL_GRAPH_VERSION = 1
@@ -24,7 +24,7 @@ export class ProposalGraphSnapshotStore {
     graph: SpecGraph,
   ): Promise<Result<string, string>> {
     const slug = this.slugFor(branch)
-    if (slug === null) return [null, `no proposal branch for '${branch}'`]
+    if (slug === null) return fail(`no proposal branch for '${branch}'`)
 
     const path = this.pathFor(slug)
     const snapshot: ProposalGraphSnapshot = {
@@ -39,56 +39,53 @@ export class ProposalGraphSnapshotStore {
       return path
     })
     if (writeError !== null || written === null) {
-      return [null, writeError === null ? `cannot write ${path}` : writeError]
+      return fail(writeError === null ? `cannot write ${path}` : writeError)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   async load(branch: string): Promise<Result<ProposalGraphSnapshot | null, string>> {
     const slug = this.slugFor(branch)
-    if (slug === null) return [null, null]
+    if (slug === null) return ok(null)
 
     const path = this.pathFor(slug)
     const [exists, existsError] = await attemptAsync(() => Bun.file(path).exists())
-    if (existsError !== null) return [null, `cannot read ${path}: ${existsError}`]
-    if (!exists) return [null, null]
+    if (existsError !== null) return fail(`cannot read ${path}: ${existsError}`)
+    if (!exists) return ok(null)
 
     const [text, readError] = await attemptAsync(() => Bun.file(path).text())
     if (readError !== null || text === null) {
-      return [null, readError === null ? `cannot read ${path}` : readError]
+      return fail(readError === null ? `cannot read ${path}` : readError)
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError !== null || parsed === null) {
-      return [null, `invalid JSON in ${path}: ${parseError ?? "empty document"}`]
+      return fail(`invalid JSON in ${path}: ${parseError ?? "empty document"}`)
     }
 
     return this.validate(parsed, path)
   }
 
   private validate(value: unknown, path: string): Result<ProposalGraphSnapshot, string> {
-    if (!this.isRecord(value)) return [null, `${path}: graph snapshot must be an object`]
+    if (!this.isRecord(value)) return fail(`${path}: graph snapshot must be an object`)
     if (value["version"] !== PROPOSAL_GRAPH_VERSION) {
-      return [null, `${path}: unsupported graph snapshot version`]
+      return fail(`${path}: unsupported graph snapshot version`)
     }
     if (typeof value["proposal_id"] !== "string") {
-      return [null, `${path}: proposal_id must be a string`]
+      return fail(`${path}: proposal_id must be a string`)
     }
 
     const graph = value["graph"]
-    if (!this.isRecord(graph)) return [null, `${path}: graph must be an object`]
-    if (graph["version"] !== GRAPH_VERSION) return [null, `${path}: unsupported graph version`]
-    if (!Array.isArray(graph["elements"])) return [null, `${path}: graph.elements must be an array`]
+    if (!this.isRecord(graph)) return fail(`${path}: graph must be an object`)
+    if (graph["version"] !== GRAPH_VERSION) return fail(`${path}: unsupported graph version`)
+    if (!Array.isArray(graph["elements"])) return fail(`${path}: graph.elements must be an array`)
 
-    return [
-      {
-        version: PROPOSAL_GRAPH_VERSION,
-        proposal_id: value["proposal_id"],
-        graph: graph as unknown as SpecGraph,
-      },
-      null,
-    ]
+    return ok({
+      version: PROPOSAL_GRAPH_VERSION,
+      proposal_id: value["proposal_id"],
+      graph: graph as unknown as SpecGraph,
+    })
   }
 
   private slugFor(branch: string): string | null {

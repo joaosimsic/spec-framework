@@ -9,7 +9,7 @@ import {
   type C4Element,
   type C4Relationship,
 } from "../core/c4"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { architectureContentHash } from "./hash"
 
 export const ARCHITECTURE_PREFIXES = ["SYS-", "CMP-", "DAT-", "EXT-", "ACTOR-"] as const
@@ -28,7 +28,7 @@ export class ArchitectureCatalogLoader {
 
   async load(): Promise<Result<ArchitectureCatalog, string>> {
     const files = await collectC4Files(join(this.target, "spec", "architecture"))
-    if (files.length === 0) return [null, "no LikeC4 architecture sources found"]
+    if (files.length === 0) return fail("no LikeC4 architecture sources found")
 
     const elements: C4Element[] = []
     const relationships: C4Relationship[] = []
@@ -36,7 +36,7 @@ export class ArchitectureCatalogLoader {
     for (const file of files) {
       const [text, readError] = await attemptAsync(() => Bun.file(file).text())
       if (readError !== null || text === null) {
-        return [null, readError === null ? `cannot read ${file}` : readError]
+        return fail(readError === null ? `cannot read ${file}` : readError)
       }
 
       const parsed = parseC4(file, text)
@@ -44,7 +44,7 @@ export class ArchitectureCatalogLoader {
       relationships.push(...parsed.relationships)
     }
 
-    return [{ elements, relationships }, null]
+    return ok({ elements, relationships })
   }
 }
 
@@ -70,23 +70,23 @@ export class ArchitectureStatusWriter {
     for (const file of files) {
       const [text, readError] = await attemptAsync(() => Bun.file(file).text())
       if (readError !== null || text === null) {
-        return [null, readError === null ? `cannot read ${file}` : readError]
+        return fail(readError === null ? `cannot read ${file}` : readError)
       }
 
       const [updated, changed] = this.rewrite(text, pending, status)
       if (!changed) continue
 
       const [, writeError] = await attemptAsync(() => Bun.write(file, updated))
-      if (writeError !== null) return [null, `cannot write ${file}: ${writeError}`]
+      if (writeError !== null) return fail(`cannot write ${file}: ${writeError}`)
 
       written.push(file)
     }
 
     if (pending.size > 0) {
-      return [null, `architecture element(s) not found: ${[...pending].sort().join(", ")}`]
+      return fail(`architecture element(s) not found: ${[...pending].sort().join(", ")}`)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   private rewrite(

@@ -1,5 +1,5 @@
 import type { CheckResult, Diagnostic } from "../core/types"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   DisplayProjection,
   type DisplayEntry,
@@ -31,12 +31,12 @@ export class WorkbenchGraphDisplay {
 
   resolveHandle(handle: string): Result<string, DisplayFailure> {
     const [entry, error] = this.projection.resolve(handle)
-    if (error !== null) return [null, error]
+    if (error !== null) return fail(error)
     if (entry === null) {
-      return [null, { code: "DISPLAY-NOT-FOUND", message: `unknown item: ${handle}` }]
+      return fail({ code: "DISPLAY-NOT-FOUND", message: `unknown item: ${handle}` })
     }
 
-    return [entry.technical.id, null]
+    return ok(entry.technical.id)
   }
 
   view(): WorkbenchGraphView {
@@ -54,20 +54,17 @@ export class WorkbenchGraphDisplay {
     next: string[],
   ): Result<WorkbenchContextView, DisplayFailure> {
     const [entries, entriesError] = this.entries(names)
-    if (entriesError !== null) return [null, entriesError]
+    if (entriesError !== null) return fail(entriesError)
 
     const resolvedEntries = entries ?? []
-    return [
-      {
-        proposal,
-        entries: resolvedEntries,
-        blockers: this.blockers(resolvedEntries),
-        openQuestions: this.openQuestions(resolvedEntries),
-        prompts: [...prompts],
-        next: [...next],
-      },
-      null,
-    ]
+    return ok({
+      proposal,
+      entries: resolvedEntries,
+      blockers: this.blockers(resolvedEntries),
+      openQuestions: this.openQuestions(resolvedEntries),
+      prompts: [...prompts],
+      next: [...next],
+    })
   }
 
   check(result: CheckResult): WorkbenchCheckView {
@@ -79,17 +76,17 @@ export class WorkbenchGraphDisplay {
   }
 
   private entries(names: string[] | undefined): Result<DisplayEntry[], DisplayFailure> {
-    if (names === undefined || names.length === 0) return [this.projection.model.entries, null]
+    if (names === undefined || names.length === 0) return ok(this.projection.model.entries)
 
     const entries = new Map<string, DisplayEntry>()
     for (const name of names) {
       const [entry, error] = this.projection.resolve(name)
-      if (error !== null) return [null, error]
+      if (error !== null) return fail(error)
       if (entry === null) continue
       entries.set(entry.ref, entry)
     }
 
-    return [[...entries.values()], null]
+    return ok([...entries.values()])
   }
 
   private blockers(entries: DisplayEntry[]): string[] {

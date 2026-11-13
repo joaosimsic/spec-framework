@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { WorkbenchFailure } from "../workbench/failure"
 import type { WorkbenchService } from "../workbench/service"
 import type { WorkbenchChangeView } from "../workbench/types"
@@ -54,10 +54,10 @@ export class TerminalProposalSession {
 
   async run(): Promise<Result<WorkbenchChangeView, string>> {
     const [initial, initialError] = await this.service.change()
-    if (initialError !== null) return [null, initialError.message]
-    if (initial === null) return [null, "proposal report unavailable"]
+    if (initialError !== null) return fail(initialError.message)
+    if (initial === null) return fail("proposal report unavailable")
     if (initial.proposal.mode === "mapping") {
-      return [null, "mapping proposals are curated with spec map --review"]
+      return fail("mapping proposals are curated with spec map --review")
     }
 
     let view = initial
@@ -66,7 +66,7 @@ export class TerminalProposalSession {
     while (true) {
       const actions = view.proposal.mode === "scratch" ? SCRATCH_ACTIONS : REWORK_ACTIONS
       const action = await this.prompt.select("Next step", actions)
-      if (action === null || action === "done" || this.prompt.isClosed) return [view, null]
+      if (action === null || action === "done" || this.prompt.isClosed) return ok(view)
       if (action === "show") {
         const [refreshed, refreshedError] = await this.service.change()
         if (refreshedError !== null) {
@@ -80,7 +80,7 @@ export class TerminalProposalSession {
       }
 
       const [operation, operationError] = await this.operation(action, view)
-      if (this.prompt.isClosed) return [view, null]
+      if (this.prompt.isClosed) return ok(view)
       if (operationError !== null) {
         this.io.print(operationError)
         continue
@@ -111,8 +111,8 @@ export class TerminalProposalSession {
     view: WorkbenchChangeView,
   ): Promise<ReturnType<TerminalScratchForm["build"]>> {
     const [graph, graphError] = await this.service.graph()
-    if (graphError !== null) return [null, graphError.message]
-    if (graph === null) return [null, "graph unavailable"]
+    if (graphError !== null) return fail(graphError.message)
+    if (graph === null) return fail("graph unavailable")
 
     return view.proposal.mode === "scratch"
       ? this.scratch.build(action, graph.entries)

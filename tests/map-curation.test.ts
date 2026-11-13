@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { ProposalGit } from "../src/change/change"
 import type { Proposal } from "../src/change/types"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import type { GitProposalState } from "../src/change/types"
 import { runMapReview, type MapReviewReport } from "../src/core/map-review"
 import type { MappingSnapshot } from "../src/discovery/curation-types"
@@ -26,13 +26,13 @@ class FakeProposalGit implements ProposalGit {
 
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     void target
-    return [this.state, null]
+    return ok(this.state)
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     void target
     void branch
-    return [false, null]
+    return ok(false)
   }
 
   async createBranch(
@@ -43,12 +43,12 @@ class FakeProposalGit implements ProposalGit {
     void target
     void baseCommit
     this.branches.push(branch)
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     void target
-    return ["tester", null]
+    return ok("tester")
   }
 }
 

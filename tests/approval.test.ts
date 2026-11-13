@@ -9,7 +9,7 @@ import { elementContentHash } from "../src/approval/hash"
 import { specLockPath } from "../src/approval/lock"
 import { parseSdoc } from "../src/core/sdoc"
 import { loadRequirementSources } from "../src/core/requirements"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { EvidenceFactory, EvidenceStore, type EvidenceRecord } from "../src/evidence"
 import { verifySpecLock } from "../src/approval/verify"
 
@@ -60,7 +60,7 @@ class FakeGitStatus implements GitStatusReader {
     void target
     this.calls += 1
 
-    return [this.clean, null]
+    return ok(this.clean)
   }
 }
 

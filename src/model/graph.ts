@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   GRAPH_VERSION,
   type GraphContribution,
@@ -23,28 +23,25 @@ export class SpecGraphBuilder {
     toolVersions: Record<string, string> = {},
   ): Result<SpecGraph, GraphFailure> {
     const [elements, elementFailure] = this.collectElements()
-    if (elementFailure !== null) return [null, elementFailure]
-    if (elements === null) return [null, this.failure("GRAPH-BUILD", "element collection failed")]
+    if (elementFailure !== null) return fail(elementFailure)
+    if (elements === null) return fail(this.failure("GRAPH-BUILD", "element collection failed"))
 
     const [evidence, evidenceFailure] = this.collectEvidence()
-    if (evidenceFailure !== null) return [null, evidenceFailure]
-    if (evidence === null) return [null, this.failure("GRAPH-BUILD", "evidence collection failed")]
+    if (evidenceFailure !== null) return fail(evidenceFailure)
+    if (evidence === null) return fail(this.failure("GRAPH-BUILD", "evidence collection failed"))
 
     const findings = this.collectFindings(elements)
 
-    return [
-      {
-        version: GRAPH_VERSION,
-        workspace: workspace.workspace,
-        commit: workspace.commit,
-        dirty: workspace.dirty,
-        elements,
-        evidence,
-        findings,
-        tool_versions: this.sortedToolVersions(toolVersions),
-      },
-      null,
-    ]
+    return ok({
+      version: GRAPH_VERSION,
+      workspace: workspace.workspace,
+      commit: workspace.commit,
+      dirty: workspace.dirty,
+      elements,
+      evidence,
+      findings,
+      tool_versions: this.sortedToolVersions(toolVersions),
+    })
   }
 
   private collectElements(): Result<GraphElement[], GraphFailure> {
@@ -53,16 +50,13 @@ export class SpecGraphBuilder {
     for (const contribution of this.contributions) {
       for (const element of contribution.elements) {
         if (byId.has(element.id)) {
-          return [
-            null,
-            this.failure("GRAPH-DUPLICATE-ID", `duplicate graph element '${element.id}'`),
-          ]
+          return fail(this.failure("GRAPH-DUPLICATE-ID", `duplicate graph element '${element.id}'`))
         }
         byId.set(element.id, this.normalizedElement(element))
       }
     }
 
-    return [[...byId.values()].sort((left, right) => left.id.localeCompare(right.id)), null]
+    return ok([...byId.values()].sort((left, right) => left.id.localeCompare(right.id)))
   }
 
   private collectEvidence(): Result<GraphEvidence[], GraphFailure> {
@@ -71,16 +65,15 @@ export class SpecGraphBuilder {
     for (const contribution of this.contributions) {
       for (const evidence of contribution.evidence ?? []) {
         if (byId.has(evidence.id)) {
-          return [
-            null,
+          return fail(
             this.failure("GRAPH-DUPLICATE-EVIDENCE", `duplicate graph evidence '${evidence.id}'`),
-          ]
+          )
         }
         byId.set(evidence.id, { ...evidence })
       }
     }
 
-    return [[...byId.values()].sort((left, right) => left.id.localeCompare(right.id)), null]
+    return ok([...byId.values()].sort((left, right) => left.id.localeCompare(right.id)))
   }
 
   private collectFindings(elements: GraphElement[]): GraphFinding[] {

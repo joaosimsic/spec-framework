@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import type {
   CommandFailure,
   CommandResult,
@@ -35,7 +35,7 @@ class FakeProcessRunner implements ProcessRunner {
 }
 
 function result(stdout: string): Result<CommandResult, CommandFailure> {
-  return [{ exitCode: 0, stdout, stderr: "" }, null]
+  return ok({ exitCode: 0, stdout, stderr: "" })
 }
 
 describe("GitWorkspaceReader", () => {

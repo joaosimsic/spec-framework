@@ -5,7 +5,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { JsonSchemaAdapter } from "../src/adapters/json-schema"
 import type { AdapterRun } from "../src/adapters/types"
-import type { ProcessRunner, ToolLocator } from "../src/core/runner"
+import { ok, type Result } from "../src/core/result"
+import type { CommandFailure, CommandResult, ProcessRunner, ToolLocator } from "../src/core/runner"
 
 const validSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -25,8 +26,8 @@ const validSidecar = {
 }
 
 const stubRunner: ProcessRunner = {
-  async run() {
-    return [{ exitCode: 0, stdout: "", stderr: "" }, null]
+  async run(): Promise<Result<CommandResult, CommandFailure>> {
+    return ok({ exitCode: 0, stdout: "", stderr: "" })
   },
 }
 const stubLocator: ToolLocator = {

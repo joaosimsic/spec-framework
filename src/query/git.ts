@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   BunProcessRunner,
   ToolResolver,
@@ -16,7 +16,7 @@ export class GitWorkspaceReader implements WorkspaceMetadataReader {
 
   async read(target: string): Promise<Result<GraphWorkspace, string>> {
     const git = await this.toolLocator.resolve("git")
-    if (git === null) return [null, "git executable is not available"]
+    if (git === null) return fail("git executable is not available")
 
     const [commitResult, commitError] = await this.processRunner.run({
       executable: git,
@@ -24,14 +24,14 @@ export class GitWorkspaceReader implements WorkspaceMetadataReader {
       workingDirectory: target,
     })
     if (commitError || commitResult === null) {
-      return [null, commitError === null ? "git rev-parse produced no result" : commitError.message]
+      return fail(commitError === null ? "git rev-parse produced no result" : commitError.message)
     }
     if (commitResult.exitCode !== 0) {
-      return [null, this.commandFailure("rev-parse HEAD", commitResult)]
+      return fail(this.commandFailure("rev-parse HEAD", commitResult))
     }
 
     const commit = commitResult.stdout.trim()
-    if (commit === "") return [null, "git rev-parse HEAD produced an empty commit"]
+    if (commit === "") return fail("git rev-parse HEAD produced an empty commit")
 
     const [statusResult, statusError] = await this.processRunner.run({
       executable: git,
@@ -39,21 +39,18 @@ export class GitWorkspaceReader implements WorkspaceMetadataReader {
       workingDirectory: target,
     })
     if (statusError || statusResult === null) {
-      return [null, statusError === null ? "git status produced no result" : statusError.message]
+      return fail(statusError === null ? "git status produced no result" : statusError.message)
     }
 
     if (statusResult.exitCode !== 0) {
-      return [null, this.commandFailure("status --porcelain", statusResult)]
+      return fail(this.commandFailure("status --porcelain", statusResult))
     }
 
-    return [
-      {
-        workspace: "single-repo",
-        commit,
-        dirty: statusResult.stdout.trim() !== "",
-      },
-      null,
-    ]
+    return ok({
+      workspace: "single-repo",
+      commit,
+      dirty: statusResult.stdout.trim() !== "",
+    })
   }
 
   private commandFailure(command: string, result: { stdout: string; stderr: string }): string {

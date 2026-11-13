@@ -1,4 +1,4 @@
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { parseSdoc } from "../core/sdoc"
 import { SDOC_GRAMMAR } from "../core/sdoc"
 import type { SdocBlock } from "../core/types"
@@ -58,12 +58,12 @@ export class SdocDocument {
   static async load(path: string): Promise<Result<SdocDocument, string>> {
     const [text, readError] = await attemptAsync(() => Bun.file(path).text())
     if (readError !== null || text === null) {
-      return [null, readError === null ? `cannot read ${path}` : readError]
+      return fail(readError === null ? `cannot read ${path}` : readError)
     }
 
     const newline = text.includes("\r\n") ? "\r\n" : "\n"
 
-    return [new SdocDocument(path, text, newline, text.split(newline)), null]
+    return ok(new SdocDocument(path, text, newline, text.split(newline)))
   }
 
   has(uid: string): boolean {
@@ -84,31 +84,31 @@ export class SdocDocument {
 
   setField(uid: string, field: string, value: string): Result<void, string> {
     const range = this.findRange(uid)
-    if (range === null) return [null, `unknown element '${uid}'`]
+    if (range === null) return fail(`unknown element '${uid}'`)
 
     const lineIndex = this.lineFor(range, field)
     if (lineIndex !== null) {
       this.lines[lineIndex] = `${field}: ${value}`
 
-      return [undefined, null]
+      return ok(undefined)
     }
 
     this.lines.splice(this.insertionPoint(range), 0, `${field}: ${value}`)
 
-    return [undefined, null]
+    return ok(undefined)
   }
 
   appendRecord(fields: Record<string, string>): Result<string, string> {
     const uid = fields.UID?.trim() ?? ""
-    if (uid === "") return [null, "new record requires UID"]
-    if (this.has(uid)) return [null, `duplicate element ID '${uid}'`]
+    if (uid === "") return fail("new record requires UID")
+    if (this.has(uid)) return fail(`duplicate element ID '${uid}'`)
 
     const block = [BLOCK_KIND, ...this.orderedFields(fields)].join(this.newline)
     const existing = this.text().replace(/\s+$/, "")
     const prefix = existing === "" ? "" : `${existing}${this.newline}${this.newline}`
     this.lines = `${prefix}${block}`.split(this.newline)
 
-    return [uid, null]
+    return ok(uid)
   }
 
   changed(): boolean {
@@ -128,7 +128,7 @@ export class SdocDocument {
   }
 
   async save(): Promise<Result<string, string>> {
-    if (!this.changed()) return [this.path, null]
+    if (!this.changed()) return ok(this.path)
 
     const [written, writeError] = await attemptAsync(async () => {
       await Bun.write(this.path, this.text())
@@ -136,10 +136,10 @@ export class SdocDocument {
       return this.path
     })
     if (writeError !== null || written === null) {
-      return [null, writeError === null ? `cannot write ${this.path}` : writeError]
+      return fail(writeError === null ? `cannot write ${this.path}` : writeError)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   private findRange(uid: string): BlockRange | null {

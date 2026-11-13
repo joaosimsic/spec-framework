@@ -6,6 +6,7 @@ import { ArchitectureDraftBuilder } from "./architecture-draft"
 import { runMap } from "./map"
 import { attemptAsync, type Result } from "./result"
 import type { ProcessRunner, ToolLocator } from "./runner"
+import { ok, fail } from "./result"
 
 export const ARCHITECTURE_DRAFT_PATH = join("spec", "generated", "architecture.gen.c4")
 
@@ -35,17 +36,17 @@ export class ArchitectureModelGenerator {
       processRunner: options.processRunner,
       toolLocator: options.toolLocator,
     })
-    if (run.code !== 0 || run.report === null) return [null, run.output]
+    if (run.code !== 0 || run.report === null) return fail(run.output)
 
-    return [this.model(run.report), null]
+    return ok(this.model(run.report))
   }
 
   async write(
     options: ArchitectureGenerateOptions = {},
   ): Promise<Result<ArchitectureGenerateRun, string>> {
     const [generated, generateError] = await this.generate(options)
-    if (generateError !== null) return [null, generateError]
-    if (generated === null) return [null, "architecture generation returned no model"]
+    if (generateError !== null) return fail(generateError)
+    if (generated === null) return fail("architecture generation returned no model")
 
     const path = join(this.target, ARCHITECTURE_DRAFT_PATH)
     const [current, readError] = await attemptAsync(() => Bun.file(path).text())
@@ -56,52 +57,43 @@ export class ArchitectureModelGenerator {
 
       return path
     })
-    if (writeError !== null || written === null) return [null, writeError ?? "cannot write model"]
+    if (writeError !== null || written === null) return fail(writeError ?? "cannot write model")
 
-    return [
-      {
-        output: `generated ${relative(this.target, written)} (${generated.elements} elements)`,
-        code: 0,
-        path: written,
-        changed,
-      },
-      null,
-    ]
+    return ok({
+      output: `generated ${relative(this.target, written)} (${generated.elements} elements)`,
+      code: 0,
+      path: written,
+      changed,
+    })
   }
 
   async check(
     options: ArchitectureGenerateOptions = {},
   ): Promise<Result<ArchitectureGenerateRun, string>> {
     const [generated, generateError] = await this.generate(options)
-    if (generateError !== null) return [null, generateError]
-    if (generated === null) return [null, "architecture generation returned no model"]
+    if (generateError !== null) return fail(generateError)
+    if (generated === null) return fail("architecture generation returned no model")
 
     const path = join(this.target, ARCHITECTURE_DRAFT_PATH)
     const [current, readError] = await attemptAsync(() => Bun.file(path).text())
     if (readError !== null || current === null) {
-      return [
-        {
-          output: `missing or unreadable generated architecture draft: ${relative(this.target, path)}`,
-          code: 1,
-          path,
-          changed: true,
-        },
-        null,
-      ]
+      return ok({
+        output: `missing or unreadable generated architecture draft: ${relative(this.target, path)}`,
+        code: 1,
+        path,
+        changed: true,
+      })
     }
     const changed = current !== generated.model
 
-    return [
-      {
-        output: changed
-          ? `generated architecture draft is stale: ${relative(this.target, path)}`
-          : `generated architecture draft is current: ${relative(this.target, path)}`,
-        code: changed ? 1 : 0,
-        path,
-        changed,
-      },
-      null,
-    ]
+    return ok({
+      output: changed
+        ? `generated architecture draft is stale: ${relative(this.target, path)}`
+        : `generated architecture draft is current: ${relative(this.target, path)}`,
+      code: changed ? 1 : 0,
+      path,
+      changed,
+    })
   }
 
   private model(report: MapReport): { model: string; elements: number } {

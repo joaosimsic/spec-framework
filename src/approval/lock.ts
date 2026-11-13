@@ -1,5 +1,5 @@
 import { join } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import {
   SPEC_LOCK_VERSION,
   type SpecLock,
@@ -21,69 +21,66 @@ export class SpecLockLoader {
 
   async load(): Promise<Result<SpecLock, SpecLockFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.path).exists())
-    if (existsError) return [null, this.bad(`cannot read ${this.path}: ${existsError}`)]
+    if (existsError) return fail(this.bad(`cannot read ${this.path}: ${existsError}`))
     if (!exists) {
-      return [null, this.failure("SPEC-LOCK-NOT-FOUND", `no lock at ${this.path}`)]
+      return fail(this.failure("SPEC-LOCK-NOT-FOUND", `no lock at ${this.path}`))
     }
 
     const [text, readError] = await attemptAsync(() => Bun.file(this.path).text())
     if (readError || text === null) {
-      return [null, this.bad(readError === null ? `cannot read ${this.path}` : readError)]
+      return fail(this.bad(readError === null ? `cannot read ${this.path}` : readError))
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
-    if (parseError) return [null, this.bad(`invalid JSON in ${this.path}: ${parseError}`)]
+    if (parseError) return fail(this.bad(`invalid JSON in ${this.path}: ${parseError}`))
 
     return this.validate(parsed)
   }
 
   private validate(value: unknown): Result<SpecLock, SpecLockFailure> {
-    if (!this.isRecord(value)) return [null, this.bad("lock must be an object")]
+    if (!this.isRecord(value)) return fail(this.bad("lock must be an object"))
     if (value["version"] !== SPEC_LOCK_VERSION) {
-      return [null, this.bad(`unsupported lock version '${String(value["version"])}'`)]
+      return fail(this.bad(`unsupported lock version '${String(value["version"])}'`))
     }
     if (typeof value["approved_at"] !== "string") {
-      return [null, this.bad("approved_at must be a string")]
+      return fail(this.bad("approved_at must be a string"))
     }
     if (typeof value["approver"] !== "string") {
-      return [null, this.bad("approver must be a string")]
+      return fail(this.bad("approver must be a string"))
     }
     if (typeof value["dirty"] !== "boolean") {
-      return [null, this.bad("dirty must be a boolean")]
+      return fail(this.bad("dirty must be a boolean"))
     }
 
     const [elements, elementFailure] = this.readElements(value["elements"])
-    if (elementFailure !== null) return [null, elementFailure]
-    if (elements === null) return [null, this.bad("elements failed")]
+    if (elementFailure !== null) return fail(elementFailure)
+    if (elements === null) return fail(this.bad("elements failed"))
 
     const [evidence, evidenceFailure] = this.readEvidence(value["evidence"])
-    if (evidenceFailure !== null) return [null, evidenceFailure]
-    if (evidence === null) return [null, this.bad("evidence failed")]
+    if (evidenceFailure !== null) return fail(evidenceFailure)
+    if (evidence === null) return fail(this.bad("evidence failed"))
 
-    return [
-      {
-        version: SPEC_LOCK_VERSION,
-        approved_at: value["approved_at"],
-        approver: value["approver"],
-        dirty: value["dirty"],
-        elements,
-        evidence,
-      },
-      null,
-    ]
+    return ok({
+      version: SPEC_LOCK_VERSION,
+      approved_at: value["approved_at"],
+      approver: value["approver"],
+      dirty: value["dirty"],
+      elements,
+      evidence,
+    })
   }
 
   private readElements(value: unknown): Result<Record<string, SpecLockElement>, SpecLockFailure> {
-    if (!this.isRecord(value)) return [null, this.bad("elements must be an object")]
+    if (!this.isRecord(value)) return fail(this.bad("elements must be an object"))
 
     const elements: Record<string, SpecLockElement> = {}
     for (const [id, candidate] of Object.entries(value)) {
-      if (!this.isRecord(candidate)) return [null, this.bad(`element ${id} must be an object`)]
+      if (!this.isRecord(candidate)) return fail(this.bad(`element ${id} must be an object`))
       if (typeof candidate["content_hash"] !== "string") {
-        return [null, this.bad(`element ${id} content_hash must be a string`)]
+        return fail(this.bad(`element ${id} content_hash must be a string`))
       }
       if (!this.isStringArray(candidate["evidence"])) {
-        return [null, this.bad(`element ${id} evidence must be a string array`)]
+        return fail(this.bad(`element ${id} evidence must be a string array`))
       }
       elements[id] = {
         content_hash: candidate["content_hash"],
@@ -91,23 +88,23 @@ export class SpecLockLoader {
       }
     }
 
-    return [elements, null]
+    return ok(elements)
   }
 
   private readEvidence(value: unknown): Result<Record<string, SpecLockEvidence>, SpecLockFailure> {
-    if (!this.isRecord(value)) return [null, this.bad("evidence must be an object")]
+    if (!this.isRecord(value)) return fail(this.bad("evidence must be an object"))
 
     const evidence: Record<string, SpecLockEvidence> = {}
     for (const [id, candidate] of Object.entries(value)) {
-      if (!this.isRecord(candidate)) return [null, this.bad(`evidence ${id} must be an object`)]
+      if (!this.isRecord(candidate)) return fail(this.bad(`evidence ${id} must be an object`))
       if (typeof candidate["hash"] !== "string") {
-        return [null, this.bad(`evidence ${id} hash must be a string`)]
+        return fail(this.bad(`evidence ${id} hash must be a string`))
       }
       if (typeof candidate["tool"] !== "string") {
-        return [null, this.bad(`evidence ${id} tool must be a string`)]
+        return fail(this.bad(`evidence ${id} tool must be a string`))
       }
       if (typeof candidate["result"] !== "string") {
-        return [null, this.bad(`evidence ${id} result must be a string`)]
+        return fail(this.bad(`evidence ${id} result must be a string`))
       }
       evidence[id] = {
         hash: candidate["hash"],
@@ -116,7 +113,7 @@ export class SpecLockLoader {
       }
     }
 
-    return [evidence, null]
+    return ok(evidence)
   }
 
   private isStringArray(value: unknown): value is string[] {
@@ -147,10 +144,10 @@ export class SpecLockWriter {
     })
 
     if (writeError || written === null) {
-      return [null, writeError === null ? `cannot write ${path}` : writeError]
+      return fail(writeError === null ? `cannot write ${path}` : writeError)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   private sorted(lock: SpecLock): SpecLock {

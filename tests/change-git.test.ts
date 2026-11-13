@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { GitProposalRepository } from "../src/change/git"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import type {
   CommandFailure,
   CommandResult,
@@ -34,7 +34,7 @@ class FakeProcessRunner implements ProcessRunner {
 }
 
 function result(stdout: string, exitCode = 0): Result<CommandResult, CommandFailure> {
-  return [{ exitCode, stdout, stderr: "" }, null]
+  return ok({ exitCode, stdout, stderr: "" })
 }
 
 describe("GitProposalRepository", () => {

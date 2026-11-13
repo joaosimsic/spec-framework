@@ -1,10 +1,13 @@
 import { join } from "node:path"
 import {
+  fail,
   formatContextBlock,
   guardCommand,
   guardWrite,
+  ok,
   PluginWorkbenchRegistry,
   SpecPluginService,
+  type Result,
 } from "@spec-framework/cli/plugin"
 import type { Config, Hooks, Plugin, PluginInput } from "./compat"
 import { pluginAgents } from "./agents"
@@ -112,11 +115,11 @@ export function createSpecPlugin(
   return Promise.resolve(hooks)
 }
 
-async function fileExists(path: string): Promise<[boolean, string | null]> {
+async function fileExists(path: string): Promise<Result<boolean, string>> {
   try {
-    return [await Bun.file(path).exists(), null]
+    return ok(await Bun.file(path).exists())
   } catch (error) {
-    return [false, error instanceof Error ? error.message : String(error)]
+    return fail(error instanceof Error ? error.message : String(error))
   }
 }
 

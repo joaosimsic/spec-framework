@@ -1,5 +1,5 @@
 import type { DisplayEntry } from "../model"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { TerminalPrompt } from "./prompt"
 
 export class TerminalEntrySelect {
@@ -11,9 +11,9 @@ export class TerminalEntrySelect {
     kinds?: string[],
   ): Promise<Result<string | null, string>> {
     const matches = this.matches(entries, kinds)
-    if (matches.length === 0) return [null, "no matching items are available"]
+    if (matches.length === 0) return fail("no matching items are available")
 
-    return [await this.prompt.select(message, this.choices(matches)), null]
+    return ok(await this.prompt.select(message, this.choices(matches)))
   }
 
   async optional(
@@ -24,7 +24,7 @@ export class TerminalEntrySelect {
     const matches = this.matches(entries, kinds)
     const choices = [{ value: "", label: "None" }, ...this.choices(matches)]
 
-    return [await this.prompt.select(message, choices), null]
+    return ok(await this.prompt.select(message, choices))
   }
 
   private matches(entries: DisplayEntry[], kinds?: string[]): DisplayEntry[] {

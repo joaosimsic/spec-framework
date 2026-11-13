@@ -1,5 +1,6 @@
 import { join } from "node:path"
 import { attempt, attemptAsync, type Result } from "./result"
+import { ok, fail } from "./result"
 
 export type ConfigFailureCode = "SPEC-NO-CONFIG" | "SPEC-BAD-CONFIG"
 
@@ -38,29 +39,25 @@ export class SpecConfigLoader {
   async load(): Promise<Result<SpecConfig, ConfigFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.configPath).exists())
     if (existsError) {
-      return [
-        null,
-        this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`),
-      ]
+      return fail(this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`))
     }
     if (!exists) {
-      return [null, this.failure("SPEC-NO-CONFIG", `missing ${this.configPath}; run spec init`)]
+      return fail(this.failure("SPEC-NO-CONFIG", `missing ${this.configPath}; run spec init`))
     }
 
     const [text, readError] = await attemptAsync(() => Bun.file(this.configPath).text())
     if (readError) {
-      return [null, this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${readError}`)]
+      return fail(this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}: ${readError}`))
     }
     if (text === null) {
-      return [null, this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}`)]
+      return fail(this.failure("SPEC-NO-CONFIG", `cannot read ${this.configPath}`))
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError) {
-      return [
-        null,
+      return fail(
         this.failure("SPEC-BAD-CONFIG", `invalid JSON in ${this.configPath}: ${parseError}`),
-      ]
+      )
     }
 
     return this.validate(parsed)
@@ -68,35 +65,32 @@ export class SpecConfigLoader {
 
   private validate(value: unknown): Result<SpecConfig, ConfigFailure> {
     if (!this.isRecord(value)) {
-      return [null, this.failure("SPEC-BAD-CONFIG", "config must be a JSON object")]
+      return fail(this.failure("SPEC-BAD-CONFIG", "config must be a JSON object"))
     }
 
     if (!this.isInteger(value.version)) {
-      return [null, this.failure("SPEC-BAD-CONFIG", "version must be an integer")]
+      return fail(this.failure("SPEC-BAD-CONFIG", "version must be an integer"))
     }
     if (typeof value.profile !== "string") {
-      return [null, this.failure("SPEC-BAD-CONFIG", "profile must be a string")]
+      return fail(this.failure("SPEC-BAD-CONFIG", "profile must be a string"))
     }
 
     const project = this.readProject(value.project)
-    if ("code" in project) return [null, project]
+    if ("code" in project) return fail(project)
 
     const adapters = this.readAdapters(value.adapters)
-    if ("code" in adapters) return [null, adapters]
+    if ("code" in adapters) return fail(adapters)
 
     const approval = this.readApproval(value.approval)
-    if ("code" in approval) return [null, approval]
+    if ("code" in approval) return fail(approval)
 
-    return [
-      {
-        version: value.version,
-        profile: value.profile,
-        project,
-        adapters,
-        approval,
-      },
-      null,
-    ]
+    return ok({
+      version: value.version,
+      profile: value.profile,
+      project,
+      adapters,
+      approval,
+    })
   }
 
   private readProject(value: unknown): SpecConfig["project"] | ConfigFailure {

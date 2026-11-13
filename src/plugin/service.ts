@@ -1,6 +1,6 @@
 import { ProposalOperationParser } from "../change/operation-parser"
 import type { ProposalOperation } from "../change"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import { WorkbenchGraphDisplay } from "../workbench/graph-display"
 import { WorkbenchService, type WorkbenchServiceOptions } from "../workbench/service"
 import { WorkbenchStateReader } from "../workbench/state"
@@ -62,21 +62,18 @@ export class SpecPluginService {
             .sort()
             .map((id) => display.labels.named(id))
 
-    return [
-      {
-        contract: PLUGIN_CONTRACT_VERSION,
-        mode: workspace.proposal?.mode ?? "read-only",
-        commit: workspace.state.commit,
-        dirty: !workspace.state.clean,
-        proposal,
-        approved,
-        blockers: context.blockers,
-        openQuestions: context.openQuestions,
-        prompts: context.prompts,
-        next: context.next,
-      },
-      null,
-    ]
+    return ok({
+      contract: PLUGIN_CONTRACT_VERSION,
+      mode: workspace.proposal?.mode ?? "read-only",
+      commit: workspace.state.commit,
+      dirty: !workspace.state.clean,
+      proposal,
+      approved,
+      blockers: context.blockers,
+      openQuestions: context.openQuestions,
+      prompts: context.prompts,
+      next: context.next,
+    })
   }
 
   async context(names: string[] = []): Promise<Result<PluginContextView, PluginFailure>> {
@@ -84,7 +81,7 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-CONTEXT", "context unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   async query(input: {
@@ -107,20 +104,17 @@ export class SpecPluginService {
       )
       if (matches.length === 0) return this.fail("SPEC-PLUGIN-NOT-FOUND", `unknown item: ${handle}`)
       if (matches.length > 1) {
-        return [
-          null,
-          {
-            code: "SPEC-PLUGIN-AMBIGUOUS",
-            message: `more than one item is named '${handle}'`,
-            choices: matches.map((entry) => ({
-              label: entry.label,
-              context: entry.kindLabel,
-            })),
-          },
-        ]
+        return fail({
+          code: "SPEC-PLUGIN-AMBIGUOUS",
+          message: `more than one item is named '${handle}'`,
+          choices: matches.map((entry) => ({
+            label: entry.label,
+            context: entry.kindLabel,
+          })),
+        })
       }
 
-      return [{ commit: graph.commit, dirty: graph.dirty, entries: matches }, null]
+      return ok({ commit: graph.commit, dirty: graph.dirty, entries: matches })
     }
 
     const kind = input.kind?.toLowerCase()
@@ -131,7 +125,7 @@ export class SpecPluginService {
         (status === undefined || entry.technical.status?.toLowerCase() === status),
     )
 
-    return [{ commit: graph.commit, dirty: graph.dirty, entries }, null]
+    return ok({ commit: graph.commit, dirty: graph.dirty, entries })
   }
 
   async next(): Promise<Result<PluginNextView, PluginFailure>> {
@@ -139,15 +133,12 @@ export class SpecPluginService {
     if (contextError !== null) return this.failure(contextError)
     if (context === null) return this.fail("SPEC-PLUGIN-CONTEXT", "context unavailable")
 
-    return [
-      {
-        prompts: context.prompts,
-        next: context.next,
-        blockers: context.blockers,
-        openQuestions: context.openQuestions,
-      },
-      null,
-    ]
+    return ok({
+      prompts: context.prompts,
+      next: context.next,
+      blockers: context.blockers,
+      openQuestions: context.openQuestions,
+    })
   }
 
   async impact(): Promise<Result<PluginImpactView, PluginFailure>> {
@@ -155,7 +146,7 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-IMPACT", "impact unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   async diff(): Promise<Result<PluginDiffView, PluginFailure>> {
@@ -163,7 +154,7 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-DIFF", "diff unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   async change(): Promise<Result<PluginChangeView, PluginFailure>> {
@@ -171,7 +162,7 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   async validate(structural = false): Promise<Result<PluginCheckView, PluginFailure>> {
@@ -179,16 +170,16 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-CHECK", "check view unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   parseOperations(text: string): Result<ProposalOperation[], PluginFailure> {
     const [operations, error] = ProposalOperationParser.parseJson(text)
     if (error !== null || operations === null) {
-      return [null, { code: "SPEC-PLUGIN-BAD-OPERATION", message: error ?? "operations failed" }]
+      return fail({ code: "SPEC-PLUGIN-BAD-OPERATION", message: error ?? "operations failed" })
     }
 
-    return [operations, null]
+    return ok(operations)
   }
 
   async propose(
@@ -200,7 +191,7 @@ export class SpecPluginService {
     }
 
     const [ref, refError] = await this.proposalRef(proposalRef)
-    if (refError !== null) return [null, refError]
+    if (refError !== null) return fail(refError)
     if (ref === null) return this.fail("SPEC-PLUGIN-NO-PROPOSAL", "no active proposal")
 
     const [view, error] = await this.workbench.operations(
@@ -211,7 +202,7 @@ export class SpecPluginService {
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   async decide(request: PluginDecisionRequest): Promise<Result<PluginChangeView, PluginFailure>> {
@@ -248,23 +239,23 @@ export class SpecPluginService {
     if (changeError !== null) return this.failure(changeError)
     if (change === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
 
-    return [change, null]
+    return ok(change)
   }
 
   async technical(proposalRef?: string): Promise<Result<PluginTechnicalView, PluginFailure>> {
     const [ref, refError] = await this.proposalRef(proposalRef)
-    if (refError !== null) return [null, refError]
+    if (refError !== null) return fail(refError)
     if (ref === null) return this.fail("SPEC-PLUGIN-NO-PROPOSAL", "no active proposal")
 
     const [view, error] = await this.workbench.technical(ref)
     if (error !== null) return this.failure(error)
     if (view === null) return this.fail("SPEC-PLUGIN-TECHNICAL", "technical view unavailable")
 
-    return [view, null]
+    return ok(view)
   }
 
   private async proposalRef(supplied: string | undefined): Promise<Result<string, PluginFailure>> {
-    if (supplied !== undefined && supplied.trim() !== "") return [supplied.trim(), null]
+    if (supplied !== undefined && supplied.trim() !== "") return ok(supplied.trim())
 
     const [session, sessionError] = await this.workbench.session("plugin", false)
     if (sessionError !== null) return this.failure(sessionError)
@@ -276,22 +267,19 @@ export class SpecPluginService {
       )
     }
 
-    return [session.proposal.ref, null]
+    return ok(session.proposal.ref)
   }
 
   private failure(failure: WorkbenchFailure): Result<never, PluginFailure> {
-    return [
-      null,
-      {
-        code: failure.code,
-        message: failure.message,
-        ...(failure.choices === undefined ? {} : { choices: failure.choices }),
-      },
-    ]
+    return fail({
+      code: failure.code,
+      message: failure.message,
+      ...(failure.choices === undefined ? {} : { choices: failure.choices }),
+    })
   }
 
   private fail(code: string, message: string): Result<never, PluginFailure> {
-    return [null, { code, message }]
+    return fail({ code, message })
   }
 }
 

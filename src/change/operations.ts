@@ -1,7 +1,7 @@
 import { elementContentHash } from "../approval/hash"
 import { collectC4Files } from "../core/c4"
 import { loadRequirementSources } from "../core/requirements"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import type { SdocBlock } from "../core/types"
 import { elementId } from "../discovery/ids"
 import { join } from "node:path"
@@ -82,52 +82,49 @@ export class WorkspaceOperationApplier {
 
   async apply(operations: ProposalOperation[]): Promise<Result<OperationApplication, string>> {
     const [loaded, loadError] = await this.loadDocuments()
-    if (loadError !== null) return [null, loadError]
-    if (!loaded) return [null, "requirement documents failed to load"]
+    if (loadError !== null) return fail(loadError)
+    if (!loaded) return fail("requirement documents failed to load")
 
     const logs: ProposalOperationLog[] = []
     for (const operation of operations) {
       const [log, operationError] = await this.applyOperation(operation)
-      if (operationError !== null) return [null, operationError]
-      if (log === null) return [null, "operation produced no log"]
+      if (operationError !== null) return fail(operationError)
+      if (log === null) return fail("operation produced no log")
       logs.push(log)
     }
 
     const [saved, saveError] = await this.saveFiles()
-    if (saveError !== null) return [null, saveError]
-    if (!saved) return [null, "documents failed to save"]
+    if (saveError !== null) return fail(saveError)
+    if (!saved) return fail("documents failed to save")
 
-    return [
-      {
-        logs,
-        changes: [...this.changes.values()].sort((left, right) => left.id.localeCompare(right.id)),
-      },
-      null,
-    ]
+    return ok({
+      logs,
+      changes: [...this.changes.values()].sort((left, right) => left.id.localeCompare(right.id)),
+    })
   }
 
   private async loadDocuments(): Promise<Result<boolean, string>> {
     const sources = await loadRequirementSources(this.target)
     const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
     if (sourceErrors.length > 0) {
-      return [null, sourceErrors.map((item) => item.message).join("\n")]
+      return fail(sourceErrors.map((item) => item.message).join("\n"))
     }
 
     for (const file of sources.files) {
       const [document, documentError] = await SdocDocument.load(file)
-      if (documentError !== null) return [null, documentError]
-      if (document === null) return [null, `cannot load ${file}`]
+      if (documentError !== null) return fail(documentError)
+      if (document === null) return fail(`cannot load ${file}`)
       this.documents.set(file, document)
     }
 
     for (const block of sources.blocks) {
       const uid = block.fields.UID
       if (uid === undefined || uid === "") continue
-      if (this.pathsByUid.has(uid)) return [null, `duplicate element ID '${uid}'`]
+      if (this.pathsByUid.has(uid)) return fail(`duplicate element ID '${uid}'`)
       this.pathsByUid.set(uid, block.file)
     }
 
-    return [true, null]
+    return ok(true)
   }
 
   private async prepare(operation: ProposalOperation): Promise<Result<boolean, string>> {
@@ -142,36 +139,36 @@ export class WorkspaceOperationApplier {
       case "record-open-question":
         return this.ensureDecisions()
       default:
-        return [true, null]
+        return ok(true)
     }
   }
 
   private async ensureDecisions(): Promise<Result<boolean, string>> {
-    if (this.decisions !== null) return [true, null]
+    if (this.decisions !== null) return ok(true)
 
     const path = join(this.target, "spec", "requirements", "decisions.sdoc")
     const existing = this.documents.get(path)
     if (existing !== undefined) {
       this.decisions = existing
-      return [true, null]
+      return ok(true)
     }
 
     const [exists, existsError] = await attemptAsync(() => Bun.file(path).exists())
-    if (existsError !== null) return [null, `cannot read ${path}: ${existsError}`]
+    if (existsError !== null) return fail(`cannot read ${path}: ${existsError}`)
 
     const [document, documentError] = exists
       ? await SdocDocument.load(path)
       : ([SdocDocument.empty(path), null] as const)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `cannot load ${path}`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`cannot load ${path}`)
 
     this.decisions = document
     this.documents.set(path, document)
-    return [true, null]
+    return ok(true)
   }
 
   private async ensureArchitecture(required: boolean): Promise<Result<boolean, string>> {
-    if (this.architecture !== null) return [true, null]
+    if (this.architecture !== null) return ok(true)
 
     const files = await collectC4Files(join(this.target, "spec", "architecture"))
     if (files.length === 0) {
@@ -181,57 +178,54 @@ export class WorkspaceOperationApplier {
     }
 
     const [architecture, architectureError] = await ArchitectureEditor.load(this.target)
-    if (architectureError !== null) return [null, architectureError]
-    if (architecture === null) return [null, "architecture editor failed to load"]
+    if (architectureError !== null) return fail(architectureError)
+    if (architecture === null) return fail("architecture editor failed to load")
     this.architecture = architecture
 
-    return [true, null]
+    return ok(true)
   }
 
   private async ensureContracts(): Promise<Result<boolean, string>> {
-    if (this.contracts !== null) return [true, null]
+    if (this.contracts !== null) return ok(true)
 
     const files = await collectContractFiles(join(this.target, "spec", "contracts"))
     if (files.length === 0) {
-      return [null, "no contract sidecars found under spec/contracts"]
+      return fail("no contract sidecars found under spec/contracts")
     }
 
     const [contracts, contractError] = await ContractEditor.load(this.target)
-    if (contractError !== null) return [null, contractError]
-    if (contracts === null) return [null, "contract editor failed to load"]
+    if (contractError !== null) return fail(contractError)
+    if (contracts === null) return fail("contract editor failed to load")
     this.contracts = contracts
 
-    return [true, null]
+    return ok(true)
   }
 
   private async applyOperation(
     operation: ProposalOperation,
   ): Promise<Result<ProposalOperationLog, string>> {
     const [prepared, prepareError] = await this.prepare(operation)
-    if (prepareError !== null) return [null, prepareError]
-    if (!prepared) return [null, "operation sources failed to load"]
+    if (prepareError !== null) return fail(prepareError)
+    if (!prepared) return fail("operation sources failed to load")
 
     const [normalized, normalizeError] = this.normalize(operation)
-    if (normalizeError !== null) return [null, normalizeError]
-    if (normalized === null) return [null, "operation normalization failed"]
+    if (normalizeError !== null) return fail(normalizeError)
+    if (normalized === null) return fail("operation normalization failed")
 
     const targets = this.targetsFor(normalized)
     const ids = this.idsFor(normalized)
     const beforeHashes = this.hashesFor(ids)
     const [applied, applyError] = this.applyOne(normalized)
-    if (applyError !== null) return [null, applyError]
-    if (!applied) return [null, "operation did not apply"]
+    if (applyError !== null) return fail(applyError)
+    if (!applied) return fail("operation did not apply")
 
-    return [
-      {
-        kind: normalized.kind,
-        at: this.now().toISOString(),
-        targets,
-        before_hashes: beforeHashes,
-        after_hashes: this.hashesFor(ids),
-      },
-      null,
-    ]
+    return ok({
+      kind: normalized.kind,
+      at: this.now().toISOString(),
+      targets,
+      before_hashes: beforeHashes,
+      after_hashes: this.hashesFor(ids),
+    })
   }
 
   private normalize(operation: ProposalOperation): Result<ProposalOperation, string> {
@@ -242,51 +236,51 @@ export class WorkspaceOperationApplier {
           this.prefixFor(operation.target),
           "replacement",
         )
-        if (error !== null) return [null, error]
-        if (replacement === null) return [null, "replacement fields failed"]
+        if (error !== null) return fail(error)
+        if (replacement === null) return fail("replacement fields failed")
 
-        return [{ ...operation, replacement }, null]
+        return ok({ ...operation, replacement })
       }
       case "split": {
         const prefix = this.prefixFor(operation.target)
         const parts: ProposalRecordFields[] = []
         for (const part of operation.parts) {
           const [next, error] = this.withUid(part, prefix, "part")
-          if (error !== null) return [null, error]
-          if (next === null) return [null, "split part fields failed"]
+          if (error !== null) return fail(error)
+          if (next === null) return fail("split part fields failed")
           parts.push(next)
         }
 
-        return [{ ...operation, parts }, null]
+        return ok({ ...operation, parts })
       }
       case "merge": {
         const prefix = this.prefixFor(operation.targets[0] ?? "")
         const [result, error] = this.withUid(operation.result, prefix, "result")
-        if (error !== null) return [null, error]
-        if (result === null) return [null, "merge result fields failed"]
+        if (error !== null) return fail(error)
+        if (result === null) return fail("merge result fields failed")
 
-        return [{ ...operation, result }, null]
+        return ok({ ...operation, result })
       }
       case "extract": {
         const [component, error] = this.withComponentUid(operation.component)
-        if (error !== null) return [null, error]
-        if (component === null) return [null, "component fields failed"]
+        if (error !== null) return fail(error)
+        if (component === null) return fail("component fields failed")
 
-        return [{ ...operation, component }, null]
+        return ok({ ...operation, component })
       }
       case "add-record": {
         const prefix = PREFIX_BY_KIND[operation.recordKind]
         if (prefix === undefined || !ADDABLE_RECORD_KINDS.has(operation.recordKind)) {
-          return [null, `add-record kind '${operation.recordKind}' is not supported`]
+          return fail(`add-record kind '${operation.recordKind}' is not supported`)
         }
         const [record, error] = this.withUid(operation.record, prefix, "record")
-        if (error !== null) return [null, error]
-        if (record === null) return [null, "record fields failed"]
+        if (error !== null) return fail(error)
+        if (record === null) return fail("record fields failed")
 
-        return [{ ...operation, record }, null]
+        return ok({ ...operation, record })
       }
       default:
-        return [operation, null]
+        return ok(operation)
     }
   }
 
@@ -296,27 +290,27 @@ export class WorkspaceOperationApplier {
     label: string,
   ): Result<ProposalRecordFields, string> {
     const uid = (fields.UID ?? "").trim()
-    if (uid !== "") return [{ ...fields, UID: uid }, null]
+    if (uid !== "") return ok({ ...fields, UID: uid })
 
     const title = (fields.TITLE ?? "").trim()
-    if (title === "") return [null, `${label} requires a title when no ID is supplied`]
+    if (title === "") return fail(`${label} requires a title when no ID is supplied`)
 
-    return [{ ...fields, UID: this.allocate(prefix, title) }, null]
+    return ok({ ...fields, UID: this.allocate(prefix, title) })
   }
 
   private withComponentUid(
     component: ProposalComponentFields,
   ): Result<ProposalComponentFields, string> {
     const uid = (component.UID ?? "").trim()
-    if (uid !== "") return [{ ...component, UID: uid }, null]
+    if (uid !== "") return ok({ ...component, UID: uid })
 
     const title = (component.TITLE ?? "").trim()
-    if (title === "") return [null, "component requires a title when no ID is supplied"]
+    if (title === "") return fail("component requires a title when no ID is supplied")
 
     const kind = (component.KIND ?? "").toLowerCase()
     const prefix = PREFIX_BY_KIND[kind] ?? "CMP"
 
-    return [{ ...component, UID: this.allocate(prefix, title) }, null]
+    return ok({ ...component, UID: this.allocate(prefix, title) })
   }
 
   private allocate(prefix: string, title: string): string {
@@ -372,72 +366,72 @@ export class WorkspaceOperationApplier {
 
   private rename(uid: string, title: string): Result<boolean, string> {
     const [document, documentError] = this.documentFor(uid)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${uid}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${uid}'`)
 
     const [fields, fieldError] = this.fieldsFor(uid)
-    if (fieldError !== null) return [null, fieldError]
-    if (fields === null) return [null, `unknown element '${uid}'`]
-    if (fields.STATUS === "Deprecated") return [null, `'${uid}' is deprecated`]
-    if (title.trim() === "") return [null, "rename requires a title"]
+    if (fieldError !== null) return fail(fieldError)
+    if (fields === null) return fail(`unknown element '${uid}'`)
+    if (fields.STATUS === "Deprecated") return fail(`'${uid}' is deprecated`)
+    if (title.trim() === "") return fail("rename requires a title")
 
     document.setField(uid, "TITLE", title.trim())
     if (fields.STATUS === "Approved") document.setField(uid, "STATUS", "Proposed")
     this.recordChange(uid, "modified", fields)
 
-    return [true, null]
+    return ok(true)
   }
 
   private deprecate(uid: string): Result<boolean, string> {
     const [document, documentError] = this.documentFor(uid)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${uid}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${uid}'`)
 
     const [fields, fieldError] = this.fieldsFor(uid)
-    if (fieldError !== null) return [null, fieldError]
-    if (fields === null) return [null, `unknown element '${uid}'`]
+    if (fieldError !== null) return fail(fieldError)
+    if (fields === null) return fail(`unknown element '${uid}'`)
 
     document.setField(uid, "STATUS", "Deprecated")
     this.recordChange(uid, "deprecated", fields)
 
-    return [true, null]
+    return ok(true)
   }
 
   private replace(target: string, replacement: ProposalRecordFields): Result<boolean, string> {
     const [fields, fieldError] = this.fieldsFor(target)
-    if (fieldError !== null) return [null, fieldError]
-    if (fields === null) return [null, `unknown element '${target}'`]
+    if (fieldError !== null) return fail(fieldError)
+    if (fields === null) return fail(`unknown element '${target}'`)
 
     const [nextFields, nextError] = this.newFields(replacement, [target])
-    if (nextError !== null) return [null, nextError]
-    if (nextFields === null) return [null, "replacement fields failed"]
+    if (nextError !== null) return fail(nextError)
+    if (nextFields === null) return fail("replacement fields failed")
 
     const [added, addError] = this.append(target, nextFields)
-    if (addError !== null) return [null, addError]
-    if (!added) return [null, "replacement was not added"]
+    if (addError !== null) return fail(addError)
+    if (!added) return fail("replacement was not added")
 
     const [document] = this.documentFor(target)
     if (document !== null) document.setField(target, "STATUS", "Deprecated")
     this.recordChange(target, "deprecated", fields)
     this.recordAdded(nextFields.UID)
 
-    return [true, null]
+    return ok(true)
   }
 
   private split(target: string, parts: ProposalRecordFields[]): Result<boolean, string> {
     const [fields, fieldError] = this.fieldsFor(target)
-    if (fieldError !== null) return [null, fieldError]
-    if (fields === null) return [null, `unknown element '${target}'`]
-    if (parts.length === 0) return [null, "split requires at least one part"]
+    if (fieldError !== null) return fail(fieldError)
+    if (fields === null) return fail(`unknown element '${target}'`)
+    if (parts.length === 0) return fail("split requires at least one part")
 
     for (const part of parts) {
       const [nextFields, nextError] = this.newFields(part, [target])
-      if (nextError !== null) return [null, nextError]
-      if (nextFields === null) return [null, "split part failed"]
+      if (nextError !== null) return fail(nextError)
+      if (nextFields === null) return fail("split part failed")
 
       const [added, addError] = this.append(target, nextFields)
-      if (addError !== null) return [null, addError]
-      if (!added) return [null, "split part was not added"]
+      if (addError !== null) return fail(addError)
+      if (!added) return fail("split part was not added")
       this.recordAdded(nextFields.UID)
     }
 
@@ -445,29 +439,29 @@ export class WorkspaceOperationApplier {
     if (document !== null) document.setField(target, "STATUS", "Deprecated")
     this.recordChange(target, "deprecated", fields)
 
-    return [true, null]
+    return ok(true)
   }
 
   private merge(targets: string[], result: ProposalRecordFields): Result<boolean, string> {
     if (targets.length < 2 || new Set(targets).size !== targets.length) {
-      return [null, "merge requires at least two unique targets"]
+      return fail("merge requires at least two unique targets")
     }
 
     const previous = new Map<string, Record<string, string>>()
     for (const target of targets) {
       const [fields, fieldError] = this.fieldsFor(target)
-      if (fieldError !== null) return [null, fieldError]
-      if (fields === null) return [null, `unknown element '${target}'`]
+      if (fieldError !== null) return fail(fieldError)
+      if (fields === null) return fail(`unknown element '${target}'`)
       previous.set(target, fields)
     }
 
     const [nextFields, nextError] = this.newFields(result, targets)
-    if (nextError !== null) return [null, nextError]
-    if (nextFields === null) return [null, "merge result fields failed"]
+    if (nextError !== null) return fail(nextError)
+    if (nextFields === null) return fail("merge result fields failed")
 
     const [added, addError] = this.append(targets[0] ?? "", nextFields)
-    if (addError !== null) return [null, addError]
-    if (!added) return [null, "merge result was not added"]
+    if (addError !== null) return fail(addError)
+    if (!added) return fail("merge result was not added")
 
     for (const target of targets) {
       const [document] = this.documentFor(target)
@@ -476,7 +470,7 @@ export class WorkspaceOperationApplier {
     }
     this.recordAdded(nextFields.UID)
 
-    return [true, null]
+    return ok(true)
   }
 
   private extract(
@@ -486,24 +480,24 @@ export class WorkspaceOperationApplier {
     from: string | undefined,
   ): Result<boolean, string> {
     if (!target.startsWith("REQ-")) {
-      return [null, "extract target must be a requirement"]
+      return fail("extract target must be a requirement")
     }
     const fields = this.sdocFields(target)
-    if (fields === null) return [null, `unknown element '${target}'`]
+    if (fields === null) return fail(`unknown element '${target}'`)
     if (this.hasAnyElement(component.UID)) {
-      return [null, `element '${component.UID}' already exists`]
+      return fail(`element '${component.UID}' already exists`)
     }
 
     const architecture = this.architecture
     if (architecture === null) {
-      return [null, "no LikeC4 architecture sources found under spec/architecture"]
+      return fail("no LikeC4 architecture sources found under spec/architecture")
     }
 
     const current = this.splitList(fields.COMPONENT ?? "")
     const source = this.sourceValue(current, from, target)
-    if (source.error !== null) return [null, source.error]
+    if (source.error !== null) return fail(source.error)
     if (from !== undefined && !current.includes(from)) {
-      return [null, `'${target}' does not reference component '${from}'`]
+      return fail(`'${target}' does not reference component '${from}'`)
     }
 
     const parentId =
@@ -516,21 +510,21 @@ export class WorkspaceOperationApplier {
       kind,
       parentId,
     )
-    if (addError !== null) return [null, addError]
-    if (alias === null) return [null, "component was not added"]
+    if (addError !== null) return fail(addError)
+    if (alias === null) return fail("component was not added")
 
     const next = current.filter((item) => item !== source.value)
     next.push(component.UID)
     const [document, documentError] = this.documentFor(target)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${target}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${target}'`)
     document.setField(target, "COMPONENT", next.join(" "))
     if (fields.STATUS === "Approved") document.setField(target, "STATUS", "Proposed")
 
     this.recordChange(target, "modified", fields)
     this.recordAdded(component.UID, component.TITLE, kind)
 
-    return [true, null]
+    return ok(true)
   }
 
   private move(
@@ -546,7 +540,7 @@ export class WorkspaceOperationApplier {
       return this.moveArchitectureElement(target, to)
     }
 
-    return [null, `unknown element '${target}'`]
+    return fail(`unknown element '${target}'`)
   }
 
   private moveSdocField(
@@ -556,57 +550,57 @@ export class WorkspaceOperationApplier {
     from: string | undefined,
   ): Result<boolean, string> {
     const fields = this.sdocFields(target)
-    if (fields === null) return [null, `unknown element '${target}'`]
+    if (fields === null) return fail(`unknown element '${target}'`)
 
     if (field === "COMPONENT") {
-      if (!to.startsWith("CMP-")) return [null, "component destination must start with CMP-"]
+      if (!to.startsWith("CMP-")) return fail("component destination must start with CMP-")
       if (this.architecture === null || !this.architecture.hasElement(to)) {
-        return [null, `unknown architecture element '${to}'`]
+        return fail(`unknown architecture element '${to}'`)
       }
     }
     if (field === "CAPABILITY" && !to.startsWith("CAP-")) {
-      return [null, "capability destination must start with CAP-"]
+      return fail("capability destination must start with CAP-")
     }
 
     const current = this.splitList(fields[field] ?? "")
-    if (current.length === 0) return [null, `'${target}' has no ${field} link to move`]
+    if (current.length === 0) return fail(`'${target}' has no ${field} link to move`)
     const source = this.sourceValue(current, from, target)
-    if (source.error !== null) return [null, source.error]
+    if (source.error !== null) return fail(source.error)
     if (from !== undefined && !current.includes(from)) {
-      return [null, `'${target}' does not reference '${from}' in ${field}`]
+      return fail(`'${target}' does not reference '${from}' in ${field}`)
     }
 
     const next = current.filter((item) => item !== source.value)
     next.push(to)
     const [document, documentError] = this.documentFor(target)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${target}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${target}'`)
     document.setField(target, field, next.join(" "))
     if (fields.STATUS === "Approved") document.setField(target, "STATUS", "Proposed")
     this.recordChange(target, "modified", fields)
 
-    return [true, null]
+    return ok(true)
   }
 
   private moveArchitectureElement(target: string, to: string): Result<boolean, string> {
     const architecture = this.architecture
-    if (architecture === null) return [null, "architecture editor unavailable"]
+    if (architecture === null) return fail("architecture editor unavailable")
     const previousTitle = architecture.titleFor(target) ?? target
     const [moved, moveError] = architecture.moveContainment(target, to)
-    if (moveError !== null) return [null, moveError]
-    if (!moved) return [null, "component was not moved"]
+    if (moveError !== null) return fail(moveError)
+    if (!moved) return fail("component was not moved")
     this.recordExternal(target, "component", "modified", previousTitle)
 
-    return [true, null]
+    return ok(true)
   }
 
   private recordDecision(
     operation: Extract<ProposalOperation, { kind: "record-decision" }>,
   ): Result<boolean, string> {
     const uid = this.recordUid(operation)
-    if (this.hasAnyElement(uid)) return [null, `record '${uid}' already exists`]
+    if (this.hasAnyElement(uid)) return fail(`record '${uid}' already exists`)
     if (operation.target !== undefined && !this.hasAnyElement(operation.target)) {
-      return [null, `unknown element '${operation.target}'`]
+      return fail(`unknown element '${operation.target}'`)
     }
 
     const owner = this.humanName(operation.owner)
@@ -619,20 +613,20 @@ export class WorkspaceOperationApplier {
       PROVENANCE: `human:${owner}`,
       OWNER: owner,
     })
-    if (addError !== null) return [null, addError]
-    if (!added) return [null, "decision was not recorded"]
+    if (addError !== null) return fail(addError)
+    if (!added) return fail("decision was not recorded")
     this.recordAdded(uid)
 
-    return [true, null]
+    return ok(true)
   }
 
   private recordOpenQuestion(
     operation: Extract<ProposalOperation, { kind: "record-open-question" }>,
   ): Result<boolean, string> {
     const uid = this.recordUid(operation)
-    if (this.hasAnyElement(uid)) return [null, `record '${uid}' already exists`]
+    if (this.hasAnyElement(uid)) return fail(`record '${uid}' already exists`)
     if (operation.target !== undefined && !this.hasAnyElement(operation.target)) {
-      return [null, `unknown element '${operation.target}'`]
+      return fail(`unknown element '${operation.target}'`)
     }
 
     const owner = this.humanName(operation.owner)
@@ -645,32 +639,32 @@ export class WorkspaceOperationApplier {
       PROVENANCE: `human:${owner}`,
       OWNER: owner,
     })
-    if (addError !== null) return [null, addError]
-    if (!added) return [null, "open question was not recorded"]
+    if (addError !== null) return fail(addError)
+    if (!added) return fail("open question was not recorded")
     this.recordAdded(uid)
 
-    return [true, null]
+    return ok(true)
   }
 
   private addRecord(
     operation: Extract<ProposalOperation, { kind: "add-record" }>,
   ): Result<boolean, string> {
     const [document, documentError] = this.requirementsDocument()
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, "no requirements document is available"]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail("no requirements document is available")
 
     if (operation.acceptanceOf !== undefined && operation.recordKind !== "acceptance_criterion") {
-      return [null, "only an acceptance criterion can link to a requirement"]
+      return fail("only an acceptance criterion can link to a requirement")
     }
 
     const uid = (operation.record.UID ?? "").trim()
-    if (uid === "") return [null, "new record requires UID"]
-    if (this.hasAnyElement(uid)) return [null, `element '${uid}' already exists`]
+    if (uid === "") return fail("new record requires UID")
+    if (this.hasAnyElement(uid)) return fail(`element '${uid}' already exists`)
     const title = (operation.record.TITLE ?? "").trim()
-    if (title === "") return [null, "new record requires a title"]
+    if (title === "") return fail("new record requires a title")
     const status = (operation.record.STATUS ?? "Draft").trim()
     if (status !== "Draft" && status !== "Proposed") {
-      return [null, `new record '${uid}' must be Draft or Proposed`]
+      return fail(`new record '${uid}' must be Draft or Proposed`)
     }
 
     const [appendedUid, appendError] = document.appendRecord({
@@ -679,31 +673,31 @@ export class WorkspaceOperationApplier {
       TITLE: title,
       STATUS: status,
     })
-    if (appendError !== null) return [null, appendError]
-    if (appendedUid === null) return [null, "new record was not added"]
+    if (appendError !== null) return fail(appendError)
+    if (appendedUid === null) return fail("new record was not added")
 
     this.pathsByUid.set(appendedUid, document.sourcePath())
     this.recordAdded(appendedUid)
 
     if (operation.acceptanceOf !== undefined) {
       const [linked, linkError] = this.linkAcceptance(operation.acceptanceOf, appendedUid)
-      if (linkError !== null) return [null, linkError]
-      if (!linked) return [null, "acceptance criterion was not linked"]
+      if (linkError !== null) return fail(linkError)
+      if (!linked) return fail("acceptance criterion was not linked")
     }
 
-    return [true, null]
+    return ok(true)
   }
 
   private linkAcceptance(requirement: string, acceptance: string): Result<boolean, string> {
     const fields = this.sdocFields(requirement)
-    if (fields === null) return [null, `unknown element '${requirement}'`]
+    if (fields === null) return fail(`unknown element '${requirement}'`)
     if (!requirement.startsWith("REQ-")) {
-      return [null, `acceptance links require a requirement, not '${requirement}'`]
+      return fail(`acceptance links require a requirement, not '${requirement}'`)
     }
 
     const [document, documentError] = this.documentFor(requirement)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${requirement}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${requirement}'`)
 
     const current = this.splitList(fields.ACCEPTANCE ?? "")
     const next = current.includes(acceptance) ? current : [...current, acceptance]
@@ -711,22 +705,22 @@ export class WorkspaceOperationApplier {
     if (fields.STATUS === "Approved") document.setField(requirement, "STATUS", "Proposed")
     this.recordChange(requirement, "modified", fields)
 
-    return [true, null]
+    return ok(true)
   }
 
   private requirementsDocument(): Result<SdocDocument, string> {
     const preferred = join(this.target, "spec", "requirements", "core.sdoc")
     const document = this.documents.get(preferred)
-    if (document !== undefined) return [document, null]
+    if (document !== undefined) return ok(document)
 
     const path = [...this.documents.keys()].sort()[0]
     if (path === undefined) {
-      return [null, "no requirements document is available"]
+      return fail("no requirements document is available")
     }
     const fallback = this.documents.get(path)
-    if (fallback === undefined) return [null, "requirements document failed to load"]
+    if (fallback === undefined) return fail("requirements document failed to load")
 
-    return [fallback, null]
+    return ok(fallback)
   }
 
   private humanName(value: string | undefined): string {
@@ -737,17 +731,17 @@ export class WorkspaceOperationApplier {
 
   private appendDecision(fields: ProposalRecordFields): Result<boolean, string> {
     const document = this.decisions
-    if (document === null) return [null, "decision document is not available"]
+    if (document === null) return fail("decision document is not available")
 
     const uid = (fields.UID ?? "").trim()
-    if (this.hasAnyElement(uid)) return [null, `duplicate element ID '${uid}'`]
+    if (this.hasAnyElement(uid)) return fail(`duplicate element ID '${uid}'`)
 
     const [appendedUid, appendError] = document.appendRecord(fields)
-    if (appendError !== null) return [null, appendError]
-    if (appendedUid === null) return [null, "decision record failed"]
+    if (appendError !== null) return fail(appendError)
+    if (appendedUid === null) return fail("decision record failed")
 
     this.pathsByUid.set(appendedUid, document.sourcePath())
-    return [true, null]
+    return ok(true)
   }
 
   private recordUid(operation: ProposalOperation): string {
@@ -769,13 +763,13 @@ export class WorkspaceOperationApplier {
 
   private changeContract(target: string, fields: ProposalContractFields): Result<boolean, string> {
     const contracts = this.contracts
-    if (contracts === null) return [null, "no contract sidecars found under spec/contracts"]
+    if (contracts === null) return fail("no contract sidecars found under spec/contracts")
     const [patched, patchError] = contracts.patch(target, fields)
-    if (patchError !== null) return [null, patchError]
-    if (!patched) return [null, "contract was not changed"]
+    if (patchError !== null) return fail(patchError)
+    if (!patched) return fail("contract was not changed")
     this.recordExternal(target, "contract", "modified", contracts.titleFor(target) ?? target)
 
-    return [true, null]
+    return ok(true)
   }
 
   private sourceValue(
@@ -796,19 +790,19 @@ export class WorkspaceOperationApplier {
 
   private append(target: string, fields: ProposalRecordFields): Result<boolean, string> {
     const [document, documentError] = this.documentFor(target)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${target}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${target}'`)
 
     const uid = (fields.UID ?? "").trim()
-    if (this.hasAnyElement(uid)) return [null, `duplicate element ID '${uid}'`]
+    if (this.hasAnyElement(uid)) return fail(`duplicate element ID '${uid}'`)
 
     const [appendedUid, appendError] = document.appendRecord(fields)
-    if (appendError !== null) return [null, appendError]
-    if (appendedUid === null) return [null, "new record failed"]
+    if (appendError !== null) return fail(appendError)
+    if (appendedUid === null) return fail("new record failed")
 
     this.pathsByUid.set(appendedUid, this.pathsByUid.get(target) ?? "")
 
-    return [true, null]
+    return ok(true)
   }
 
   private newFields(
@@ -816,25 +810,22 @@ export class WorkspaceOperationApplier {
     replaces: string[],
   ): Result<ProposalRecordFields, string> {
     const uid = (fields.UID ?? "").trim()
-    if (uid === "") return [null, "new record requires UID"]
+    if (uid === "") return fail("new record requires UID")
 
     const status = (fields.STATUS ?? "Proposed").trim()
     if (status !== "Draft" && status !== "Proposed") {
-      return [null, `new record '${uid}' must be Draft or Proposed`]
+      return fail(`new record '${uid}' must be Draft or Proposed`)
     }
 
     const links = [...this.splitList(fields.REPLACES ?? ""), ...replaces]
     const uniqueLinks = [...new Set(links)]
 
-    return [
-      {
-        ...fields,
-        UID: uid,
-        STATUS: status,
-        REPLACES: uniqueLinks.join(" "),
-      },
-      null,
-    ]
+    return ok({
+      ...fields,
+      UID: uid,
+      STATUS: status,
+      REPLACES: uniqueLinks.join(" "),
+    })
   }
 
   private recordAdded(uid: string, title?: string, kind?: string): void {
@@ -917,26 +908,26 @@ export class WorkspaceOperationApplier {
 
   private documentFor(uid: string): Result<SdocDocument, string> {
     const path = this.pathsByUid.get(uid)
-    if (path === undefined) return [null, `unknown element '${uid}'`]
+    if (path === undefined) return fail(`unknown element '${uid}'`)
     if (!path.endsWith(".sdoc")) {
-      return [null, `element '${uid}' is not in an editable .sdoc file`]
+      return fail(`element '${uid}' is not in an editable .sdoc file`)
     }
 
     const document = this.documents.get(path)
-    if (document === undefined) return [null, `cannot load document for '${uid}'`]
+    if (document === undefined) return fail(`cannot load document for '${uid}'`)
 
-    return [document, null]
+    return ok(document)
   }
 
   private fieldsFor(uid: string): Result<Record<string, string>, string> {
     const [document, documentError] = this.documentFor(uid)
-    if (documentError !== null) return [null, documentError]
-    if (document === null) return [null, `unknown element '${uid}'`]
+    if (documentError !== null) return fail(documentError)
+    if (document === null) return fail(`unknown element '${uid}'`)
 
     const fields = document.fields(uid)
-    if (fields === null) return [null, `unknown element '${uid}'`]
+    if (fields === null) return fail(`unknown element '${uid}'`)
 
-    return [fields, null]
+    return ok(fields)
   }
 
   private sdocFields(uid: string): Record<string, string> | null {
@@ -1089,12 +1080,12 @@ export class WorkspaceOperationApplier {
         for (const previous of written.reverse()) {
           await Bun.write(previous.path, previous.original).catch(() => undefined)
         }
-        return [null, `cannot write ${path}: ${writeError}`]
+        return fail(`cannot write ${path}: ${writeError}`)
       }
       written.push({ path, original: file.original })
     }
 
-    return [true, null]
+    return ok(true)
   }
 }
 

@@ -7,7 +7,7 @@ import { ProposalOperationParser } from "../src/change/operation-parser"
 import { WorkspaceOperationApplier } from "../src/change/operations"
 import { runChange, type ProposalGit } from "../src/change/change"
 import type { GitProposalState, ProposalOperation } from "../src/change/types"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { collectWorkspaceContributions } from "../src/model"
 import { SpecGraphBuilder } from "../src/model"
 import { parseSdoc } from "../src/core/sdoc"
@@ -80,13 +80,13 @@ const contractSource = `{
 class FakeProposalGit implements ProposalGit {
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     void target
-    return [{ branch: "main", commit: "base123", clean: true }, null]
+    return ok({ branch: "main", commit: "base123", clean: true })
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     void target
     void branch
-    return [false, null]
+    return ok(false)
   }
 
   async createBranch(
@@ -96,12 +96,12 @@ class FakeProposalGit implements ProposalGit {
   ): Promise<Result<string, string>> {
     void target
     void baseCommit
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     void target
-    return ["tester", null]
+    return ok("tester")
   }
 }
 

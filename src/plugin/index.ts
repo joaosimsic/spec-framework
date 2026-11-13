@@ -1,3 +1,4 @@
+export { fail, ok, type Result } from "../core/result"
 export {
   formatChange,
   formatCheck,

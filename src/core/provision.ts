@@ -9,6 +9,7 @@ import {
   type ToolchainLock,
   type ToolchainStatus,
 } from "./toolchain"
+import { ok, fail } from "./result"
 
 type ProvisionRecipe = { kind: "bun"; packageName: string } | { kind: "uv"; packageName: string }
 
@@ -64,9 +65,9 @@ export class ToolProvisioner {
   async provision(): Promise<Result<ProvisionOutcome, ToolchainFailure>> {
     const store = new ToolchainLockStore(this.target)
     const [lock, lockError] = await store.load()
-    if (lockError !== null) return [null, lockError]
+    if (lockError !== null) return fail(lockError)
     if (lock === null) {
-      return [null, { code: "TOOLCHAIN-BAD-LOCK", message: "toolchain lock produced no result" }]
+      return fail({ code: "TOOLCHAIN-BAD-LOCK", message: "toolchain lock produced no result" })
     }
 
     const statuses = this.readStatuses(this.target)
@@ -92,16 +93,13 @@ export class ToolProvisioner {
       })
     }
 
-    return [
-      {
-        statuses: finalStatuses,
-        provisioned,
-        skipped,
-        failed,
-        lockStatus: savedLock?.status ?? null,
-      },
-      null,
-    ]
+    return ok({
+      statuses: finalStatuses,
+      provisioned,
+      skipped,
+      failed,
+      lockStatus: savedLock?.status ?? null,
+    })
   }
 
   private async attemptTool(
@@ -163,19 +161,19 @@ export class ToolProvisioner {
   private async prepare(recipe: ProvisionRecipe): Promise<Result<null, string>> {
     const toolsDirectory = join(this.target, ".spec", "tools")
     const [, toolsError] = await attemptAsync(() => mkdir(toolsDirectory, { recursive: true }))
-    if (toolsError !== null) return [null, toolsError]
+    if (toolsError !== null) return fail(toolsError)
     if (recipe.kind === "uv") {
       const [, binError] = await attemptAsync(() =>
         mkdir(join(toolsDirectory, "bin"), { recursive: true }),
       )
-      if (binError !== null) return [null, binError]
+      if (binError !== null) return fail(binError)
 
       const [, uvError] = await attemptAsync(() =>
         mkdir(join(toolsDirectory, "uv"), { recursive: true }),
       )
-      if (uvError !== null) return [null, uvError]
+      if (uvError !== null) return fail(uvError)
 
-      return [null, null]
+      return ok(null)
     }
 
     return this.prepareBunProject(toolsDirectory)
@@ -184,8 +182,8 @@ export class ToolProvisioner {
   private async prepareBunProject(toolsDirectory: string): Promise<Result<null, string>> {
     const packagePath = join(toolsDirectory, "package.json")
     const [exists, existsError] = await attemptAsync(() => Bun.file(packagePath).exists())
-    if (existsError !== null) return [null, existsError]
-    if (exists) return [null, null]
+    if (existsError !== null) return fail(existsError)
+    if (exists) return ok(null)
 
     const [, writeError] = await attemptAsync(() =>
       Bun.write(packagePath, `${JSON.stringify({ private: true }, null, 2)}\n`),

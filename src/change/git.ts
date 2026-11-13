@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   BunProcessRunner,
   ToolResolver,
@@ -16,23 +16,23 @@ export class GitProposalRepository {
 
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     const [branch, branchError] = await this.output(target, ["rev-parse", "--abbrev-ref", "HEAD"])
-    if (branchError !== null) return [null, branchError]
-    if (branch === null) return [null, "git branch produced no result"]
+    if (branchError !== null) return fail(branchError)
+    if (branch === null) return fail("git branch produced no result")
 
     const [commit, commitError] = await this.output(target, ["rev-parse", "HEAD"])
-    if (commitError !== null) return [null, commitError]
-    if (commit === null) return [null, "git commit produced no result"]
+    if (commitError !== null) return fail(commitError)
+    if (commit === null) return fail("git commit produced no result")
 
     const [status, statusError] = await this.output(target, ["status", "--porcelain"])
-    if (statusError !== null) return [null, statusError]
-    if (status === null) return [null, "git status produced no result"]
+    if (statusError !== null) return fail(statusError)
+    if (status === null) return fail("git status produced no result")
 
-    return [{ branch: branch.trim(), commit: commit.trim(), clean: status.trim() === "" }, null]
+    return ok({ branch: branch.trim(), commit: commit.trim(), clean: status.trim() === "" })
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     const git = await this.toolLocator.resolve("git")
-    if (git === null) return [null, "git executable is not available"]
+    if (git === null) return fail("git executable is not available")
 
     const [result, runError] = await this.processRunner.run({
       executable: git,
@@ -40,12 +40,12 @@ export class GitProposalRepository {
       workingDirectory: target,
     })
     if (runError !== null || result === null) {
-      return [null, runError === null ? "git show-ref produced no result" : runError.message]
+      return fail(runError === null ? "git show-ref produced no result" : runError.message)
     }
-    if (result.exitCode === 0) return [true, null]
-    if (result.exitCode === 1) return [false, null]
+    if (result.exitCode === 0) return ok(true)
+    if (result.exitCode === 1) return ok(false)
 
-    return [null, this.commandFailure("show-ref", result)]
+    return fail(this.commandFailure("show-ref", result))
   }
 
   async createBranch(
@@ -55,38 +55,38 @@ export class GitProposalRepository {
   ): Promise<Result<string, string>> {
     const [result, runError] = await this.run(target, ["switch", "-c", branch, baseCommit])
     if (runError !== null || result === null) {
-      return [null, runError === null ? "git switch produced no result" : runError]
+      return fail(runError === null ? "git switch produced no result" : runError)
     }
-    if (result.exitCode !== 0) return [null, this.commandFailure("switch", result)]
+    if (result.exitCode !== 0) return fail(this.commandFailure("switch", result))
 
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     const configured = process.env.SPEC_AUTHOR?.trim() ?? ""
-    if (configured !== "") return [configured, null]
+    if (configured !== "") return ok(configured)
 
     const [result, runError] = await this.run(target, ["config", "user.name"])
     if (runError !== null || result === null) {
-      return [null, "proposal author unavailable; set SPEC_AUTHOR or git user.name"]
+      return fail("proposal author unavailable; set SPEC_AUTHOR or git user.name")
     }
 
     const author = result.stdout.trim()
     if (result.exitCode !== 0 || author === "") {
-      return [null, "proposal author unavailable; set SPEC_AUTHOR or git user.name"]
+      return fail("proposal author unavailable; set SPEC_AUTHOR or git user.name")
     }
 
-    return [author, null]
+    return ok(author)
   }
 
   private async output(target: string, argumentsList: string[]): Promise<Result<string, string>> {
     const [result, runError] = await this.run(target, argumentsList)
     if (runError !== null || result === null) {
-      return [null, runError === null ? "git produced no result" : runError]
+      return fail(runError === null ? "git produced no result" : runError)
     }
-    if (result.exitCode !== 0) return [null, this.commandFailure(argumentsList.join(" "), result)]
+    if (result.exitCode !== 0) return fail(this.commandFailure(argumentsList.join(" "), result))
 
-    return [result.stdout, null]
+    return ok(result.stdout)
   }
 
   private async run(
@@ -94,7 +94,7 @@ export class GitProposalRepository {
     argumentsList: string[],
   ): Promise<Result<CommandResult, string>> {
     const git = await this.toolLocator.resolve("git")
-    if (git === null) return [null, "git executable is not available"]
+    if (git === null) return fail("git executable is not available")
 
     const [result, runError] = await this.processRunner.run({
       executable: git,
@@ -102,10 +102,10 @@ export class GitProposalRepository {
       workingDirectory: target,
     })
     if (runError !== null || result === null) {
-      return [null, runError === null ? "git produced no result" : runError.message]
+      return fail(runError === null ? "git produced no result" : runError.message)
     }
 
-    return [result, null]
+    return ok(result)
   }
 
   private commandFailure(command: string, result: CommandResult): string {

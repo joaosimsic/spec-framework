@@ -8,7 +8,7 @@ import type { GitStatusReader } from "../src/approval/git"
 import { specLockPath } from "../src/approval/lock"
 import type { NativeAdapter } from "../src/adapters/types"
 import { runCheck } from "../src/core/check"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { EvidenceFactory, type EvidenceRecord } from "../src/evidence"
 
 const requirement = `[DOCUMENT]
@@ -47,7 +47,7 @@ class CleanGitStatus implements GitStatusReader {
   async read(target: string): Promise<Result<boolean, string>> {
     void target
 
-    return [true, null]
+    return ok(true)
   }
 }
 

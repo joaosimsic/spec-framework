@@ -1,6 +1,6 @@
 import { SpecLockLoader } from "../approval/lock"
 import type { SpecLock } from "../approval/types"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { ProcessRunner, ToolLocator } from "../core/runner"
 import { GraphSimulator, type SimulationReport } from "../model"
 import type { ProposalGit } from "./change"
@@ -24,68 +24,65 @@ export class ProposalReportReader {
     const git =
       options.gitRepository ?? new GitProposalRepository(options.processRunner, options.toolLocator)
     const [state, stateError] = await git.readState(this.target)
-    if (stateError !== null) return [null, `cannot read workspace: ${stateError}`]
-    if (state === null) return [null, "workspace reader returned no metadata"]
+    if (stateError !== null) return fail(`cannot read workspace: ${stateError}`)
+    if (state === null) return fail("workspace reader returned no metadata")
 
     const [proposal, proposalError] = await new ProposalStore(this.target).loadForBranch(
       state.branch,
     )
-    if (proposalError !== null) return [null, proposalError]
-    if (proposal === null) return [null, "no active proposal"]
+    if (proposalError !== null) return fail(proposalError)
+    if (proposal === null) return fail("no active proposal")
 
     const [lock, lockError] = await this.lock()
-    if (lockError !== null) return [null, lockError]
+    if (lockError !== null) return fail(lockError)
 
     const [impact, impactError] = await new ProposalImpactAnalyzer(this.target).analyze(
       proposal,
       proposal.operations,
       lock,
     )
-    if (impactError !== null) return [null, impactError]
-    if (impact === null) return [null, "impact analysis failed"]
+    if (impactError !== null) return fail(impactError)
+    if (impact === null) return fail("impact analysis failed")
 
     const [simulation, simulationError] = await this.simulation(proposal, options.simulate)
-    if (simulationError !== null) return [null, simulationError]
+    if (simulationError !== null) return fail(simulationError)
 
-    return [
-      {
-        proposal,
-        operations: [...proposal.operations],
-        changes: [],
-        impact: impact.impact,
-        ...(simulation === null ? {} : { simulation }),
-      },
-      null,
-    ]
+    return ok({
+      proposal,
+      operations: [...proposal.operations],
+      changes: [],
+      impact: impact.impact,
+      ...(simulation === null ? {} : { simulation }),
+    })
   }
 
   private async lock(): Promise<Result<SpecLock | null, string>> {
     const [lock, lockError] = await new SpecLockLoader(this.target).load()
-    if (lockError === null) return [lock, null]
-    if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
+    if (lockError === null) return ok(lock)
+    if (lockError.code === "SPEC-LOCK-NOT-FOUND") return ok(null)
 
-    return [null, lockError.message]
+    return fail(lockError.message)
   }
 
   private async simulation(
     proposal: Proposal,
     enabled: boolean | undefined,
   ): Promise<Result<SimulationReport | null, string>> {
-    if (enabled === false) return [null, null]
+    if (enabled === false) return ok(null)
 
     const store = new ProposalGraphSnapshotStore(this.target)
     const [snapshot, snapshotError] = await store.load(proposal.branch)
-    if (snapshotError !== null) return [null, snapshotError]
-    if (snapshot === null) return [null, null]
+    if (snapshotError !== null) return fail(snapshotError)
+    if (snapshot === null) return ok(null)
 
     const [current, currentError] = await new ProposalImpactAnalyzer(this.target).analyze(
       proposal,
       proposal.operations,
       null,
     )
-    if (currentError !== null) return [null, currentError]
-    if (current === null) return [null, "current graph unavailable"]
+    if (currentError !== null) return fail(currentError)
+    if (current === null) return fail("current graph unavailable")
 
-    return [new GraphSimulator().simulate(snapshot.graph, current.graph), null]
+    return ok(new GraphSimulator().simulate(snapshot.graph, current.graph))
   }
 }

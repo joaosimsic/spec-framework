@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import { WorkbenchFailureFactory, type WorkbenchFailure } from "./failure"
 
 export interface WorkbenchSecurityOptions {
@@ -34,31 +34,31 @@ export class WorkbenchSecurity {
   check(request: Request, mutation: boolean): Result<null, WorkbenchFailure> {
     const host = request.headers.get("host") ?? ""
     if (!this.hosts.has(this.hostnameFromHostHeader(host))) {
-      return [null, this.forbidden("request host is not allowed")]
+      return fail(this.forbidden("request host is not allowed"))
     }
 
-    if (!mutation) return [null, null]
+    if (!mutation) return ok(null)
 
     const origin = request.headers.get("origin")
     if (origin === null || !this.origins.has(this.normalizeOrigin(origin))) {
-      return [null, this.forbidden("request origin is not allowed")]
+      return fail(this.forbidden("request origin is not allowed"))
     }
 
     const fetchSite = request.headers.get("sec-fetch-site")
     if (fetchSite !== null && fetchSite !== "same-origin" && fetchSite !== "none") {
-      return [null, this.forbidden("cross-site requests are not allowed")]
+      return fail(this.forbidden("cross-site requests are not allowed"))
     }
 
     if (request.headers.get("x-csrf-token") !== this.options.token) {
-      return [null, this.forbidden("missing or invalid CSRF token")]
+      return fail(this.forbidden("missing or invalid CSRF token"))
     }
 
     const contentType = request.headers.get("content-type") ?? ""
     if (!contentType.toLowerCase().startsWith("application/json")) {
-      return [null, WorkbenchFailureFactory.badRequest("requests must use application/json")]
+      return fail(WorkbenchFailureFactory.badRequest("requests must use application/json"))
     }
 
-    return [null, null]
+    return ok(null)
   }
 
   private forbidden(message: string): WorkbenchFailure {

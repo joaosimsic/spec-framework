@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { attempt, attemptAsync, type Result } from "./result"
+import { ok, fail } from "./result"
 
 export interface CommandSpec {
   executable: string
@@ -69,10 +70,10 @@ export class BunProcessRunner implements ProcessRunner {
       }),
     )
     if (spawnError) {
-      return [null, { code: "COMMAND_SPAWN_FAILED", message: spawnError }]
+      return fail({ code: "COMMAND_SPAWN_FAILED", message: spawnError })
     }
     if (childProcess === null) {
-      return [null, { code: "COMMAND_SPAWN_FAILED", message: "process did not start" }]
+      return fail({ code: "COMMAND_SPAWN_FAILED", message: "process did not start" })
     }
 
     let timedOut = false
@@ -92,15 +93,15 @@ export class BunProcessRunner implements ProcessRunner {
     clearTimeout(timeout)
 
     if (timedOut) {
-      return [null, { code: "COMMAND_TIMEOUT", message: `command timed out after ${timeoutMs}ms` }]
+      return fail({ code: "COMMAND_TIMEOUT", message: `command timed out after ${timeoutMs}ms` })
     }
     if (ioError) {
-      return [null, { code: "COMMAND_IO_FAILED", message: ioError }]
+      return fail({ code: "COMMAND_IO_FAILED", message: ioError })
     }
     if (result === null) {
-      return [null, { code: "COMMAND_IO_FAILED", message: "process produced no result" }]
+      return fail({ code: "COMMAND_IO_FAILED", message: "process produced no result" })
     }
 
-    return [result, null]
+    return ok(result)
   }
 }

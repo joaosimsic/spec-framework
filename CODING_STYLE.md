@@ -1,74 +1,96 @@
-# Coding style — TiCrafter agent rules
+# Coding style — spec-framework agent rules
 
-Normative for agents working in this repo. `spec.md` is normative for the build;
-`docs.md` (theory) wins on conflict. Do not invent theory.
+Normative for agents working in this repo. `AGENTS.md` defines workflow and
+verification. `README.md`, `docs/`, and the decision records define product
+direction. Do not invent theory. When documentation and code disagree, fix the
+stale side or record a decision; never preserve a contradiction.
 
 ## 1. Result pattern, heavily
 
-Standardize on the existing tuple (`packages/core/src/kernel/result.ts`):
+Standardize on the discriminated tuple and constructors (`src/core/result.ts`):
 
 ```ts
-export type Result<T, E = unknown> = [value: T | null, err: E | null]
-```
+export type Result<Value, Failure = string> =
+  [value: Value, err: null] | [value: null, err: Failure]
 
-- Return `Result` for all expected failures: validation, parsing, guards, LLM
-  validation, replay/sync.
-- `T` may be a single value or an object payload. Prefer one
-  `Result<object, E>` over multiple returns or out-params:
-
-```ts
-type MdlScore = { gain: number; cost: number }
-
-const scoreSplit = (): Result<MdlScore, string> => {
-  if (bad) return [null, "MDL_BLOAT_REJECTED"]
-
-  return [{ gain, cost }, null]
+export function ok<Value>(value: Value): Result<Value, never> {
+  return [value, null]
 }
 
-const [scored, err] = scoreSplit()
-if (err) return [null, err]
+export function fail<Failure>(error: Failure): Result<never, Failure> {
+  return [null, error]
+}
+```
+
+- Return `Result` for all expected failures: validation, parsing, guards,
+  adapter checks, AI validation, and analysis.
+- New code constructs results with `ok` / `fail`. Raw tuple literals are
+  migration debt; convert them when touching a file.
+- `Value` may be a single value or an object payload. Prefer one
+  `Result<object, Failure>` over multiple returns or out-params:
+
+```ts
+type ElementCount = { elements: number; links: number }
+
+const countElements = (elements: GraphElement[]): Result<ElementCount, string> => {
+  if (elements.length === 0) return fail("GRAPH_EMPTY")
+
+  const links = elements.reduce((total, element) => total + element.links.length, 0)
+
+  return ok({ elements: elements.length, links })
+}
+
+const [counted, err] = countElements(graph.elements)
+if (err !== null) return fail(err)
 ```
 
 - Destructure as `const [value, err] = ...`, check `err` first, early-return.
   Never use `value` when `err` is non-null.
-- Type `E` narrowly (`string` or a `FailureType` union). Never leave bare
-  `unknown` at call sites.
-- Reference example: `packages/core/src/config/schema.ts`.
+- Checking `err !== null` narrows `value` to the success type. Keep distinct
+  bindings per result; do not reuse one mutable `err`.
+- Type `Failure` narrowly (`string` or a failure union) and never include
+  `null` or `undefined` in it.
+- Reference examples: `src/core/config.ts`, `src/adapters/compiler.ts`, and
+  `src/discovery/generic.ts`.
 
-## 2. Exceptions only at the irreplacable boundary
+## 2. Exceptions only at the irreplaceable boundary
 
 - Never write `try-catch` and never `throw` for domain failures or control
   flow. The only `try-catch` in the repo lives inside `attempt` /
   `attemptAsync` themselves.
 - At throwing boundaries (`fs`, `bun:sqlite`, network/SDK calls,
   `JSON.parse`, and similar APIs that cannot avoid throwing) always use
-  `attempt` / `attemptAsync` from `@core/result.js`. They wrap the call into
+  `attempt` / `attemptAsync` from `src/core/result.ts`. They wrap the call into
   a `Result` immediately; use pure `Result` flow inward from there.
 - The process entrypoint's terminal `.catch` (log + non-zero exit) is the
   single allowed rejection handler outside `attempt`. Never swallow errors.
-- The only sanctioned `throw` is `assertNever(value: never)` from
-  `packages/core/src/kernel/assert.ts`: unreachable-arm guard for exhaustive
-  `switch` defaults (§6). Never call it for reachable control flow.
+- If exhaustive matching needs a throwing helper, it lives at
+  `src/core/assert.ts` as `assertNever(value: never)`. It is the only
+  sanctioned `throw`, and it is only for unreachable `switch` defaults (§6).
+  Never call it for reachable control flow.
 
 ## 3. OOP by default, functional iteration style
 
 - Behavior lives with the data it mutates. Entities and aggregates encapsulate
-  their transitions and invariants (reference: `RunState` in
-  `apps/server/src/reasoning/run-state.ts`). Services hold their dependencies;
-  storage, hubs, ids, hashers, clocks, and fs are injected at the composition
-  root (`buildApp` / `main.ts`), never reached for inside domain code.
+  their transitions and invariants. Services hold their dependencies; storage,
+  ids, hashers, clocks, and fs are injected at the composition root
+  (`bin/spec.ts`, `src/cli.ts`, `src/workbench/server.ts`), never reached for
+  inside domain code.
 - Stateless helpers: single-consumer helpers are `private` methods of their
   owner. Shared pure helpers remain `static` utility classes (references:
-  `TypeAlgebra`, `LogicFormatter`, `GraphFactory`, `KindComparators`).
-  Module-level free functions are never allowed.
+  `SpecGraphBuilder`, `DisplayProjection`, `EvidenceCollector`,
+  `WorkbenchService`). Module-level free functions are not allowed for new
+  domain code. Existing free functions are refactor debt. Sanctioned
+  exceptions: `ok`, `fail`, `attempt`, `attemptAsync`, test framework globals,
+  and thin command entrypoints.
 - A class of all-`static` methods is only acceptable when it is a pure
   namespace: no state, no dependencies, no invariants. Anything holding state
   or collaborating with the outside world is an instance.
-- Composition roots (`buildApp` / `main.ts`, `GraphStore.open`) are the only
-  places that construct collaborators or touch edge singletons (`sseHub`);
-  inward code receives ports (`EventSink`, `Clock`, `LLMProvider`). No DI
-  container or service locator: runtime resolution fails with exceptions
-  instead of `Result` and hides the graph from the type checker.
+- Composition roots (`bin/spec.ts`, `src/cli.ts`,
+  `src/workbench/server.ts`) are the only places that construct collaborators.
+  Inward code receives ports and explicit dependencies. No DI container or
+  service locator: runtime resolution fails with exceptions instead of
+  `Result` and hides the graph from the type checker.
 - "Functional" means iteration style: prefer `.map` / `.filter` / `.find` /
   `.reduce` / `.forEach` / `.some` / `.every` over `for` loops for collection
   processing. Use plain loops for repetition and control flow.
@@ -78,7 +100,7 @@ if (err) return [null, err]
 - Never mutate inputs — this is critical for `reduce(state, event)`.
 - Keep methods and files small and focused. Delete rather than abstract.
 - Prefer files under 150 lines; split a file that grows past that instead of
-  adding to it.
+  adding to it. Existing oversized files are refactor debt.
 
 ## 4. DDD tactics
 
@@ -123,14 +145,12 @@ if (err) return [null, err]
 - Prefer full words over abbreviations: `database` not `db`, `environment` not
   `env`, `currentWorkingDirectory` not `cwd`, `fileSystem` not `fs`,
   `operatingSystem` not `os`, `packageJson` not `pkg`, `cliArguments` not
-  `args`, `context` not `ctx`, `payload`/`message` not `obj`/`msg`, `zod` not
-  `z` when importing zod.
-- Loop variables use `index`, `botIndex`, `downloadIndex`, and similar names;
+  `args`, `context` not `ctx`, `payload`/`message` not `obj`/`msg`.
+- Loop variables use `index`, `elementIndex`, `fileIndex`, and similar names;
   never `i`, `j`, or `k`.
 - Test fixtures use descriptive keys, never `a`, `b`, or `c`.
-- Exceptions: coordinate axes `x`, `y`, and `z` in Minecraft position fields;
-  the wire-format field `v`; standard acronyms `id`, `url`, and `apiKey`; and
-  `value`/`err` in the `Result` tuple.
+- Exceptions: standard acronyms `id`, `url`, and `apiKey`; and `value`/`err` in
+  the `Result` tuple.
 - Applies to TypeScript and JavaScript, including tests, tools, and ESLint
   rules. External wire-format fields and third-party API names are exempt.
 
@@ -139,54 +159,57 @@ if (err) return [null, err]
 - Use `satisfies` for configs, registries, and maps.
 - Give objects fully typed fields; do not rely on widened inference.
 - Prefer exhaustive matching over branch checking. When branching on a union
-  kind (`EventOp`, `LogicNode.kind`, `RelationType`, `Standing`, failure
-  unions), `switch` the discriminant with a `never` default so a new variant
-  fails compilation. Never use `if` / `else` chains to pick union arms;
-  guard clauses stay for booleans and preconditions only. Close with
-  `const _exhaustive: never = x; return _exhaustive;` or
-  `assertNever(x: never): never`; never let `default` silently return a value.
-  Reference examples: `packages/engine/reduce/reduce.ts`,
-  `packages/engine/logical-form/formatter.ts`.
+  kind (`ProposalOperation`, `CurationAction`, `Diagnostic`, failure unions),
+  `switch` the discriminant with a `never` default so a new variant fails
+  compilation. Never use `if` / `else` chains to pick union arms; guard clauses
+  stay for booleans and preconditions only. Close with
+  `const exhaustive: never = value; return exhaustive` or
+  `assertNever(value: never): never`; never let `default` silently return a
+  value. Reference examples: `src/change/operations.ts`,
+  `src/discovery/curation.ts`, and `src/core/types.ts`.
 - Model failures as discriminated unions, not loose strings or `any`.
 - `no any`. Narrow `unknown` with type guards (`isInt` / `isNum` style).
 - No `!` non-null assertion. No silent fallbacks — fail closed.
 
-## 7. Spec and architecture invariants
+## 7. Repository invariants
 
-- `packages/core` and `packages/engine` stay pure: no `fs`, `node:*`, `bun:*`,
-  or provider SDKs (enforced in `eslint.config.mjs`). They must run in a
-  browser/worker. `packages/core` holds code shared with `apps/web` (model,
-  config, `Result`); `packages/engine` holds the server-side domain algorithms.
-- Only `packages/events/storage` may import `bun:sqlite`, `node:sqlite`, or
-  `better-sqlite3` (enforced in `eslint.config.mjs`). All SQLite access goes
-  through `SqliteEdge`; `SqliteCache` and `Projector` take the edge and return
-  `Result<T, StorageFailure>`. `GraphStore` maps storage failures to strings.
-- `reduce(state, event)` is the only mutation: pure, synchronous,
-  deterministic, returns a new state, idempotent by `hash`.
-- The event file is the authority; SQLite is a disposable projection.
-- Rejected proposals are never persisted as graph events; each rejection (full proposal + reason) is journaled to `data/runs/<graphId>.jsonl` via `RejectionSink` (D9).
-- LLM output is never trusted: recompute `definitionHash` and canonical forms
-  server-side and re-run core checks.
+- Approved spec sources and `spec/spec.lock` are written only by the human
+  approval workflow. Workbench, plugin, query, and analysis surfaces never
+  approve and never write the lock.
+- Generated artifacts never overwrite sources. `spec/generated`,
+  `spec/evidence`, `spec/audit`, and `src/workbench/web/dist` are outputs.
+- Native adapters produce deterministic evidence. Missing required tools fail
+  closed; no silent skips.
+- Stable IDs are the cross-layer contract. Never reuse or renumber IDs.
+- Intent, implementation, and mapping graphs stay distinct until an explicit
+  projection joins them.
+- Analysis is read-only and never executes repository code.
+- AI output is evidence-bound, schema-validated, and never a pass verdict.
+- SQLite is disposable local state; approved intent is never stored only there.
+- Remove stale modules, adapters, and tests instead of keeping a second path.
 
 ## 8. Toolchain, imports, tests
 
-- `bun` runs package sources directly; imports resolve through the
-  `tsconfig.json` path aliases (`@core`, `@engine`, `@schemas`, `@events`,
-  `@llm`). Root scripts are the entrypoints (`bun run build|lint|test`).
-- Local imports use `.js` extensions. Keep `simple-import-sort` order.
-- New logic needs a test: property test `replay(E) === fold(reduce, E)`,
-  AF `§17.1` fixtures, guard thresholds.
-- Aggregate transitions need colocated unit tests with fake ports (e.g. a fake
-  `RunEvents` sink in `apps/server/src/reasoning/run-state.test.ts`).
-- Tests: colocated `*.test.ts` for units and package property tests, root
-  `tests/` for integration (`tests/events/`) and golden traces
-  (`tests/golden.test.ts`). Run the whole suite with `bun run test`.
+- `bun` runs sources directly. The repository commands are
+  `bun run format`, `bun run format:check`, `bun run lint`,
+  `bun run typecheck`, `bun test`, `bun run spec`, and
+  `bun run build:workbench`.
+- Imports are relative and extensionless. No path aliases exist.
+- New logic needs a test. Prefer focused fixtures over broad integration
+  fixtures.
+- Test files live under `tests/` as `tests/<area>.test.ts`. There are no
+  colocated `*.test.ts` files.
+- Run the touched tests first, then `bun test` when the change crosses modules.
+- Workbench changes require `bun run build:workbench` before verifying the
+  served UI.
+- New analysis behavior requires fixture repositories and deterministic output
+  assertions.
 
 ## 9. No code comments
 
 - Do not write `//`, `/* */`, `/** */`, or JSX comments in code.
 - Code must be self-explanatory through descriptive names and small methods.
-- Markdown docs (`AGENTS.md`, `README.md`, `spec.md`) may still use prose.
+- Markdown docs (`AGENTS.md`, `README.md`, `docs/`) may still use prose.
 
 ## 10. Low complexity, flat indentation
 
@@ -213,20 +236,20 @@ if (err) return [null, err]
 ## 11. Keep related lines adjacent (Go-style declaration + verification)
 
 - A `Result` acquire and its guards are one atomic block, exactly like Go's
-  `v, err := f()` immediately followed by `if err != nil { ... }`: the
+  `value, err := f()` immediately followed by `if err != nil { ... }`: the
   destructure, the `err` check, and the `null` / `undefined` check are
   **adjacent lines with no blank lines between them**:
 
 ```ts
-const [withEnv, envErr] = applyEnvOverrides(merged, env)
-if (envErr) {
-  return [null, envErr]
+const [config, configError] = await new SpecConfigLoader(target).load()
+if (configError !== null) {
+  return failure(configError.message)
 }
-if (withEnv === null) {
-  return [null, "Env overlay returned null"]
+if (config === null) {
+  return failure("config loader returned no configuration")
 }
 
-return validateAppConfig(withEnv)
+return runMap(target, config)
 ```
 
 - Never separate the declaration from its verification with blank lines. A
@@ -238,71 +261,79 @@ return validateAppConfig(withEnv)
   In tests, `expect(err).toBeNull()` is the `err` check and follows the
   destructure immediately, with the `null` / `undefined` guard right after it.
 
-## 12. Facade pattern, always (Rust modules)
+## 12. Module boundaries and facades
 
-- Every directory is a module and must declare its interface (like `mod.rs`):
-  `packages/<pkg>/` and every directory beneath it owns `index.ts`,
-  including intermediate directories that only contain subdirectories
-  (e.g. `packages/engine/`). `apps/<app>/` owns `main.ts` instead of
-  `index.ts` (bin root, like `main.rs`); every other module directory under
-  `apps/<app>/` owns `index.ts`, except the conventional `src/` container
-  (like Rust's `src/`). Exempt: `scripts/` (each file is its own bin),
-  `tests/` (each file owns its integration suite; subdirs mirror packages),
-  asset-only directories (`packages/llm/prompts/`), runtime data.
-- Consumers outside the folder import only via the nearest facade:
-  `@core/model/index.js` counts, `@core/model/types.js` does not.
-  `./storage/index.js` counts, `./storage/sqlite-cache.js` does not.
-- Siblings inside the same folder may import each other relatively
-  (e.g. `event-writer.ts` imports `./manifest-reader.js` directly).
-  This avoids `index` → impl → `index` cycles.
-- File-local helpers stay unexported. Shared-but-internal helpers are
-  exported from their file but omitted from `index.ts` (e.g. `SqliteEdge`,
-  `NodeWriter`, `StatusWriter` never leave `packages/events/storage`).
-- Existence is enforced in `eslint.config.mjs` by the local `require-facade`
-  rule (ancestor walk up to the package root / app `src/` container);
-  import targets are enforced via `no-restricted-imports` `regex`
-  (gitignore-style `group` cannot express "except `index.js`").
-  Reference facade: `packages/events/storage/index.ts`.
+- A directory that exposes a public surface owns `index.ts`.
+- Consumers outside the directory import through the facade.
+- Siblings inside the directory may import each other relatively.
+- Existing facades: `src/model`, `src/evidence`, `src/bundle`, `src/terminal`,
+  `src/workbench`, `src/query`, `src/change`, `src/plugin`.
+- New modules consumed across boundaries must add a facade.
+- Delete facade exports when their implementation is removed.
+- The repository does not enforce facades with ESLint today. Treat this as a
+  review rule and a refactor target, not an optional preference.
 
-## TiCrafter mapping and exceptions
+## 13. Active development and refactoring [NORMATIVE]
 
-The rules above are preserved verbatim. This appendix maps foreign references to
-this repository and records sanctioned exceptions.
+The repository is in active development. The current architecture is a
+hypothesis, not a compatibility promise.
 
-- **Specification names:** `spec.md` maps to `main.md`. `docs.md` maps to
-  `docs/architecture/graph.json` plus generated `decomposition.md`.
-- **Toolchain:** Bun 1.4.2 is the package manager, runner, test runner, and
-  SQLite provider. `bun run …` commands are literal. `bun run format`,
-  `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun test`, and
-  `bun run validate:graph` are the repository commands.
-- **Result module:** `packages/core/result.ts` maps to
-  `packages/core/src/kernel/result.ts`. `packages/core/assert.ts` maps to
-  `packages/core/src/kernel/assert.ts`.
-- **Path aliases:** `@core` maps to `@ticrafter/core`. `@engine`, `@schemas`,
-  `@events`, and `@llm` do not exist yet. `apps/server` maps to
-  `apps/coordinator`. `apps/web` does not exist yet.
-- **Storage edge:** `packages/events/storage` maps to `packages/memory`.
-  `packages/memory` is the only package allowed to import `bun:sqlite`.
-  `SqliteEdge` maps to `SqliteRuntime`; `StorageFailure` maps to the
-  `packages/memory` failure union.
-- **Package purity:** `packages/core` must not import `fs`, `node:*`, `bun:*`,
-  or provider SDKs. Configuration and transport receive ports from the
-  composition root.
-- **App entrypoints:** `apps/coordinator/src/main.ts` and
-  `apps/bot/src/main.ts` are the bin roots. Every other module directory under
-  `apps/*/src` owns `index.ts`.
-- **CLI exemption:** `tools/**/*.mjs` are bin scripts. They are exempt from
-  OOP, facade, and `Result` requirements, but must follow Prettier, import
-  order, and no-comments rules. Exceptions may be caught at the CLI entry
-  boundary.
-- **Sanctioned free functions:** `attempt`, `attemptAsync`, and `assertNever`
-  are the only allowed module-level free functions. Test framework globals
-  (`describe`, `it`, `expect`, `beforeEach`, `afterEach`) are exempt.
-- **Sanctioned throws:** only `assertNever`. `attempt` and `attemptAsync` may
-  contain `try-catch` internally.
-- **Composition roots:** `apps/coordinator/src/main.ts`,
-  `apps/bot/src/main.ts`, and bootstrap CLI entrypoints may construct
-  collaborators.
-- **Comments:** Markdown files, generated architecture output, and CLI usage
-  text may contain prose. TypeScript and JavaScript code must not contain
-  comments.
+### Delete over preserve
+
+- Remove dead code, unused exports, duplicate implementations, stale fixtures,
+  and obsolete documentation.
+- Do not keep "just in case" branches, adapters, or wrappers.
+- Do not leave TODO stubs or half-finished migrations.
+- A compatibility shim is allowed only for a versioned external contract such
+  as a CLI, public API, file format, or spec schema. Name the contract and the
+  condition for removing the shim.
+
+### Refactor toward the current design
+
+- Move, split, merge, or rename modules when the domain model changes.
+- Prefer one coherent architecture over incremental accretion.
+- Update call sites, tests, docs, and generated artifacts in the same change.
+- Delete the old path. Do not keep both implementations.
+- Large refactors need a short plan, explicit boundaries, and a verification
+  step before edits begin.
+
+### Safety rails
+
+- Search references before deleting: `rg`, the type checker, and the test suite.
+- Preserve approved spec sources, evidence, and `spec/spec.lock`; use the
+  proposal and approval workflow.
+- Never delete user data, evidence, or audit artifacts without explicit
+  instruction.
+- Run format, lint, typecheck, and tests after refactoring.
+- If a change alters product direction or module boundaries, add or update a
+  decision record.
+
+## Repository conventions and exceptions
+
+- Specification and direction: `README.md`, `AGENTS.md`, `docs/`, and
+  `docs/design-decisions/`. `spec/` is the self-hosted specification.
+- Result module: `src/core/result.ts`; default failure type is `string`.
+- Toolchain: Bun. Use `bun run format`, `bun run format:check`,
+  `bun run lint`, `bun run typecheck`, `bun test`, `bun run spec`, and
+  `bun run build:workbench` for UI changes.
+- Imports: relative and extensionless. No path aliases exist.
+- Tests: `tests/`; no colocated `*.test.ts`.
+- Entrypoints: `bin/spec.ts`, `src/cli.ts`, and `scripts/mvp.ts`.
+- Generated and ignored trees: `.spec/`, `spec/evidence/`, `spec/audit/`,
+  `spec/**/*.gen.*`, `src/workbench/web/dist/`, `node_modules/`, and `dist/`.
+- Sanctioned free functions: `ok`, `fail`, `attempt`, `attemptAsync`, test
+  framework globals (`describe`, `it`, `expect`, `beforeEach`, `afterEach`), and
+  thin command entrypoints. Existing free functions outside those categories
+  are refactor debt.
+- Sanctioned throws: only inside `attempt` and `attemptAsync`, plus a future
+  `assertNever` if it is added under `src/core/assert.ts`.
+- Composition roots: `bin/spec.ts`, `src/cli.ts`, and
+  `src/workbench/server.ts` may construct collaborators.
+- CLI exemption: `bin/` and `scripts/` are entrypoints. They may use free
+  functions and direct error handling, but must follow Prettier, `Result` at
+  boundaries, and the no-comments rule.
+- Comments: Markdown and CLI usage text may use prose. TypeScript and
+  JavaScript code must not contain comments.
+- Approval, analysis, and AI invariants are defined in §7 and in
+  `docs/design-decisions/0012-architecture-intelligence.md`,
+  `0013-analysis-persistence.md`, and `0014-ai-interpretation-boundary.md`.

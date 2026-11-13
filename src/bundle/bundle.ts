@@ -5,7 +5,7 @@ import type { SpecLock } from "../approval/types"
 import { ProposalImpactAnalyzer } from "../change/impact"
 import { runCheck } from "../core/check"
 import { SpecConfigLoader } from "../core/config"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { loadRequirementSources } from "../core/requirements"
 import type { Diagnostic } from "../core/types"
 import type { EvidenceRecord } from "../evidence"
@@ -119,10 +119,10 @@ export async function runBundle(target: string, options: BundleOptions = {}): Pr
 
 async function loadLock(target: string): Promise<Result<SpecLock | null, string>> {
   const [lock, lockError] = await new SpecLockLoader(target).load()
-  if (lockError === null) return [lock, null]
-  if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
+  if (lockError === null) return ok(lock)
+  if (lockError.code === "SPEC-LOCK-NOT-FOUND") return ok(null)
 
-  return [null, lockError.message]
+  return fail(lockError.message)
 }
 
 async function buildGraph(
@@ -133,7 +133,7 @@ async function buildGraph(
 ): Promise<Result<SpecGraph, string>> {
   const sources = await loadRequirementSources(target)
   const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
-  if (sourceErrors.length > 0) return [null, sourceErrors.map((item) => item.message).join("\n")]
+  if (sourceErrors.length > 0) return fail(sourceErrors.map((item) => item.message).join("\n"))
 
   const builder = new SpecGraphBuilder()
   for (const contribution of await collectWorkspaceContributions(target, sources.blocks)) {
@@ -157,10 +157,10 @@ async function buildGraph(
   })
 
   const [graph, graphError] = builder.build(workspace, { spec: pkg.version })
-  if (graphError !== null) return [null, `${graphError.code}: ${graphError.message}`]
-  if (graph === null) return [null, "graph builder returned no graph"]
+  if (graphError !== null) return fail(`${graphError.code}: ${graphError.message}`)
+  if (graph === null) return fail("graph builder returned no graph")
 
-  return [graph, null]
+  return ok(graph)
 }
 
 async function buildChangeReport(
@@ -173,25 +173,24 @@ async function buildChangeReport(
     options.proposalReader ??
     new BranchProposalReader(options.checkOptions?.processRunner, options.checkOptions?.toolLocator)
   const [context, contextError] = await reader.read(target)
-  if (contextError !== null) return [null, contextError]
-  if (context === null) return [new BundleChangeReportRenderer().empty(commit), null]
+  if (contextError !== null) return fail(contextError)
+  if (context === null) return ok(new BundleChangeReportRenderer().empty(commit))
 
   const [impact, impactError] = await new ProposalImpactAnalyzer(target).analyze(
     context.proposal,
     context.proposal.operations,
     lock,
   )
-  if (impactError !== null) return [null, impactError]
-  if (impact === null) return [null, "impact analysis returned no result"]
+  if (impactError !== null) return fail(impactError)
+  if (impact === null) return fail("impact analysis returned no result")
 
-  return [
+  return ok(
     new BundleChangeReportRenderer().render(
       context.proposal,
       context.proposal.operations,
       impact.impact,
     ),
-    null,
-  ]
+  )
 }
 
 async function outputFiles(

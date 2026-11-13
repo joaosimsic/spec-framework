@@ -1,7 +1,7 @@
 import { cp, mkdir, mkdtemp, rm, stat, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, relative } from "node:path"
-import { attempt, attemptAsync, type Result } from "../../src/core/result"
+import { attempt, attemptAsync, fail, ok, type Result } from "../../src/core/result"
 
 const EXCLUDED_DIRECTORIES = new Set([
   ".git",
@@ -36,7 +36,7 @@ export class MvpWorkspace {
   static async create(repoRoot: string): Promise<Result<MvpWorkspaceContext, string>> {
     const [root, rootError] = await attemptAsync(() => mkdtemp(join(tmpdir(), "spec-mvp-")))
     if (rootError !== null || root === null) {
-      return [null, rootError ?? "cannot create MVP workspace"]
+      return fail(rootError ?? "cannot create MVP workspace")
     }
 
     const target = join(root, "repo")
@@ -46,14 +46,14 @@ export class MvpWorkspace {
         filter: (source) => this.included(repoRoot, source),
       }),
     )
-    if (copyError !== null) return [null, `cannot copy workspace: ${copyError}`]
+    if (copyError !== null) return fail(`cannot copy workspace: ${copyError}`)
 
     const toolDirectory = join(repoRoot, ".spec", "tools")
     const [toolsReady, toolsError] = await attemptAsync(() =>
       Bun.file(join(toolDirectory, "package.json")).exists(),
     )
     if (toolsError !== null || toolsReady !== true) {
-      return [null, "project-local tools are missing; run spec doctor --fix first"]
+      return fail("project-local tools are missing; run spec doctor --fix first")
     }
 
     const [, linkError] = await attemptAsync(async () => {
@@ -62,18 +62,15 @@ export class MvpWorkspace {
       await mkdir(join(target, ".spec"), { recursive: true })
       await symlink(toolDirectory, join(target, ".spec", "tools"), "dir")
     })
-    if (linkError !== null) return [null, `cannot link MVP dependencies: ${linkError}`]
+    if (linkError !== null) return fail(`cannot link MVP dependencies: ${linkError}`)
 
-    return [
-      {
-        root,
-        target,
-        cleanup: async () => {
-          await rm(root, { recursive: true, force: true })
-        },
+    return ok({
+      root,
+      target,
+      cleanup: async () => {
+        await rm(root, { recursive: true, force: true })
       },
-      null,
-    ]
+    })
   }
 
   private static async linkDirectory(
@@ -157,14 +154,15 @@ export class MvpRunner {
     let last: CommandResult | null = null
     for (const command of commands) {
       const [result, error] = await this.git(command)
-      if (error !== null) return [null, error]
+      if (error !== null) return fail(error)
       if (result === null || result.code !== 0) {
-        return [null, `git ${command.join(" ")} failed\n${result?.stderr ?? "no result"}`]
+        return fail(`git ${command.join(" ")} failed\n${result?.stderr ?? "no result"}`)
       }
       last = result
     }
 
-    return [last, null]
+    if (last === null) return fail("git initialization produced no result")
+    return ok(last)
   }
 
   private async run(
@@ -183,17 +181,17 @@ export class MvpRunner {
       }),
     )
     if (spawnError !== null || child === null) {
-      return [null, spawnError ?? "process did not start"]
+      return fail(spawnError ?? "process did not start")
     }
 
     if (options.input !== undefined) {
       const stdin = child.stdin
-      if (stdin === undefined) return [null, "process input is unavailable"]
+      if (stdin === undefined) return fail("process input is unavailable")
       const [, writeError] = await attemptAsync(async () => {
         stdin.write(options.input ?? "")
         await stdin.end()
       })
-      if (writeError !== null) return [null, `cannot send process input: ${writeError}`]
+      if (writeError !== null) return fail(`cannot send process input: ${writeError}`)
     }
 
     const [result, readError] = await attemptAsync(async () => {
@@ -206,10 +204,10 @@ export class MvpRunner {
       return { code, stdout, stderr }
     })
     if (readError !== null || result === null) {
-      return [null, readError ?? "cannot read process output"]
+      return fail(readError ?? "cannot read process output")
     }
 
-    return [result, null]
+    return ok(result)
   }
 }
 

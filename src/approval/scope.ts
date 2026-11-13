@@ -1,5 +1,5 @@
 import { loadRequirementSources } from "../core/requirements"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { C4Element } from "../core/c4"
 import type { SdocBlock } from "../core/types"
 import {
@@ -69,11 +69,11 @@ export class ApprovalScopeResolver {
 
     for (const scope of scopes) {
       const term = scope.trim()
-      if (term === "") return [null, this.notFound(scope)]
+      if (term === "") return fail(this.notFound(scope))
 
       const [matched, matchFailure] = this.match(term)
-      if (matchFailure !== null) return [null, matchFailure]
-      if (matched === null) return [null, this.notFound(term)]
+      if (matchFailure !== null) return fail(matchFailure)
+      if (matched === null) return fail(this.notFound(term))
 
       for (const target of this.expand(matched)) {
         const id = this.id(target)
@@ -91,14 +91,11 @@ export class ApprovalScopeResolver {
       }
     }
 
-    return [
-      {
-        ids: selections.map((selection) => selection.id),
-        selections,
-        labels: Object.fromEntries(selections.map((selection) => [selection.id, selection.label])),
-      },
-      null,
-    ]
+    return ok({
+      ids: selections.map((selection) => selection.id),
+      selections,
+      labels: Object.fromEntries(selections.map((selection) => [selection.id, selection.label])),
+    })
   }
 
   private addTarget(target: ApprovalTarget): void {
@@ -119,8 +116,8 @@ export class ApprovalScopeResolver {
     if (byId !== undefined) return this.approvable(byId)
 
     const matches = this.byTitle.get(this.normalize(term)) ?? []
-    if (matches.length === 0) return [null, null]
-    if (matches.length > 1) return [null, this.ambiguous(term, matches)]
+    if (matches.length === 0) return ok(null)
+    if (matches.length > 1) return fail(this.ambiguous(term, matches))
 
     return this.approvable(matches[0] ?? null)
   }
@@ -128,19 +125,16 @@ export class ApprovalScopeResolver {
   private approvable(
     target: ApprovalTarget | null,
   ): Result<ApprovalTarget | null, ApprovalScopeFailure> {
-    if (target === null) return [null, null]
+    if (target === null) return ok(null)
 
-    if (this.isApprovable(target)) return [target, null]
+    if (this.isApprovable(target)) return ok(target)
 
     const id = this.id(target)
 
-    return [
-      null,
-      {
-        code: "SCOPE-NOT-APPROVABLE",
-        message: `${id} is not an approvable element`,
-      },
-    ]
+    return fail({
+      code: "SCOPE-NOT-APPROVABLE",
+      message: `${id} is not an approvable element`,
+    })
   }
 
   private expand(target: ApprovalTarget): ApprovalTarget[] {
@@ -279,7 +273,7 @@ export class ApprovalScopeLoader {
       (item) => item.level === "error" && item.code !== "SPEC-NO-REQUIREMENTS",
     )
     if (sourceErrors.length > 0) {
-      return [null, sourceErrors.map((item) => item.message).join("\n")]
+      return fail(sourceErrors.map((item) => item.message).join("\n"))
     }
 
     const [loadedArchitecture, architectureError] = await new ArchitectureCatalogLoader(
@@ -289,13 +283,13 @@ export class ApprovalScopeLoader {
       architectureError !== null &&
       architectureError !== "no LikeC4 architecture sources found"
     ) {
-      return [null, architectureError]
+      return fail(architectureError)
     }
     const architecture = loadedArchitecture ?? { elements: [], relationships: [] }
 
     const [locked, lockError] = await new SpecLockLoader(this.target).load()
     if (lockError !== null && lockError.code !== "SPEC-LOCK-NOT-FOUND") {
-      return [null, lockError.message]
+      return fail(lockError.message)
     }
     const lock = lockError === null ? locked : null
 
@@ -304,9 +298,9 @@ export class ApprovalScopeLoader {
       lock,
       architecture,
     ).resolve(scopes)
-    if (failure !== null) return [null, this.describe(failure)]
+    if (failure !== null) return fail(this.describe(failure))
 
-    return [resolution, null]
+    return ok(resolution)
   }
 
   private describe(failure: ApprovalScopeFailure): string {

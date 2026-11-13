@@ -1,4 +1,5 @@
 import type { SpecLock } from "../approval/types"
+import type { Result } from "../core/result"
 import type { Diagnostic } from "../core/types"
 import type { GraphFinding } from "../model/types"
 import type { CheckOptions } from "../core/check"
@@ -23,7 +24,7 @@ export interface ProposalContext {
 }
 
 export interface ProposalContextReader {
-  read(target: string): Promise<[ProposalContext | null, string | null]>
+  read(target: string): Promise<Result<ProposalContext | null, string>>
 }
 
 export interface BundleSource {

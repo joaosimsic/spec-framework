@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises"
 import { join, relative } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { CurationParser } from "./curation-parser"
 import {
   MAPPING_SNAPSHOT_VERSION,
@@ -21,17 +21,17 @@ export class MappingSnapshotStore {
 
   async load(branch: string): Promise<Result<MappingSnapshot, string>> {
     const slug = this.slugFor(branch)
-    if (slug === null) return [null, `no active mapping proposal on branch '${branch}'`]
+    if (slug === null) return fail(`no active mapping proposal on branch '${branch}'`)
 
     const path = this.pathFor(slug)
     const [text, readError] = await attemptAsync(() => Bun.file(path).text())
     if (readError !== null || text === null) {
-      return [null, readError === null ? `cannot read ${path}` : readError]
+      return fail(readError === null ? `cannot read ${path}` : readError)
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError !== null || parsed === null) {
-      return [null, `invalid JSON in ${path}: ${parseError ?? "empty document"}`]
+      return fail(`invalid JSON in ${path}: ${parseError ?? "empty document"}`)
     }
 
     return this.validate(parsed, path)
@@ -43,7 +43,7 @@ export class MappingSnapshotStore {
     decisions: CurationDecision[],
   ): Promise<Result<string, string>> {
     const slug = this.slugFor(branch)
-    if (slug === null) return [null, `no active mapping proposal on branch '${branch}'`]
+    if (slug === null) return fail(`no active mapping proposal on branch '${branch}'`)
 
     const path = this.pathFor(slug)
     const snapshot: MappingSnapshot = {
@@ -58,10 +58,10 @@ export class MappingSnapshotStore {
       return path
     })
     if (writeError !== null || written === null) {
-      return [null, writeError === null ? `cannot write ${path}` : writeError]
+      return fail(writeError === null ? `cannot write ${path}` : writeError)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   async writeDraft(areas: DraftElement[]): Promise<Result<string, string>> {
@@ -73,36 +73,33 @@ export class MappingSnapshotStore {
       return path
     })
     if (writeError !== null || written === null) {
-      return [null, writeError === null ? `cannot write ${path}` : writeError]
+      return fail(writeError === null ? `cannot write ${path}` : writeError)
     }
 
-    return [relative(this.target, written), null]
+    return ok(relative(this.target, written))
   }
 
   private validate(value: unknown, path: string): Result<MappingSnapshot, string> {
-    if (!this.isRecord(value)) return [null, `${path}: mapping snapshot must be an object`]
+    if (!this.isRecord(value)) return fail(`${path}: mapping snapshot must be an object`)
     if (value["version"] !== MAPPING_SNAPSHOT_VERSION) {
-      return [null, `${path}: unsupported mapping snapshot version`]
+      return fail(`${path}: unsupported mapping snapshot version`)
     }
 
     const map = value["map"]
-    if (!this.isRecord(map)) return [null, `${path}: map must be an object`]
-    if (!Array.isArray(map["elements"])) return [null, `${path}: map.elements must be an array`]
-    if (!this.isRecord(map["gaps"])) return [null, `${path}: map.gaps must be an object`]
+    if (!this.isRecord(map)) return fail(`${path}: map must be an object`)
+    if (!Array.isArray(map["elements"])) return fail(`${path}: map.elements must be an array`)
+    if (!this.isRecord(map["gaps"])) return fail(`${path}: map.gaps must be an object`)
 
     const [decisions, decisionsError] = CurationParser.parseDecisions(value["decisions"])
     if (decisionsError !== null || decisions === null) {
-      return [null, `${path}: ${decisionsError ?? "decisions failed"}`]
+      return fail(`${path}: ${decisionsError ?? "decisions failed"}`)
     }
 
-    return [
-      {
-        version: MAPPING_SNAPSHOT_VERSION,
-        map: map as unknown as MapReport,
-        decisions,
-      },
-      null,
-    ]
+    return ok({
+      version: MAPPING_SNAPSHOT_VERSION,
+      map: map as unknown as MapReport,
+      decisions,
+    })
   }
 
   private slugFor(branch: string): string | null {

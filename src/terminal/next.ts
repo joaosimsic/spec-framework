@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { WorkbenchService } from "../workbench/service"
 import type { WorkbenchContextView } from "../workbench/types"
 
@@ -12,15 +12,12 @@ export class TerminalNextReporter {
 
   async read(): Promise<Result<TerminalNextView, string>> {
     const [context, error] = await this.service.context([])
-    if (error !== null) return [null, error.message]
-    if (context === null) return [null, "context unavailable"]
+    if (error !== null) return fail(error.message)
+    if (context === null) return fail("context unavailable")
 
-    return [
-      {
-        mode: context.proposal?.mode ?? "read-only",
-        context,
-      },
-      null,
-    ]
+    return ok({
+      mode: context.proposal?.mode ?? "read-only",
+      context,
+    })
   }
 }

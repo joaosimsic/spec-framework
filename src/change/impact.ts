@@ -1,7 +1,7 @@
 import { elementContentHash } from "../approval/hash"
 import type { SpecLock } from "../approval/types"
 import { loadRequirementSources } from "../core/requirements"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { SdocBlock } from "../core/types"
 import { ImpactAnalyzer, type ImpactApproval, type ImpactReport } from "../model"
 import type { GraphWorkspace, SpecGraph } from "../model/types"
@@ -27,13 +27,13 @@ export class ProposalImpactAnalyzer {
       dirty: true,
     }
     const [graph, graphError] = await new ProposalGraphLoader().load(this.target, workspace)
-    if (graphError !== null) return [null, graphError]
-    if (graph === null) return [null, "graph loader returned no graph"]
+    if (graphError !== null) return fail(graphError)
+    if (graph === null) return fail("graph loader returned no graph")
 
     const sources = await loadRequirementSources(this.target)
     const sourceErrors = sources.diagnostics.filter((item) => item.level === "error")
     if (sourceErrors.length > 0) {
-      return [null, sourceErrors.map((item) => item.message).join("\n")]
+      return fail(sourceErrors.map((item) => item.message).join("\n"))
     }
 
     const blocks = this.blocksById(sources.blocks)
@@ -41,7 +41,7 @@ export class ProposalImpactAnalyzer {
     const approvals = this.approvals(lock)
     const impact = new ImpactAnalyzer().analyze(graph, changedIds, approvals)
 
-    return [{ graph, impact }, null]
+    return ok({ graph, impact })
   }
 
   private blocksById(blocks: SdocBlock[]): Map<string, SdocBlock> {

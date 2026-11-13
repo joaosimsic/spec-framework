@@ -1,5 +1,6 @@
 import { ProposalStore } from "../change/store"
 import { GitProposalRepository } from "../change/git"
+import { fail, ok, type Result } from "../core/result"
 import type { ProcessRunner, ToolLocator } from "../core/runner"
 import type { ProposalContext, ProposalContextReader } from "./types"
 
@@ -13,16 +14,16 @@ export class BranchProposalReader implements ProposalContextReader {
         : new GitProposalRepository(processRunner, toolLocator)
   }
 
-  async read(target: string): Promise<[ProposalContext | null, string | null]> {
+  async read(target: string): Promise<Result<ProposalContext | null, string>> {
     const [state, stateError] = await this.git.readState(target)
-    if (stateError !== null) return [null, `cannot read proposal branch: ${stateError}`]
-    if (state === null) return [null, "proposal branch reader returned no state"]
-    if (!state.branch.startsWith("spec/")) return [null, null]
+    if (stateError !== null) return fail(`cannot read proposal branch: ${stateError}`)
+    if (state === null) return fail("proposal branch reader returned no state")
+    if (!state.branch.startsWith("spec/")) return ok(null)
 
     const [proposal, proposalError] = await new ProposalStore(target).loadForBranch(state.branch)
-    if (proposalError !== null) return [null, proposalError]
-    if (proposal === null) return [null, "active proposal was not found"]
+    if (proposalError !== null) return fail(proposalError)
+    if (proposal === null) return fail("active proposal was not found")
 
-    return [{ branch: state.branch, proposal }, null]
+    return ok({ branch: state.branch, proposal })
   }
 }

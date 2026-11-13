@@ -1,5 +1,6 @@
 import { join } from "node:path"
 import { attempt, attemptAsync, type Result } from "./result"
+import { ok, fail } from "./result"
 
 export type ToolchainStatus = "unprovisioned" | "partial" | "provisioned"
 
@@ -40,23 +41,20 @@ export class ToolchainLockStore {
   async load(): Promise<Result<ToolchainLock, ToolchainFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.path).exists())
     if (existsError !== null) {
-      return [null, this.failure("TOOLCHAIN-NO-LOCK", `cannot read ${this.path}: ${existsError}`)]
+      return fail(this.failure("TOOLCHAIN-NO-LOCK", `cannot read ${this.path}: ${existsError}`))
     }
     if (!exists) {
-      return [null, this.failure("TOOLCHAIN-NO-LOCK", `missing ${this.path}; run spec init`)]
+      return fail(this.failure("TOOLCHAIN-NO-LOCK", `missing ${this.path}; run spec init`))
     }
 
     const [text, readError] = await attemptAsync(() => Bun.file(this.path).text())
     if (readError !== null || text === null) {
-      return [null, this.failure("TOOLCHAIN-NO-LOCK", `cannot read ${this.path}`)]
+      return fail(this.failure("TOOLCHAIN-NO-LOCK", `cannot read ${this.path}`))
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError !== null) {
-      return [
-        null,
-        this.failure("TOOLCHAIN-BAD-LOCK", `invalid JSON in ${this.path}: ${parseError}`),
-      ]
+      return fail(this.failure("TOOLCHAIN-BAD-LOCK", `invalid JSON in ${this.path}: ${parseError}`))
     }
 
     return this.validate(parsed)
@@ -69,55 +67,53 @@ export class ToolchainLockStore {
     const content = `${JSON.stringify({ schema: lock.schema, status: lock.status, tools }, null, 2)}\n`
     const [, writeError] = await attemptAsync(() => Bun.write(this.path, content))
     if (writeError !== null) {
-      return [
-        null,
+      return fail(
         this.failure("TOOLCHAIN-WRITE-FAILED", `cannot write ${this.path}: ${writeError}`),
-      ]
+      )
     }
 
-    return [lock, null]
+    return ok(lock)
   }
 
   private validate(value: unknown): Result<ToolchainLock, ToolchainFailure> {
     if (!this.isRecord(value)) {
-      return [null, this.failure("TOOLCHAIN-BAD-LOCK", "toolchain lock must be a JSON object")]
+      return fail(this.failure("TOOLCHAIN-BAD-LOCK", "toolchain lock must be a JSON object"))
     }
     if (value.schema !== 1) {
-      return [null, this.failure("TOOLCHAIN-BAD-LOCK", "toolchain lock schema must be 1")]
+      return fail(this.failure("TOOLCHAIN-BAD-LOCK", "toolchain lock schema must be 1"))
     }
     if (!this.isStatus(value.status)) {
-      return [
-        null,
+      return fail(
         this.failure(
           "TOOLCHAIN-BAD-LOCK",
           "toolchain lock status must be unprovisioned, partial, or provisioned",
         ),
-      ]
+      )
     }
 
     const [tools, toolsError] = this.readTools(value.tools)
     if (toolsError !== null || tools === null) {
-      return [null, this.failure("TOOLCHAIN-BAD-LOCK", toolsError ?? "cannot read tools")]
+      return fail(this.failure("TOOLCHAIN-BAD-LOCK", toolsError ?? "cannot read tools"))
     }
 
-    return [{ schema: 1, status: value.status, tools }, null]
+    return ok({ schema: 1, status: value.status, tools })
   }
 
   private readTools(value: unknown): Result<Record<string, string>, string> {
-    if (!this.isRecord(value)) return [null, "toolchain lock tools must be an object"]
+    if (!this.isRecord(value)) return fail("toolchain lock tools must be an object")
 
     const tools: Record<string, string> = {}
     for (const [name, version] of Object.entries(value)) {
       if (typeof version !== "string") {
-        return [null, `toolchain lock version for '${name}' must be a string`]
+        return fail(`toolchain lock version for '${name}' must be a string`)
       }
       if (!ToolchainLockStore.isPinnedVersion(version)) {
-        return [null, `toolchain lock version for '${name}' must be exact, got '${version}'`]
+        return fail(`toolchain lock version for '${name}' must be exact, got '${version}'`)
       }
       tools[name] = version
     }
 
-    return [tools, null]
+    return ok(tools)
   }
 
   private isStatus(value: unknown): value is ToolchainStatus {

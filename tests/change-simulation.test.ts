@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { runChange, runProposalOperations, type ProposalGit } from "../src/change/change"
 import type { Proposal } from "../src/change/types"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { GraphSimulator, GRAPH_VERSION, type SpecGraph } from "../src/model"
 import type { GitProposalState } from "../src/change/types"
 
@@ -42,13 +42,13 @@ class FakeProposalGit implements ProposalGit {
 
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     void target
-    return [this.state, null]
+    return ok(this.state)
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     void target
     void branch
-    return [false, null]
+    return ok(false)
   }
 
   async createBranch(
@@ -58,12 +58,12 @@ class FakeProposalGit implements ProposalGit {
   ): Promise<Result<string, string>> {
     void target
     void baseCommit
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     void target
-    return ["tester", null]
+    return ok("tester")
   }
 }
 

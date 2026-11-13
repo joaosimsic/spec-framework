@@ -1,4 +1,4 @@
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 import { collectRequirementFiles, requirementDirectory } from "../core/requirements"
 
 const BLOCK_START = /^\[([A-Z_]+)\]\s*$/
@@ -24,12 +24,12 @@ export class SdocStatusWriter {
     for (const path of files) {
       const [text, readError] = await attemptAsync(() => Bun.file(path).text())
       if (readError || text === null) {
-        return [null, readError === null ? `cannot read ${path}` : readError]
+        return fail(readError === null ? `cannot read ${path}` : readError)
       }
 
       const [rewrite, rewriteError] = this.rewrite(text, ids, status)
       if (rewriteError || rewrite === null) {
-        return [null, `${path}: ${rewriteError ?? "could not rewrite status"}`]
+        return fail(`${path}: ${rewriteError ?? "could not rewrite status"}`)
       }
       if (rewrite.changed) updates.push({ path, text: rewrite.text })
     }
@@ -37,11 +37,11 @@ export class SdocStatusWriter {
     const written: string[] = []
     for (const update of updates) {
       const [, writeError] = await attemptAsync(() => Bun.write(update.path, update.text))
-      if (writeError) return [null, `cannot write ${update.path}: ${writeError}`]
+      if (writeError) return fail(`cannot write ${update.path}: ${writeError}`)
       written.push(update.path)
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   private rewrite(text: string, ids: Set<string>, status: string): Result<RewriteResult, string> {
@@ -52,7 +52,7 @@ export class SdocStatusWriter {
     for (const [lineIndex, line] of lines.entries()) {
       if (BLOCK_START.test(line)) {
         const failure = this.finishBlock(current, ids, status, lines)
-        if (failure !== null) return [null, failure]
+        if (failure !== null) return fail(failure)
         current = { uid: null, statusLine: null }
         continue
       }
@@ -66,10 +66,10 @@ export class SdocStatusWriter {
     }
 
     const failure = this.finishBlock(current, ids, status, lines)
-    if (failure !== null) return [null, failure]
+    if (failure !== null) return fail(failure)
 
     const rewritten = lines.join(newline)
-    return [{ text: rewritten, changed: rewritten !== text }, null]
+    return ok({ text: rewritten, changed: rewritten !== text })
   }
 
   private finishBlock(

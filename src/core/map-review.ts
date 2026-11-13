@@ -22,6 +22,7 @@ import type { MapReport } from "../discovery/types"
 import { runMap } from "./map"
 import type { Result } from "./result"
 import type { ProcessRunner, ToolLocator } from "./runner"
+import { ok, fail } from "./result"
 
 export interface MapReviewOptions {
   actions?: CurationAction[]
@@ -88,7 +89,7 @@ async function createProposal(
     toolLocator: options.toolLocator,
   })
   if (mapRun.code !== 0 || mapRun.report === null) {
-    return [null, detail(mapRun.output, MAP_FAILURE_PREFIX)]
+    return fail(detail(mapRun.output, MAP_FAILURE_PREFIX))
   }
 
   const direction = reviewDirection(mapRun.report)
@@ -102,7 +103,7 @@ async function createProposal(
     gitRepository: options.gitRepository,
   })
   if (openError !== null || proposal === null) {
-    return [null, openError ?? "proposal was not opened"]
+    return fail(openError ?? "proposal was not opened")
   }
 
   const [saved, saveError] = await new MappingSnapshotStore(target).save(
@@ -111,10 +112,10 @@ async function createProposal(
     [],
   )
   if (saveError !== null || saved === null) {
-    return [null, saveError ?? "mapping snapshot was not saved"]
+    return fail(saveError ?? "mapping snapshot was not saved")
   }
 
-  return [{ proposal: proposal.proposal }, null]
+  return ok({ proposal: proposal.proposal })
 }
 
 async function resumeProposal(
@@ -123,16 +124,16 @@ async function resumeProposal(
 ): Promise<Result<{ proposal: Proposal }, string>> {
   const [proposal, proposalError] = await new ProposalStore(target).loadForBranch(branch)
   if (proposalError !== null || proposal === null) {
-    return [null, `no active proposal on branch '${branch}': ${proposalError ?? "load failed"}`]
+    return fail(`no active proposal on branch '${branch}': ${proposalError ?? "load failed"}`)
   }
   if (proposal.mode !== "mapping") {
-    return [null, `active proposal '${branch}' is not a mapping review`]
+    return fail(`active proposal '${branch}' is not a mapping review`)
   }
   if (proposal.status === "approved" || proposal.status === "superseded") {
-    return [null, `active proposal '${branch}' is not editable`]
+    return fail(`active proposal '${branch}' is not editable`)
   }
 
-  return [{ proposal }, null]
+  return ok({ proposal })
 }
 
 async function curate(
@@ -147,14 +148,14 @@ async function curate(
     proposal.author,
   )
   if (replayError !== null || engine === null) {
-    return [null, replayError ?? "curation replay failed"]
+    return fail(replayError ?? "curation replay failed")
   }
 
   const actions = options.actions ?? []
   const timestamp = (options.now ?? (() => new Date()))().toISOString()
   for (const action of actions) {
     const [, actionError] = engine.apply(action, timestamp, proposal.author)
-    if (actionError !== null) return [null, actionError]
+    if (actionError !== null) return fail(actionError)
   }
 
   const decisions = engine.decisionsForStorage()
@@ -167,8 +168,8 @@ async function curate(
     actions.length > 0,
     decisions,
   )
-  if (draftError !== null) return [null, draftError]
-  if (savedError !== null) return [null, savedError]
+  if (draftError !== null) return fail(draftError)
+  if (savedError !== null) return fail(savedError)
 
   const state = engine.state()
   const map = curatedMapReport(snapshot.map, state, draftPath)
@@ -179,16 +180,13 @@ async function curate(
     draftPath,
   }
 
-  return [
-    {
-      version: MAPPING_REVIEW_VERSION,
-      review,
-      map,
-      curation,
-      proposal,
-    },
-    null,
-  ]
+  return ok({
+    version: MAPPING_REVIEW_VERSION,
+    review,
+    map,
+    curation,
+    proposal,
+  })
 }
 
 async function persist(

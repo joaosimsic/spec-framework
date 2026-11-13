@@ -1,6 +1,6 @@
 import { ProposalOperationParser } from "../change/operation-parser"
 import type { ProposalOperation } from "../change/types"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { CurationParser } from "../discovery/curation-parser"
 import { WorkbenchFailureFactory, type WorkbenchFailure } from "./failure"
 import type { WorkbenchSecurity } from "./security"
@@ -23,7 +23,7 @@ export class WorkbenchRouter {
     const segments = url.pathname.split("/").filter(Boolean)
     const mutation = request.method !== "GET" && request.method !== "HEAD"
     const [, securityFailure] = this.options.security.check(request, mutation)
-    if (securityFailure !== null) return [null, securityFailure]
+    if (securityFailure !== null) return fail(securityFailure)
 
     return this.route(request, url, segments)
   }
@@ -64,7 +64,7 @@ export class WorkbenchRouter {
       }
     }
 
-    return [null, WorkbenchFailureFactory.notFound("unknown workbench endpoint")]
+    return fail(WorkbenchFailureFactory.notFound("unknown workbench endpoint"))
   }
 
   private async session(): Promise<Result<Response, WorkbenchFailure>> {
@@ -72,112 +72,112 @@ export class WorkbenchRouter {
       this.options.security.token,
       this.options.assetReady,
     )
-    if (sessionError !== null) return [null, sessionError]
-    if (session === null) return [null, WorkbenchFailureFactory.internal("session unavailable")]
+    if (sessionError !== null) return fail(sessionError)
+    if (session === null) return fail(WorkbenchFailureFactory.internal("session unavailable"))
 
-    return [this.json(session), null]
+    return ok(this.json(session))
   }
 
   private async graph(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.graph()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("graph unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("graph unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async context(url: URL): Promise<Result<Response, WorkbenchFailure>> {
     const names = [...url.searchParams.getAll("name")]
     const [view, viewError] = await this.options.service.context(names)
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("context unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("context unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async change(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.change()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("change unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("change unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async impact(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.impact()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("impact unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("impact unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async diff(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.diff()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("diff unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("diff unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async architectureGraph(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.architectureGraph()
-    if (viewError !== null) return [null, viewError]
+    if (viewError !== null) return fail(viewError)
     if (view === null) {
-      return [null, WorkbenchFailureFactory.internal("architecture graph unavailable")]
+      return fail(WorkbenchFailureFactory.internal("architecture graph unavailable"))
     }
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async repoGraph(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.repoGraph()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("repo graph unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("repo graph unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async mapping(): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.mapping()
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("mapping unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("mapping unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async check(request: Request): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
-    if (bodyError !== null) return [null, bodyError]
+    if (bodyError !== null) return fail(bodyError)
     if (!this.isRecord(body))
-      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+      return fail(WorkbenchFailureFactory.badRequest("body must be an object"))
     if (body["structural"] !== undefined && typeof body["structural"] !== "boolean") {
-      return [null, WorkbenchFailureFactory.badRequest("structural must be a boolean")]
+      return fail(WorkbenchFailureFactory.badRequest("structural must be a boolean"))
     }
 
     const [view, viewError] = await this.options.service.check(body["structural"] === true)
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("check unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("check unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async mappingActions(request: Request): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
-    if (bodyError !== null) return [null, bodyError]
+    if (bodyError !== null) return fail(bodyError)
     if (!this.isRecord(body))
-      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+      return fail(WorkbenchFailureFactory.badRequest("body must be an object"))
 
     const [actions, actionsError] = CurationParser.parseList(body["actions"])
-    if (actionsError !== null) return [null, WorkbenchFailureFactory.badRequest(actionsError)]
-    if (actions === null) return [null, WorkbenchFailureFactory.badRequest("no actions supplied")]
+    if (actionsError !== null) return fail(WorkbenchFailureFactory.badRequest(actionsError))
+    if (actions === null) return fail(WorkbenchFailureFactory.badRequest("no actions supplied"))
 
     const [view, viewError] = await this.options.service.applyMapping(
       actions as WorkbenchCurationRequest[],
     )
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("mapping unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("mapping unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async operations(
@@ -185,37 +185,37 @@ export class WorkbenchRouter {
     proposalRef: string,
   ): Promise<Result<Response, WorkbenchFailure>> {
     const [body, bodyError] = await this.body(request)
-    if (bodyError !== null) return [null, bodyError]
+    if (bodyError !== null) return fail(bodyError)
     if (!this.isRecord(body))
-      return [null, WorkbenchFailureFactory.badRequest("body must be an object")]
+      return fail(WorkbenchFailureFactory.badRequest("body must be an object"))
     if (body["simulate"] !== undefined && typeof body["simulate"] !== "boolean") {
-      return [null, WorkbenchFailureFactory.badRequest("simulate must be a boolean")]
+      return fail(WorkbenchFailureFactory.badRequest("simulate must be a boolean"))
     }
 
     const [operations, operationsError] = ProposalOperationParser.parseList(body["operations"])
     if (operationsError !== null) {
-      return [null, WorkbenchFailureFactory.badRequest(operationsError)]
+      return fail(WorkbenchFailureFactory.badRequest(operationsError))
     }
     if (operations === null)
-      return [null, WorkbenchFailureFactory.badRequest("no operations supplied")]
+      return fail(WorkbenchFailureFactory.badRequest("no operations supplied"))
 
     const [view, viewError] = await this.options.service.operations(
       proposalRef,
       operations as ProposalOperation[],
       body["simulate"] !== false,
     )
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("change unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("change unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async technical(proposalRef: string): Promise<Result<Response, WorkbenchFailure>> {
     const [view, viewError] = await this.options.service.technical(proposalRef)
-    if (viewError !== null) return [null, viewError]
-    if (view === null) return [null, WorkbenchFailureFactory.internal("technical view unavailable")]
+    if (viewError !== null) return fail(viewError)
+    if (view === null) return fail(WorkbenchFailureFactory.internal("technical view unavailable"))
 
-    return [this.json(view), null]
+    return ok(this.json(view))
   }
 
   private async method(
@@ -224,14 +224,11 @@ export class WorkbenchRouter {
     handler: () => Promise<Result<Response, WorkbenchFailure>>,
   ): Promise<Result<Response, WorkbenchFailure>> {
     if (actual !== expected) {
-      return [
-        null,
-        {
-          code: "WORKBENCH-METHOD",
-          message: `method ${actual} is not allowed`,
-          status: 405,
-        },
-      ]
+      return fail({
+        code: "WORKBENCH-METHOD",
+        message: `method ${actual} is not allowed`,
+        status: 405,
+      })
     }
 
     return handler()
@@ -240,16 +237,16 @@ export class WorkbenchRouter {
   private async body(request: Request): Promise<Result<unknown, WorkbenchFailure>> {
     const [text, textError] = await attemptAsync(() => request.text())
     if (textError !== null || text === null) {
-      return [null, WorkbenchFailureFactory.badRequest(textError ?? "cannot read request body")]
+      return fail(WorkbenchFailureFactory.badRequest(textError ?? "cannot read request body"))
     }
     if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
-      return [null, WorkbenchFailureFactory.badRequest("request body is too large")]
+      return fail(WorkbenchFailureFactory.badRequest("request body is too large"))
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
-    if (parseError !== null) return [null, WorkbenchFailureFactory.badRequest("invalid JSON body")]
+    if (parseError !== null) return fail(WorkbenchFailureFactory.badRequest("invalid JSON body"))
 
-    return [parsed, null]
+    return ok(parsed)
   }
 
   private json(value: unknown, status = 200): Response {

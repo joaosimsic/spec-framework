@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { EvidenceFactory, EvidenceStore } from "../src/evidence"
 import type { GraphWorkspace } from "../src/model/types"
 import { runQuery } from "../src/query/index"
@@ -44,7 +44,7 @@ class FakeWorkspaceReader implements WorkspaceMetadataReader {
   async read(target: string): Promise<Result<GraphWorkspace, string>> {
     void target
 
-    return [this.workspace, null]
+    return ok(this.workspace)
   }
 }
 

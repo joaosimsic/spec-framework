@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import { EvidenceHasher } from "./hash"
 import {
   EVIDENCE_VERSION,
@@ -28,80 +28,65 @@ export class EvidenceCollector {
 
     for (const record of records) {
       const [validated, validationError] = this.validate(record)
-      if (validationError !== null) return [null, validationError]
-      if (validated === null) return [null, this.failure("EVIDENCE-BAD-RECORD", "record failed")]
+      if (validationError !== null) return fail(validationError)
+      if (validated === null) return fail(this.failure("EVIDENCE-BAD-RECORD", "record failed"))
       if (byId.has(validated.id)) {
-        return [
-          null,
+        return fail(
           this.failure("EVIDENCE-DUPLICATE-ID", `duplicate evidence id '${validated.id}'`),
-        ]
+        )
       }
 
       byId.set(validated.id, validated)
     }
 
-    return [[...byId.values()].sort((left, right) => left.id.localeCompare(right.id)), null]
+    return ok([...byId.values()].sort((left, right) => left.id.localeCompare(right.id)))
   }
 
   validate(value: unknown): Result<EvidenceRecord, EvidenceFailure> {
     if (!this.isRecord(value)) {
-      return [null, this.failure("EVIDENCE-BAD-RECORD", "evidence must be an object")]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", "evidence must be an object"))
     }
     if (value["version"] !== EVIDENCE_VERSION) {
-      return [
-        null,
+      return fail(
         this.failure(
           "EVIDENCE-BAD-RECORD",
           `unsupported evidence version '${String(value["version"])}'`,
         ),
-      ]
+      )
     }
     if (!this.isNonEmptyString(value["id"]) || !EVIDENCE_ID.test(value["id"])) {
-      return [
-        null,
+      return fail(
         this.failure("EVIDENCE-BAD-RECORD", "evidence id must be a safe EVD-* identifier"),
-      ]
+      )
     }
     if (!this.isNonEmptyString(value["kind"])) {
-      return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} kind is invalid`)]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} kind is invalid`))
     }
     if (!METHODS.includes(value["method"] as EvidenceMethod)) {
-      return [
-        null,
-        this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} method is invalid`),
-      ]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} method is invalid`))
     }
     if (!this.isNonEmptyString(value["tool"])) {
-      return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} tool is invalid`)]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} tool is invalid`))
     }
     if (!RESULTS.includes(value["result"] as EvidenceResult)) {
-      return [
-        null,
-        this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} result is invalid`),
-      ]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} result is invalid`))
     }
     if (!this.isNonEmptyString(value["hash"]) || !this.isNonEmptyString(value["input_hash"])) {
-      return [
-        null,
-        this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} hashes are invalid`),
-      ]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} hashes are invalid`))
     }
 
     const [inputs, inputError] = this.readInputs(value["inputs"], value["id"])
-    if (inputError !== null) return [null, inputError]
+    if (inputError !== null) return fail(inputError)
     if (inputs === null) {
-      return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} inputs failed`)]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} inputs failed`))
     }
 
     const [command, commandError] = this.readCommand(value["command"], value["id"])
-    if (commandError !== null) return [null, commandError]
+    if (commandError !== null) return fail(commandError)
 
     const details = value["details"]
     if (details !== undefined && typeof details !== "string") {
-      return [
-        null,
-        this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} details is invalid`),
-      ]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${value["id"]} details is invalid`))
     }
 
     const record: EvidenceRecord = {
@@ -119,19 +104,17 @@ export class EvidenceCollector {
     }
 
     if (EvidenceHasher.recordHash(record) !== record.hash) {
-      return [
-        null,
+      return fail(
         this.failure("EVIDENCE-BAD-HASH", `evidence ${record.id} hash does not match its content`),
-      ]
+      )
     }
     if (EvidenceHasher.inputHash(record.inputs) !== record.input_hash) {
-      return [
-        null,
+      return fail(
         this.failure("EVIDENCE-BAD-HASH", `evidence ${record.id} input hash does not match`),
-      ]
+      )
     }
 
-    return [record, null]
+    return ok(record)
   }
 
   private readInputs(
@@ -139,33 +122,32 @@ export class EvidenceCollector {
     id: string,
   ): Result<EvidenceRecord["inputs"], EvidenceFailure> {
     if (!Array.isArray(value)) {
-      return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} inputs must be an array`)]
+      return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} inputs must be an array`))
     }
 
     const inputs: EvidenceRecord["inputs"] = []
     for (const candidate of value) {
       if (!this.isRecord(candidate)) {
-        return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} input must be an object`)]
+        return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} input must be an object`))
       }
       if (!this.isNonEmptyString(candidate["path"]) || !this.isNonEmptyString(candidate["hash"])) {
-        return [null, this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} input is invalid`)]
+        return fail(this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} input is invalid`))
       }
       inputs.push({ path: candidate["path"], hash: candidate["hash"] })
     }
 
-    return [inputs, null]
+    return ok(inputs)
   }
 
   private readCommand(value: unknown, id: string): Result<string[] | null, EvidenceFailure> {
-    if (value === undefined) return [null, null]
+    if (value === undefined) return ok(null)
     if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
-      return [
-        null,
+      return fail(
         this.failure("EVIDENCE-BAD-RECORD", `evidence ${id} command must be a string array`),
-      ]
+      )
     }
 
-    return [[...value], null]
+    return ok([...value])
   }
 
   private isNonEmptyString(value: unknown): value is string {

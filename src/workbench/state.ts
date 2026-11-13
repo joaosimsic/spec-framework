@@ -5,7 +5,7 @@ import { GitProposalRepository } from "../change/git"
 import { ProposalGraphLoader } from "../change/graph-loader"
 import { ProposalStore } from "../change/store"
 import type { GitProposalState, Proposal } from "../change/types"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { ProcessRunner, ToolLocator } from "../core/runner"
 import { MappingCurationEngine } from "../discovery/curation"
 import type { MappingCurationState, MappingSnapshot } from "../discovery/curation-types"
@@ -47,16 +47,16 @@ export class WorkbenchStateReader {
 
   async readWorkspace(): Promise<Result<WorkbenchWorkspace, string>> {
     const [state, stateError] = await this.git.readState(this.target)
-    if (stateError !== null) return [null, `cannot read workspace: ${stateError}`]
-    if (state === null) return [null, "workspace reader returned no metadata"]
+    if (stateError !== null) return fail(`cannot read workspace: ${stateError}`)
+    if (state === null) return fail("workspace reader returned no metadata")
 
     const [proposal, proposalError] = await this.readProposal(state.branch)
-    if (proposalError !== null) return [null, proposalError]
+    if (proposalError !== null) return fail(proposalError)
 
     const [lock, lockError] = await this.readLock()
-    if (lockError !== null) return [null, lockError]
+    if (lockError !== null) return fail(lockError)
 
-    return [{ state, proposal, lock }, null]
+    return ok({ state, proposal, lock })
   }
 
   async readGraph(state: GitProposalState): Promise<Result<SpecGraph, string>> {
@@ -66,59 +66,56 @@ export class WorkbenchStateReader {
       dirty: !state.clean,
     }
     const [graph, graphError] = await new ProposalGraphLoader().load(this.target, workspace)
-    if (graphError !== null) return [null, graphError]
-    if (graph === null) return [null, "graph loader returned no graph"]
+    if (graphError !== null) return fail(graphError)
+    if (graph === null) return fail("graph loader returned no graph")
 
-    return [graph, null]
+    return ok(graph)
   }
 
   async readMapping(): Promise<Result<WorkbenchMappingState, string>> {
     const [workspace, workspaceError] = await this.readWorkspace()
-    if (workspaceError !== null) return [null, workspaceError]
-    if (workspace === null) return [null, "workspace unavailable"]
-    if (workspace.proposal === null) return [null, "no active mapping proposal"]
+    if (workspaceError !== null) return fail(workspaceError)
+    if (workspace === null) return fail("workspace unavailable")
+    if (workspace.proposal === null) return fail("no active mapping proposal")
     if (workspace.proposal.mode !== "mapping")
-      return [null, "active proposal is not a mapping review"]
+      return fail("active proposal is not a mapping review")
 
     const [snapshot, snapshotError] = await new MappingSnapshotStore(this.target).load(
       workspace.proposal.branch,
     )
-    if (snapshotError !== null) return [null, snapshotError]
-    if (snapshot === null) return [null, "mapping snapshot failed to load"]
+    if (snapshotError !== null) return fail(snapshotError)
+    if (snapshot === null) return fail("mapping snapshot failed to load")
 
     const [engine, replayError] = MappingCurationEngine.replay(
       snapshot.map,
       snapshot.decisions,
       workspace.proposal.author,
     )
-    if (replayError !== null) return [null, replayError]
-    if (engine === null) return [null, "curation replay failed"]
+    if (replayError !== null) return fail(replayError)
+    if (engine === null) return fail("curation replay failed")
 
-    return [
-      {
-        proposal: workspace.proposal,
-        snapshot,
-        curation: engine.state(),
-      },
-      null,
-    ]
+    return ok({
+      proposal: workspace.proposal,
+      snapshot,
+      curation: engine.state(),
+    })
   }
 
   private async readProposal(branch: string): Promise<Result<Proposal | null, string>> {
-    if (!branch.startsWith("spec/")) return [null, null]
+    if (!branch.startsWith("spec/")) return ok(null)
 
     const [proposal, proposalError] = await new ProposalStore(this.target).loadForBranch(branch)
-    if (proposalError !== null) return [null, proposalError]
-    if (proposal === null) return [null, "no active proposal"]
+    if (proposalError !== null) return fail(proposalError)
+    if (proposal === null) return fail("no active proposal")
 
-    return [proposal, null]
+    return ok(proposal)
   }
 
   private async readLock(): Promise<Result<SpecLock | null, string>> {
     const [lock, lockError] = await new SpecLockLoader(this.target).load()
-    if (lockError === null) return [lock, null]
-    if (lockError.code === "SPEC-LOCK-NOT-FOUND") return [null, null]
+    if (lockError === null) return ok(lock)
+    if (lockError.code === "SPEC-LOCK-NOT-FOUND") return ok(null)
 
-    return [null, lockError.message]
+    return fail(lockError.message)
   }
 }

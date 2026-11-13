@@ -10,7 +10,7 @@ import { specLockPath } from "../src/approval/lock"
 import { ApprovalScopeLoader } from "../src/approval/scope"
 import { verifySpecLock } from "../src/approval/verify"
 import { ArchitectureCatalogLoader } from "../src/approval/architecture"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 
 const architecture = `specification {
   element system
@@ -48,7 +48,7 @@ class FakeConfirmation implements ApprovalConfirmation {
 class FakeGitStatus implements GitStatusReader {
   async read(target: string): Promise<Result<boolean, string>> {
     void target
-    return [true, null]
+    return ok(true)
   }
 }
 

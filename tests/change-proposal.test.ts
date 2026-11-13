@@ -8,7 +8,7 @@ import {
   runProposalOperations,
   type ProposalGit,
 } from "../src/change/change"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import type { GitProposalState, Proposal } from "../src/change/types"
 
 const config = {
@@ -50,13 +50,13 @@ class FakeProposalGit implements ProposalGit {
 
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     void target
-    return [this.state, null]
+    return ok(this.state)
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     void target
     void branch
-    return [this.existingBranch, null]
+    return ok(this.existingBranch)
   }
 
   async createBranch(
@@ -67,12 +67,12 @@ class FakeProposalGit implements ProposalGit {
     void target
     this.branches.push(branch)
     this.baseCommits.push(baseCommit)
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     void target
-    return ["tester", null]
+    return ok("tester")
   }
 }
 

@@ -1,5 +1,5 @@
 import type { ProposalOperation } from "../change"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { DisplayEntry } from "../model"
 import { buildOperation } from "../workbench/forms/operation-builder"
 import {
@@ -27,8 +27,8 @@ export class TerminalReworkForm {
     const [target, targetError] = optionalTarget
       ? await this.entries.optional("Linked item?", graphEntries)
       : await this.entries.required("Item", graphEntries)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, null]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return ok(null)
     form.target = target
 
     if (action === "rename") return this.rename(form)
@@ -42,35 +42,35 @@ export class TerminalReworkForm {
     if (action === "record-decision") return this.decision(form)
     if (action === "record-open-question") return this.question(form)
 
-    return [null, `unknown refactor action '${action}'`]
+    return fail(`unknown refactor action '${action}'`)
   }
 
   private async rename(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     form.title = (await this.prompt.required("New name")) ?? ""
-    if (form.title === "") return [null, null]
+    if (form.title === "") return ok(null)
 
     return this.operation(form)
   }
 
   private async deprecate(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     const confirmed = await this.prompt.confirm("Retire this item?")
-    if (confirmed !== true) return [null, null]
+    if (confirmed !== true) return ok(null)
 
     return this.operation(form)
   }
 
   private async replace(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     form.title = (await this.prompt.required("New name")) ?? ""
-    if (form.title === "") return [null, null]
+    if (form.title === "") return ok(null)
     form.statement = (await this.prompt.required("New statement")) ?? ""
-    if (form.statement === "") return [null, null]
+    if (form.statement === "") return ok(null)
 
     return this.operation(form)
   }
 
   private async split(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     const lines = await this.prompt.lines("Part as Title | statement")
-    if (lines === null || lines.length === 0) return [null, null]
+    if (lines === null || lines.length === 0) return ok(null)
     form.parts = lines.join("\n")
 
     return this.operation(form)
@@ -78,12 +78,12 @@ export class TerminalReworkForm {
 
   private async merge(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     const extras = await this.prompt.lines("Additional item name or ref")
-    if (extras === null || extras.length === 0) return [null, null]
+    if (extras === null || extras.length === 0) return ok(null)
     form.extraTargets = extras
     form.title = (await this.prompt.required("New name")) ?? ""
-    if (form.title === "") return [null, null]
+    if (form.title === "") return ok(null)
     form.statement = (await this.prompt.required("New statement")) ?? ""
-    if (form.statement === "") return [null, null]
+    if (form.statement === "") return ok(null)
 
     return this.operation(form)
   }
@@ -93,7 +93,7 @@ export class TerminalReworkForm {
     entries: DisplayEntry[],
   ): Promise<Result<ProposalOperation | null, string>> {
     form.title = (await this.prompt.required("Component name")) ?? ""
-    if (form.title === "") return [null, null]
+    if (form.title === "") return ok(null)
 
     const componentKind = await this.prompt.select("Component kind", [
       { value: "component", label: "Component" },
@@ -101,22 +101,22 @@ export class TerminalReworkForm {
       { value: "data_store", label: "Data store" },
       { value: "external_system", label: "External system" },
     ])
-    if (componentKind === null) return [null, null]
+    if (componentKind === null) return ok(null)
     form.componentKind = componentKind
 
     const [parent, parentError] = await this.entries.optional("Parent component?", entries, [
       "component",
       "system",
     ])
-    if (parentError !== null) return [null, parentError]
-    if (parent === null) return [null, null]
+    if (parentError !== null) return fail(parentError)
+    if (parent === null) return ok(null)
     form.parent = parent
 
     const [source, sourceError] = await this.entries.optional("Requirement link?", entries, [
       "requirement",
     ])
-    if (sourceError !== null) return [null, sourceError]
-    if (source === null) return [null, null]
+    if (sourceError !== null) return fail(sourceError)
+    if (source === null) return ok(null)
     form.source = source
 
     return this.operation(form)
@@ -131,8 +131,8 @@ export class TerminalReworkForm {
       "system",
       "capability",
     ])
-    if (destinationError !== null) return [null, destinationError]
-    if (destination === null) return [null, null]
+    if (destinationError !== null) return fail(destinationError)
+    if (destination === null) return ok(null)
     form.destination = destination
 
     const field = await this.prompt.select("Link type", [
@@ -140,7 +140,7 @@ export class TerminalReworkForm {
       { value: "COMPONENT", label: "Component link" },
       { value: "CAPABILITY", label: "Capability link" },
     ])
-    if (field === null) return [null, null]
+    if (field === null) return ok(null)
     form.moveField = field as OperationForm["moveField"]
 
     return this.operation(form)
@@ -158,9 +158,9 @@ export class TerminalReworkForm {
 
   private async decision(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     form.title = (await this.prompt.required("Decision")) ?? ""
-    if (form.title === "") return [null, null]
+    if (form.title === "") return ok(null)
     form.statement = (await this.prompt.required("Statement")) ?? ""
-    if (form.statement === "") return [null, null]
+    if (form.statement === "") return ok(null)
     form.owner = (await this.prompt.text("Owner (blank to skip)")) ?? ""
 
     return this.operation(form)
@@ -168,7 +168,7 @@ export class TerminalReworkForm {
 
   private async question(form: OperationForm): Promise<Result<ProposalOperation | null, string>> {
     form.question = (await this.prompt.required("Open question")) ?? ""
-    if (form.question === "") return [null, null]
+    if (form.question === "") return ok(null)
     form.owner = (await this.prompt.text("Owner (blank to skip)")) ?? ""
 
     return this.operation(form)
@@ -176,8 +176,8 @@ export class TerminalReworkForm {
 
   private operation(form: OperationForm): Result<ProposalOperation | null, string> {
     const operation = buildOperation(form)
-    if (operation === null) return [null, "operation is incomplete"]
+    if (operation === null) return fail("operation is incomplete")
 
-    return [operation, null]
+    return ok(operation)
   }
 }

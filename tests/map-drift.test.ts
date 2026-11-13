@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { runApproval } from "../src/approval/approve"
 import type { ApprovalConfirmation } from "../src/approval/confirmation"
 import type { GitStatusReader } from "../src/approval/git"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { runMapCheck } from "../src/core/map-check"
 
 const config = {
@@ -47,7 +47,7 @@ class Confirmation implements ApprovalConfirmation {
 class CleanGit implements GitStatusReader {
   async read(target: string): Promise<Result<boolean, string>> {
     void target
-    return [true, null]
+    return ok(true)
   }
 }
 

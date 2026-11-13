@@ -1,4 +1,4 @@
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import {
   DISPLAY_MODEL_VERSION,
   type DisplayChoice,
@@ -97,27 +97,24 @@ export class DisplayProjection {
   resolve(handle: string): Result<DisplayEntry, DisplayFailure> {
     const normalized = handle.trim()
     const byRef = this.entriesByRef.get(normalized)
-    if (byRef !== undefined) return [byRef, null]
+    if (byRef !== undefined) return ok(byRef)
 
     const byId = this.entriesById.get(normalized)
-    if (byId !== undefined) return [byId, null]
+    if (byId !== undefined) return ok(byId)
 
     const matches = this.modelValue.entries.filter(
       (entry) => entry.label.toLowerCase() === normalized.toLowerCase(),
     )
-    if (matches.length === 1) return [matches[0] ?? null, null]
+    if (matches.length === 1) return ok(matches[0] ?? null)
     if (matches.length > 1) {
-      return [
-        null,
-        {
-          code: "DISPLAY-AMBIGUOUS",
-          message: `more than one item is named '${normalized}'`,
-          choices: matches.map((entry) => this.choice(entry)),
-        },
-      ]
+      return fail({
+        code: "DISPLAY-AMBIGUOUS",
+        message: `more than one item is named '${normalized}'`,
+        choices: matches.map((entry) => this.choice(entry)),
+      })
     }
 
-    return [null, { code: "DISPLAY-NOT-FOUND", message: `unknown item: ${normalized}` }]
+    return fail({ code: "DISPLAY-NOT-FOUND", message: `unknown item: ${normalized}` })
   }
 
   private entry(

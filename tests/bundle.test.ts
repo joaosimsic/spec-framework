@@ -7,7 +7,7 @@ import { elementContentHash } from "../src/approval/hash"
 import { SpecLockWriter } from "../src/approval/lock"
 import type { SpecLock } from "../src/approval/types"
 import type { Proposal } from "../src/change/types"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import { parseSdoc, requirementBlocks } from "../src/core/sdoc"
 import { EvidenceFactory, type EvidenceRecord } from "../src/evidence"
 import type { GraphWorkspace } from "../src/model/types"
@@ -65,7 +65,7 @@ class FakeWorkspaceReader implements WorkspaceMetadataReader {
   async read(target: string): Promise<Result<GraphWorkspace, string>> {
     void target
 
-    return [this.workspace, null]
+    return ok(this.workspace)
   }
 }
 
@@ -75,7 +75,7 @@ class FakeProposalReader implements ProposalContextReader {
   async read(target: string): Promise<Result<ProposalContext | null, string>> {
     void target
 
-    return [this.context, null]
+    return ok(this.context)
   }
 }
 

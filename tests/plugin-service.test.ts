@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { ProposalGit } from "../src/change"
 import type { GitProposalState, Proposal } from "../src/change/types"
-import type { Result } from "../src/core/result"
+import { ok, type Result } from "../src/core/result"
 import {
   formatChange,
   formatContext,
@@ -61,13 +61,13 @@ const proposal: Proposal = {
 class FakeProposalGit implements ProposalGit {
   async readState(target: string): Promise<Result<GitProposalState, string>> {
     void target
-    return [{ branch: "spec/add-session-expiry", commit: "base123", clean: true }, null]
+    return ok({ branch: "spec/add-session-expiry", commit: "base123", clean: true })
   }
 
   async branchExists(target: string, branch: string): Promise<Result<boolean, string>> {
     void target
     void branch
-    return [true, null]
+    return ok(true)
   }
 
   async createBranch(
@@ -77,12 +77,12 @@ class FakeProposalGit implements ProposalGit {
   ): Promise<Result<string, string>> {
     void target
     void baseCommit
-    return [branch, null]
+    return ok(branch)
   }
 
   async resolveAuthor(target: string): Promise<Result<string, string>> {
     void target
-    return ["tester", null]
+    return ok("tester")
   }
 }
 

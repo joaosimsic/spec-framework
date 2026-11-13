@@ -1,4 +1,5 @@
 import { loadRequirementSources } from "../core/requirements"
+import { fail, ok, type Result } from "../core/result"
 import type { SdocBlock } from "../core/types"
 import { EvidenceFactory, EvidenceStore, type EvidenceRecord } from "../evidence"
 import {
@@ -142,23 +143,23 @@ export async function runApproval(
 async function loadArchitectureCatalog(
   target: string,
   requested: number,
-): Promise<[ArchitectureCatalog | null, string | null]> {
-  if (requested === 0) return [{ elements: [], relationships: [] }, null]
+): Promise<Result<ArchitectureCatalog | null, string>> {
+  if (requested === 0) return ok({ elements: [], relationships: [] })
 
   return new ArchitectureCatalogLoader(target).load()
 }
 
-function indexBlocks(blocks: SdocBlock[]): [Map<string, SdocBlock> | null, string | null] {
+function indexBlocks(blocks: SdocBlock[]): Result<Map<string, SdocBlock>, string> {
   const byId = new Map<string, SdocBlock>()
 
   for (const block of blocks) {
     const id = block.fields.UID
-    if (!id) return [null, `requirement record at ${block.file}:${block.line} has no UID`]
-    if (byId.has(id)) return [null, `duplicate element ID '${id}'`]
+    if (!id) return fail(`requirement record at ${block.file}:${block.line} has no UID`)
+    if (byId.has(id)) return fail(`duplicate element ID '${id}'`)
     byId.set(id, block)
   }
 
-  return [byId, null]
+  return ok(byId)
 }
 
 function validateScope(

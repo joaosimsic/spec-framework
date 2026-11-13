@@ -1,6 +1,6 @@
 import { mkdir, readdir } from "node:fs/promises"
 import { join } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { EvidenceCollector } from "./collector"
 import type { EvidenceFailure, EvidenceRecord } from "./types"
 
@@ -18,9 +18,9 @@ export class EvidenceStore {
 
   async writeAll(records: EvidenceRecord[]): Promise<Result<string[], EvidenceFailure>> {
     const [collected, collectError] = new EvidenceCollector().collect(records)
-    if (collectError !== null) return [null, collectError]
+    if (collectError !== null) return fail(collectError)
     if (collected === null) {
-      return [null, { code: "EVIDENCE-BAD-RECORD", message: "evidence collection failed" }]
+      return fail({ code: "EVIDENCE-BAD-RECORD", message: "evidence collection failed" })
     }
 
     const [written, writeError] = await attemptAsync(async () => {
@@ -35,16 +35,13 @@ export class EvidenceStore {
       return paths
     })
     if (writeError !== null || written === null) {
-      return [
-        null,
-        {
-          code: "EVIDENCE-BAD-RECORD",
-          message: writeError ?? "cannot write evidence artifacts",
-        },
-      ]
+      return fail({
+        code: "EVIDENCE-BAD-RECORD",
+        message: writeError ?? "cannot write evidence artifacts",
+      })
     }
 
-    return [written, null]
+    return ok(written)
   }
 
   async loadAll(): Promise<EvidenceLoad> {

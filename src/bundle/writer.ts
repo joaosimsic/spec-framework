@@ -1,6 +1,6 @@
 import { mkdir, rm, stat } from "node:fs/promises"
 import { dirname, join } from "node:path"
-import { attemptAsync, type Result } from "../core/result"
+import { attemptAsync, type Result, ok, fail } from "../core/result"
 
 export interface BundleOutputFile {
   path: string
@@ -22,10 +22,10 @@ export class BundleWriter {
   ): Promise<Result<string[], string>> {
     const exists = await this.exists(directory)
     if (exists && !force) {
-      return [null, `bundle destination already exists: ${directory}; pass --force to replace it`]
+      return fail(`bundle destination already exists: ${directory}; pass --force to replace it`)
     }
     if (exists && !(await Bun.file(join(directory, "manifest.json")).exists())) {
-      return [null, `refusing to replace non-bundle directory: ${directory}`]
+      return fail(`refusing to replace non-bundle directory: ${directory}`)
     }
 
     const [written, writeError] = await attemptAsync(async () => {
@@ -43,9 +43,9 @@ export class BundleWriter {
     })
 
     if (writeError !== null || written === null) {
-      return [null, writeError ?? "cannot write bundle"]
+      return fail(writeError ?? "cannot write bundle")
     }
 
-    return [written, null]
+    return ok(written)
   }
 }

@@ -1,5 +1,5 @@
 import type { ProposalOperation } from "../change/types"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { DisplayFailure } from "../model"
 import type { WorkbenchFailure } from "./failure"
 import { WorkbenchGraphDisplay } from "./graph-display"
@@ -14,12 +14,12 @@ export class WorkbenchOperationResolver {
 
     for (const operation of operations) {
       const [next, error] = this.operation(operation)
-      if (error !== null) return [null, error]
+      if (error !== null) return fail(error)
       if (next === null) continue
       resolved.push(next)
     }
 
-    return [resolved, null]
+    return ok(resolved)
   }
 
   private operation(operation: ProposalOperation): Result<ProposalOperation, WorkbenchFailure> {
@@ -53,40 +53,40 @@ export class WorkbenchOperationResolver {
     operation: Extract<ProposalOperation, { kind: "rename" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, error] = this.handle(operation.target)
-    if (error !== null) return [null, error]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (error !== null) return fail(error)
+    if (target === null) return fail(this.notFound(operation.target))
 
-    return [{ ...operation, target }, null]
+    return ok({ ...operation, target })
   }
 
   private deprecate(
     operation: Extract<ProposalOperation, { kind: "deprecate" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, error] = this.handle(operation.target)
-    if (error !== null) return [null, error]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (error !== null) return fail(error)
+    if (target === null) return fail(this.notFound(operation.target))
 
-    return [{ ...operation, target }, null]
+    return ok({ ...operation, target })
   }
 
   private replace(
     operation: Extract<ProposalOperation, { kind: "replace" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, error] = this.handle(operation.target)
-    if (error !== null) return [null, error]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (error !== null) return fail(error)
+    if (target === null) return fail(this.notFound(operation.target))
 
-    return [{ ...operation, target }, null]
+    return ok({ ...operation, target })
   }
 
   private split(
     operation: Extract<ProposalOperation, { kind: "split" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, error] = this.handle(operation.target)
-    if (error !== null) return [null, error]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (error !== null) return fail(error)
+    if (target === null) return fail(this.notFound(operation.target))
 
-    return [{ ...operation, target }, null]
+    return ok({ ...operation, target })
   }
 
   private merge(
@@ -96,113 +96,101 @@ export class WorkbenchOperationResolver {
 
     for (const target of operation.targets) {
       const [resolved, error] = this.handle(target)
-      if (error !== null) return [null, error]
-      if (resolved === null) return [null, this.notFound(target)]
+      if (error !== null) return fail(error)
+      if (resolved === null) return fail(this.notFound(target))
       targets.push(resolved)
     }
 
-    return [{ ...operation, targets }, null]
+    return ok({ ...operation, targets })
   }
 
   private extract(
     operation: Extract<ProposalOperation, { kind: "extract" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, targetError] = this.handle(operation.target)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return fail(this.notFound(operation.target))
 
     const [parent, parentError] = this.optionalHandle(operation.parent)
-    if (parentError !== null) return [null, parentError]
+    if (parentError !== null) return fail(parentError)
 
     const [from, fromError] = this.optionalHandle(operation.from)
-    if (fromError !== null) return [null, fromError]
+    if (fromError !== null) return fail(fromError)
 
-    return [
-      {
-        ...operation,
-        target,
-        ...(parent === null ? {} : { parent }),
-        ...(from === null ? {} : { from }),
-      },
-      null,
-    ]
+    return ok({
+      ...operation,
+      target,
+      ...(parent === null ? {} : { parent }),
+      ...(from === null ? {} : { from }),
+    })
   }
 
   private move(
     operation: Extract<ProposalOperation, { kind: "move" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, targetError] = this.handle(operation.target)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return fail(this.notFound(operation.target))
 
     const [to, toError] = this.handle(operation.to)
-    if (toError !== null) return [null, toError]
-    if (to === null) return [null, this.notFound(operation.to)]
+    if (toError !== null) return fail(toError)
+    if (to === null) return fail(this.notFound(operation.to))
 
     const [from, fromError] = this.optionalHandle(operation.from)
-    if (fromError !== null) return [null, fromError]
+    if (fromError !== null) return fail(fromError)
 
-    return [{ ...operation, target, to, ...(from === null ? {} : { from }) }, null]
+    return ok({ ...operation, target, to, ...(from === null ? {} : { from }) })
   }
 
   private changeContract(
     operation: Extract<ProposalOperation, { kind: "change-contract" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [target, error] = this.handle(operation.target)
-    if (error !== null) return [null, error]
-    if (target === null) return [null, this.notFound(operation.target)]
+    if (error !== null) return fail(error)
+    if (target === null) return fail(this.notFound(operation.target))
 
-    return [{ ...operation, target }, null]
+    return ok({ ...operation, target })
   }
 
   private recordDecision(
     operation: Extract<ProposalOperation, { kind: "record-decision" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const target = this.optionalTarget(operation.target)
-    if (target.error !== null) return [null, target.error]
+    if (target.error !== null) return fail(target.error)
 
-    return [
-      {
-        ...operation,
-        ...(target.value === null ? {} : { target: target.value }),
-      },
-      null,
-    ]
+    return ok({
+      ...operation,
+      ...(target.value === null ? {} : { target: target.value }),
+    })
   }
 
   private recordOpenQuestion(
     operation: Extract<ProposalOperation, { kind: "record-open-question" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const target = this.optionalTarget(operation.target)
-    if (target.error !== null) return [null, target.error]
+    if (target.error !== null) return fail(target.error)
 
-    return [
-      {
-        ...operation,
-        ...(target.value === null ? {} : { target: target.value }),
-      },
-      null,
-    ]
+    return ok({
+      ...operation,
+      ...(target.value === null ? {} : { target: target.value }),
+    })
   }
 
   private addRecord(
     operation: Extract<ProposalOperation, { kind: "add-record" }>,
   ): Result<ProposalOperation, WorkbenchFailure> {
     const [record, recordError] = this.recordFields(operation.record)
-    if (recordError !== null) return [null, recordError]
-    if (record === null) return [null, this.notFound(operation.record.TITLE ?? "record")]
+    if (recordError !== null) return fail(recordError)
+    if (record === null) return fail(this.notFound(operation.record.TITLE ?? "record"))
 
     const [acceptanceOf, acceptanceError] = this.optionalHandle(operation.acceptanceOf)
-    if (acceptanceError !== null) return [null, acceptanceError]
+    if (acceptanceError !== null) return fail(acceptanceError)
 
-    return [
-      {
-        ...operation,
-        record,
-        ...(acceptanceOf === null ? {} : { acceptanceOf }),
-      },
-      null,
-    ]
+    return ok({
+      ...operation,
+      record,
+      ...(acceptanceOf === null ? {} : { acceptanceOf }),
+    })
   }
 
   private recordFields(
@@ -215,28 +203,28 @@ export class WorkbenchOperationResolver {
       if (value === undefined) continue
 
       const [links, linkError] = this.linkValue(value)
-      if (linkError !== null) return [null, linkError]
-      if (links === null) return [null, this.notFound(value)]
+      if (linkError !== null) return fail(linkError)
+      if (links === null) return fail(this.notFound(value))
 
       resolved[field] = links
     }
 
-    return [resolved, null]
+    return ok(resolved)
   }
 
   private linkValue(value: string): Result<string | null, WorkbenchFailure> {
     const handles = value.split(/[,\s]+/).filter(Boolean)
-    if (handles.length === 0) return [null, null]
+    if (handles.length === 0) return ok(null)
 
     const ids: string[] = []
     for (const handle of handles) {
       const [resolved, error] = this.handle(handle)
-      if (error !== null) return [null, error]
-      if (resolved === null) return [null, null]
+      if (error !== null) return fail(error)
+      if (resolved === null) return ok(null)
       ids.push(resolved)
     }
 
-    return [ids.join(" "), null]
+    return ok(ids.join(" "))
   }
 
   private optionalTarget(value: string | undefined): {
@@ -253,17 +241,17 @@ export class WorkbenchOperationResolver {
   }
 
   private optionalHandle(value: string | undefined): Result<string | null, WorkbenchFailure> {
-    if (value === undefined) return [null, null]
+    if (value === undefined) return ok(null)
 
     return this.handle(value)
   }
 
   private handle(value: string): Result<string | null, WorkbenchFailure> {
     const [resolved, failure] = this.display.resolveHandle(value)
-    if (failure !== null) return [null, this.failure(failure)]
-    if (resolved === null) return [null, null]
+    if (failure !== null) return fail(this.failure(failure))
+    if (resolved === null) return ok(null)
 
-    return [resolved, null]
+    return ok(resolved)
   }
 
   private failure(failure: DisplayFailure): WorkbenchFailure {

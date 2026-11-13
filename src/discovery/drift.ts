@@ -7,7 +7,7 @@ import { architectureContentHash } from "../approval/hash"
 import { SpecLockLoader } from "../approval/lock"
 import type { SpecLock } from "../approval/types"
 import { runMap } from "../core/map"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import { ArchitectureGraphSource, loadArchitectureSources } from "../model/architecture"
 import type { GraphElement } from "../model/types"
 
@@ -41,10 +41,10 @@ export class MapDriftAnalyzer {
   async analyze(): Promise<Result<DriftReport, string>> {
     const [locked, lockError] = await new SpecLockLoader(this.target).load()
     if (lockError !== null && lockError.code !== "SPEC-LOCK-NOT-FOUND")
-      return [null, lockError.message]
+      return fail(lockError.message)
     const lock = lockError === null ? locked : null
     const approvedIds = Object.keys(lock?.elements ?? {}).filter(isArchitectureId)
-    if (approvedIds.length === 0) return [this.emptyReport(), null]
+    if (approvedIds.length === 0) return ok(this.emptyReport())
 
     const [architecture, architectureError] = await new ArchitectureCatalogLoader(
       this.target,
@@ -53,17 +53,17 @@ export class MapDriftAnalyzer {
       architectureError !== null &&
       architectureError !== "no LikeC4 architecture sources found"
     ) {
-      return [null, architectureError]
+      return fail(architectureError)
     }
     const catalog = architecture ?? { elements: [], relationships: [] }
 
     const [model, modelError] = await this.modelGraph()
-    if (modelError !== null) return [null, modelError]
-    if (model === null) return [null, "architecture graph returned no result"]
+    if (modelError !== null) return fail(modelError)
+    if (model === null) return fail("architecture graph returned no result")
 
     const [discovered, discoverError] = await this.discoveredGraph()
-    if (discoverError !== null) return [null, discoverError]
-    if (discovered === null) return [null, "discovery returned no result"]
+    if (discoverError !== null) return fail(discoverError)
+    if (discovered === null) return fail("discovery returned no result")
 
     const approvedSet = new Set(approvedIds)
     const findings = [
@@ -73,29 +73,28 @@ export class MapDriftAnalyzer {
       ...this.changedRelations(approvedSet, model, discovered),
     ].sort(compareFindings)
 
-    return [{ approved: approvedIds.length, findings, summary: summarize(findings) }, null]
+    return ok({ approved: approvedIds.length, findings, summary: summarize(findings) })
   }
 
   private async modelGraph(): Promise<Result<GraphElement[] | null, string>> {
     const sources = await loadArchitectureSources(this.target)
     const contribution = new ArchitectureGraphSource().collect(sources)
 
-    return [contribution.elements, null]
+    return ok(contribution.elements)
   }
 
   private async discoveredGraph(): Promise<Result<GraphElement[] | null, string>> {
     const run = await runMap(this.target, { json: true })
-    if (run.code !== 0 || run.report === null) return [null, run.output]
+    if (run.code !== 0 || run.report === null) return fail(run.output)
 
-    return [
+    return ok(
       run.report.elements.map((element) => ({
         id: element.id,
         kind: element.kind,
         title: element.title,
         links: element.links.map((link) => ({ type: link.type, to: link.to })),
       })),
-      null,
-    ]
+    )
   }
 
   private missingInCode(

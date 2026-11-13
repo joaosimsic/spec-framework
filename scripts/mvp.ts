@@ -1,5 +1,5 @@
 import { join } from "node:path"
-import type { Result } from "../src/core/result"
+import { fail, ok, type Result } from "../src/core/result"
 import { MvpFailure, MvpRunner, MvpWorkspace, type CommandResult } from "./mvp/support"
 import { MvpVerification, type GraphSummary } from "./mvp/verify"
 
@@ -26,24 +26,23 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
   progress("prepare workspace")
   const [workspace, workspaceError] = await MvpWorkspace.create(repoRoot)
   if (workspaceError !== null || workspace === null) {
-    return [null, workspaceError ?? "cannot create MVP workspace"]
+    return fail(workspaceError ?? "cannot create MVP workspace")
   }
 
   const runner = new MvpRunner(repoRoot, workspace)
   progress("initialize git")
   const [initialized, initError] = await runner.initializeGit()
-  if (initError !== null) return [null, `${initError}\nworkspace: ${workspace.target}`]
+  if (initError !== null) return fail(`${initError}\nworkspace: ${workspace.target}`)
   if (initialized === null || initialized.code !== 0) {
-    return [
-      null,
+    return fail(
       `${MvpFailure.missing("git init", initialized as CommandResult)}\nworkspace: ${workspace.target}`,
-    ]
+    )
   }
 
   const [doctor, doctorError] = await thisStep(runner, "doctor", ["doctor"])
-  if (doctorError !== null) return [null, `${doctorError}\nworkspace: ${workspace.target}`]
+  if (doctorError !== null) return fail(`${doctorError}\nworkspace: ${workspace.target}`)
   const [checked, checkError] = await thisStep(runner, "check", ["check"])
-  if (checkError !== null) return [null, `${checkError}\nworkspace: ${workspace.target}`]
+  if (checkError !== null) return fail(`${checkError}\nworkspace: ${workspace.target}`)
 
   const [approved, approvalError] = await thisStep(
     runner,
@@ -63,40 +62,39 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
     ],
     { input: "y\n" },
   )
-  if (approvalError !== null) return [null, `${approvalError}\nworkspace: ${workspace.target}`]
+  if (approvalError !== null) return fail(`${approvalError}\nworkspace: ${workspace.target}`)
   void approved
   void checked
   void doctor
 
   progress("commit approved slice")
   const [commit, commitError] = await commitApproval(runner)
-  if (commitError !== null) return [null, `${commitError}\nworkspace: ${workspace.target}`]
+  if (commitError !== null) return fail(`${commitError}\nworkspace: ${workspace.target}`)
   void commit
 
   const [bundleRun, bundleError] = await thisStep(runner, "bundle", ["bundle"])
-  if (bundleError !== null) return [null, `${bundleError}\nworkspace: ${workspace.target}`]
+  if (bundleError !== null) return fail(`${bundleError}\nworkspace: ${workspace.target}`)
   void bundleRun
 
   progress("verify bundle")
   const [bundle, bundleVerifyError] = await MvpVerification.bundle(workspace.target)
   if (bundleVerifyError !== null || bundle === null) {
-    return [
-      null,
+    return fail(
       `${bundleVerifyError ?? "bundle verification failed"}\nworkspace: ${workspace.target}`,
-    ]
+    )
   }
 
   const [query, queryError] = await thisStep(runner, "query", ["query", "--view", "experience"])
-  if (queryError !== null) return [null, `${queryError}\nworkspace: ${workspace.target}`]
+  if (queryError !== null) return fail(`${queryError}\nworkspace: ${workspace.target}`)
   progress("verify query output")
   const [, queryVerifyError] = MvpVerification.query(query?.stdout ?? "")
   if (queryVerifyError !== null) {
-    return [null, `${queryVerifyError}\nworkspace: ${workspace.target}`]
+    return fail(`${queryVerifyError}\nworkspace: ${workspace.target}`)
   }
 
   progress("smoke workbench")
   const [workbench, workbenchError] = await MvpVerification.workbench(workspace.target)
-  if (workbenchError !== null) return [null, `${workbenchError}\nworkspace: ${workspace.target}`]
+  if (workbenchError !== null) return fail(`${workbenchError}\nworkspace: ${workspace.target}`)
   void workbench
 
   const [refactor, refactorError] = await thisStep(runner, "refactor", [
@@ -107,29 +105,29 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
     "--simulate",
     "--json",
   ])
-  if (refactorError !== null) return [null, `${refactorError}\nworkspace: ${workspace.target}`]
+  if (refactorError !== null) return fail(`${refactorError}\nworkspace: ${workspace.target}`)
   progress("verify refactor report")
   const [, refactorVerifyError] = MvpVerification.refactor(refactor?.stdout ?? "")
   if (refactorVerifyError !== null) {
-    return [null, `${refactorVerifyError}\nworkspace: ${workspace.target}`]
+    return fail(`${refactorVerifyError}\nworkspace: ${workspace.target}`)
   }
 
   progress("verify stale approval")
   const [staleCheck, staleError] = await thisStep(runner, "stale check", ["check", "--json"], {
     allowFailure: true,
   })
-  if (staleError !== null) return [null, `${staleError}\nworkspace: ${workspace.target}`]
+  if (staleError !== null) return fail(`${staleError}\nworkspace: ${workspace.target}`)
   if (staleCheck === null)
-    return [null, `stale check produced no result\nworkspace: ${workspace.target}`]
+    return fail(`stale check produced no result\nworkspace: ${workspace.target}`)
   const [, staleVerifyError] = MvpVerification.staleCheck(staleCheck)
   if (staleVerifyError !== null) {
-    return [null, `${staleVerifyError}\nworkspace: ${workspace.target}`]
+    return fail(`${staleVerifyError}\nworkspace: ${workspace.target}`)
   }
 
   progress("commit revised slice")
   const [, proposalCommitError] = await commitChanges(runner, "update mvp slice")
   if (proposalCommitError !== null) {
-    return [null, `${proposalCommitError}\nworkspace: ${workspace.target}`]
+    return fail(`${proposalCommitError}\nworkspace: ${workspace.target}`)
   }
 
   const [reapproved, reapprovalError] = await thisStep(
@@ -138,34 +136,32 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
     ["approve", "--scope", REVISED_SCOPE, "--approver", "spec-mvp"],
     { input: "y\n" },
   )
-  if (reapprovalError !== null) return [null, `${reapprovalError}\nworkspace: ${workspace.target}`]
+  if (reapprovalError !== null) return fail(`${reapprovalError}\nworkspace: ${workspace.target}`)
   void reapproved
 
   const [finalCheck, finalCheckError] = await thisStep(runner, "final check", ["check"])
-  if (finalCheckError !== null) return [null, `${finalCheckError}\nworkspace: ${workspace.target}`]
+  if (finalCheckError !== null) return fail(`${finalCheckError}\nworkspace: ${workspace.target}`)
   void finalCheck
 
   const [mapReport, mapError] = await thisStep(runner, "repo graph", ["map", "--json"])
-  if (mapError !== null) return [null, `${mapError}\nworkspace: ${workspace.target}`]
+  if (mapError !== null) return fail(`${mapError}\nworkspace: ${workspace.target}`)
   progress("verify repo graph")
   const [graph, graphVerifyError] = MvpVerification.graph(mapReport?.stdout ?? "")
   if (graphVerifyError !== null || graph === null) {
-    return [
-      null,
+    return fail(
       `${graphVerifyError ?? "graph verification failed"}\nworkspace: ${workspace.target}`,
-    ]
+    )
   }
 
   const [draftRun, draftError] = await thisStep(runner, "draft graph", ["map", "--draft"])
-  if (draftError !== null) return [null, `${draftError}\nworkspace: ${workspace.target}`]
+  if (draftError !== null) return fail(`${draftError}\nworkspace: ${workspace.target}`)
   void draftRun
   progress("verify draft graph")
   const [draftGraph, draftVerifyError] = await MvpVerification.draft(workspace.target)
   if (draftVerifyError !== null || draftGraph === null) {
-    return [
-      null,
+    return fail(
       `${draftVerifyError ?? "draft graph verification failed"}\nworkspace: ${workspace.target}`,
-    ]
+    )
   }
 
   progress("validate draft graph")
@@ -174,34 +170,30 @@ export async function runMvp(repoRoot: string): Promise<Result<MvpSummary, strin
     workspace.root,
   )
   if (draftDirectoryError !== null || draftDirectory === null) {
-    return [
-      null,
+    return fail(
       `${draftDirectoryError ?? "cannot isolate draft graph"}\nworkspace: ${workspace.target}`,
-    ]
+    )
   }
   const [like4, like4Error] = await runner.tool("likec4", ["validate", "--json", draftDirectory])
   if (like4Error !== null || like4 === null) {
-    return [null, `${like4Error ?? "likec4 validation failed"}\nworkspace: ${workspace.target}`]
+    return fail(`${like4Error ?? "likec4 validation failed"}\nworkspace: ${workspace.target}`)
   }
   if (like4.code !== 0) {
-    return [null, `${MvpFailure.command("likec4 validate", like4)}\nworkspace: ${workspace.target}`]
+    return fail(`${MvpFailure.command("likec4 validate", like4)}\nworkspace: ${workspace.target}`)
   }
   const [, like4VerifyError] = MvpVerification.like4Validation(like4.stdout)
   if (like4VerifyError !== null) {
-    return [null, `${like4VerifyError}\nworkspace: ${workspace.target}`]
+    return fail(`${like4VerifyError}\nworkspace: ${workspace.target}`)
   }
 
-  return [
-    {
-      workspace: workspace.target,
-      bundle: bundle.directory,
-      approvalInvalidation: `${PILOT_SCOPE} -> ${REVISED_SCOPE}`,
-      graph,
-      draftGraph,
-      elapsedMs: Date.now() - startedAt,
-    },
-    null,
-  ]
+  return ok({
+    workspace: workspace.target,
+    bundle: bundle.directory,
+    approvalInvalidation: `${PILOT_SCOPE} -> ${REVISED_SCOPE}`,
+    graph,
+    draftGraph,
+    elapsedMs: Date.now() - startedAt,
+  })
 }
 
 async function thisStep(
@@ -217,16 +209,16 @@ async function thisStep(
   }, 10_000)
   const [result, error] = await runner.spec(argumentsList, options)
   clearInterval(heartbeat)
-  if (error !== null) return [null, error]
-  if (result === null) return [null, `${label} produced no result`]
+  if (error !== null) return fail(error)
+  if (result === null) return fail(`${label} produced no result`)
   if (result.code !== 0 && options.allowFailure !== true) {
-    return [null, MvpFailure.command(label, result)]
+    return fail(MvpFailure.command(label, result))
   }
   progress(
     `${label} ${result.code === 0 ? "ok" : `exit ${result.code}`} (${seconds(Date.now() - startedAt)}s)`,
   )
 
-  return [result, null]
+  return ok(result)
 }
 
 function seconds(milliseconds: number): string {
@@ -247,7 +239,7 @@ async function commitChanges(
 ): Promise<Result<CommandResult, string>> {
   const [added, addError] = await runner.git(["add", "spec"])
   if (addError !== null || added === null || added.code !== 0) {
-    return [null, addError ?? MvpFailure.command("git add", added as CommandResult)]
+    return fail(addError ?? MvpFailure.command("git add", added as CommandResult))
   }
 
   return runner.git(["commit", "-m", message])

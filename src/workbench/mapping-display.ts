@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 import type { CurationAction, MappingCurationRelation } from "../discovery/curation-types"
 import { MappingReviewFactory } from "../discovery/review"
 import type { DraftElement } from "../discovery/types"
@@ -90,12 +90,12 @@ export class WorkbenchMappingDisplay {
 
     for (const action of actions) {
       const [curationAction, error] = this.resolveAction(action)
-      if (error !== null) return [null, error]
+      if (error !== null) return fail(error)
       if (curationAction === null) continue
       resolved.push(curationAction)
     }
 
-    return [resolved, null]
+    return ok(resolved)
   }
 
   private resolveAction(
@@ -130,40 +130,40 @@ export class WorkbenchMappingDisplay {
     target: string,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [area, error] = this.resolveArea(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, this.notFound(target)]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(this.notFound(target))
 
-    return [{ kind, target: area.id }, null]
+    return ok({ kind, target: area.id })
   }
 
   private rename(
     action: Extract<WorkbenchCurationRequest, { kind: "rename" }>,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [area, error] = this.resolveArea(action.target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, this.notFound(action.target)]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(this.notFound(action.target))
 
-    return [{ kind: "rename", target: area.id, title: action.title }, null]
+    return ok({ kind: "rename", target: area.id, title: action.title })
   }
 
   private merge(
     action: Extract<WorkbenchCurationRequest, { kind: "merge" }>,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [targets, targetsError] = this.resolveAreas(action.targets)
-    if (targetsError !== null) return [null, targetsError]
-    if (targets === null) return [null, this.notFound("")]
+    if (targetsError !== null) return fail(targetsError)
+    if (targets === null) return fail(this.notFound(""))
 
-    return [{ kind: "merge", targets: targets.map((area) => area.id), title: action.title }, null]
+    return ok({ kind: "merge", targets: targets.map((area) => area.id), title: action.title })
   }
 
   private split(
     action: Extract<WorkbenchCurationRequest, { kind: "split" }>,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [area, error] = this.resolveArea(action.target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, this.notFound(action.target)]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(this.notFound(action.target))
 
-    return [{ kind: "split", target: area.id, parts: [...action.parts] }, null]
+    return ok({ kind: "split", target: area.id, parts: [...action.parts] })
   }
 
   private metadataAction(
@@ -172,92 +172,80 @@ export class WorkbenchMappingDisplay {
     value: string,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [area, error] = this.resolveArea(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, this.notFound(target)]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(this.notFound(target))
 
-    if (kind === "set-owner") return [{ kind, target: area.id, owner: value }, null]
+    if (kind === "set-owner") return ok({ kind, target: area.id, owner: value })
     if (kind === "set-responsibility") {
-      return [{ kind, target: area.id, responsibility: value }, null]
+      return ok({ kind, target: area.id, responsibility: value })
     }
 
-    return [{ kind, target: area.id, boundary: value }, null]
+    return ok({ kind, target: area.id, boundary: value })
   }
 
   private openQuestion(
     action: Extract<WorkbenchCurationRequest, { kind: "open-question" }>,
   ): Result<CurationAction, MappingResolutionFailure> {
     if (action.target === undefined) {
-      return [{ kind: "open-question", question: action.question, blocking: action.blocking }, null]
+      return ok({ kind: "open-question", question: action.question, blocking: action.blocking })
     }
 
     const [area, error] = this.resolveArea(action.target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, this.notFound(action.target)]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(this.notFound(action.target))
 
-    return [
-      {
-        kind: "open-question",
-        question: action.question,
-        target: area.id,
-        blocking: action.blocking,
-      },
-      null,
-    ]
+    return ok({
+      kind: "open-question",
+      question: action.question,
+      target: area.id,
+      blocking: action.blocking,
+    })
   }
 
   private relationAction(
     action: Extract<WorkbenchCurationRequest, { kind: "accept-relation" | "reject-relation" }>,
   ): Result<CurationAction, MappingResolutionFailure> {
     const [source, sourceError] = this.resolveArea(action.source)
-    if (sourceError !== null) return [null, sourceError]
-    if (source === null) return [null, this.notFound(action.source)]
+    if (sourceError !== null) return fail(sourceError)
+    if (source === null) return fail(this.notFound(action.source))
 
     const [target, targetError] = this.resolveArea(action.target)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, this.notFound(action.target)]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return fail(this.notFound(action.target))
 
     const relation = this.findRelation(source.id, target.id, action.type)
     if (relation === null) {
-      return [
-        null,
-        {
-          code: "WORKBENCH-NOT-FOUND",
-          message: `unknown relation: ${source.title} to ${target.title}`,
-        },
-      ]
+      return fail({
+        code: "WORKBENCH-NOT-FOUND",
+        message: `unknown relation: ${source.title} to ${target.title}`,
+      })
     }
 
-    return [
-      {
-        kind: action.kind,
-        source: source.id,
-        target: target.id,
-        type: relation.type,
-      },
-      null,
-    ]
+    return ok({
+      kind: action.kind,
+      source: source.id,
+      target: target.id,
+      type: relation.type,
+    })
   }
 
   private resolveArea(target: string): Result<DraftElement | null, MappingResolutionFailure> {
     const refId = this.areaRefs.get(target)
-    if (refId !== undefined) return [this.areasById.get(refId) ?? null, null]
+    if (refId !== undefined) return ok(this.areasById.get(refId) ?? null)
 
     const byId = this.areasById.get(target)
-    if (byId !== undefined) return [byId, null]
+    if (byId !== undefined) return ok(byId)
 
     const matches = this.areasByLabel.get(this.normalize(target)) ?? []
     if (matches.length > 1) {
-      return [
-        null,
-        {
-          code: "WORKBENCH-AMBIGUOUS",
-          message: `more than one area is named '${target}'`,
-          choices: matches.map((area) => this.choice(area)),
-        },
-      ]
+      return fail({
+        code: "WORKBENCH-AMBIGUOUS",
+        message: `more than one area is named '${target}'`,
+        choices: matches.map((area) => this.choice(area)),
+      })
     }
 
-    return [matches[0] ?? null, null]
+    return ok(matches[0] ?? null)
   }
 
   private resolveAreas(targets: string[]): Result<DraftElement[], MappingResolutionFailure> {
@@ -265,12 +253,12 @@ export class WorkbenchMappingDisplay {
 
     for (const target of targets) {
       const [area, error] = this.resolveArea(target)
-      if (error !== null) return [null, error]
-      if (area === null) return [null, this.notFound(target)]
+      if (error !== null) return fail(error)
+      if (area === null) return fail(this.notFound(target))
       areas.push(area)
     }
 
-    return [areas, null]
+    return ok(areas)
   }
 
   private findRelation(

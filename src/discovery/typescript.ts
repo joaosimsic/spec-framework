@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises"
 import { dirname, extname, join, relative, resolve, sep } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { shouldIgnoreDirectory } from "./fs"
 import { uniqueElementId } from "./ids"
 import type { DiscoveryContribution, DiscoveryFinding, DraftElement, DraftLink } from "./types"
@@ -181,7 +181,7 @@ export class TypeScriptDiscovery {
     }
     files.sort((left, right) => left.relative.localeCompare(right.relative))
 
-    return [files, null]
+    return ok(files)
   }
 
   private async walk(target: string, directory: string, entries: FsEntry[]): Promise<SourceFile[]> {
@@ -231,7 +231,7 @@ export class TypeScriptDiscovery {
 
   private async imports(path: string): Promise<Result<string[], string>> {
     const [text, readError] = await attemptAsync(() => Bun.file(path).text())
-    if (readError !== null || text === null) return [null, readError ?? `cannot read ${path}`]
+    if (readError !== null || text === null) return fail(readError ?? `cannot read ${path}`)
 
     const extension = extname(path)
     const loader =
@@ -246,15 +246,14 @@ export class TypeScriptDiscovery {
     const source = text.replace(/^#![^\n]*\n/, "")
     const [imports, parseError] = attempt(() => transpiler.scanImports(source))
     if (parseError !== null || imports === null) {
-      return [null, `${path}: ${parseError ?? "import scan failed"}`]
+      return fail(`${path}: ${parseError ?? "import scan failed"}`)
     }
 
-    return [
+    return ok(
       imports
         .map((item) => item.path)
         .filter((value): value is string => typeof value === "string" && value !== ""),
-      null,
-    ]
+    )
   }
 
   private resolveImport(

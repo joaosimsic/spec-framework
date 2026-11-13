@@ -8,7 +8,7 @@ import type {
   MappingCurationSummary,
 } from "./curation-types"
 import type { DraftElement, DraftLink, MapReport } from "./types"
-import type { Result } from "../core/result"
+import { fail, ok, type Result } from "../core/result"
 
 interface MutableArea extends DraftElement {
   resolved: boolean
@@ -43,20 +43,20 @@ export class MappingCurationEngine {
 
     for (const decision of decisions) {
       const [applied, error] = engine.applyDecision(decision, author)
-      if (error !== null) return [null, error]
-      if (!applied) return [null, "curation decision did not apply"]
+      if (error !== null) return fail(error)
+      if (!applied) return fail("curation decision did not apply")
     }
 
-    return [engine, null]
+    return ok(engine)
   }
 
   apply(action: CurationAction, at: string, author: string): Result<CurationAction, string> {
     const decision: CurationDecision = { action, at }
     const [applied, error] = this.applyDecision(decision, author)
-    if (error !== null) return [null, error]
-    if (!applied) return [null, "curation action did not apply"]
+    if (error !== null) return fail(error)
+    if (!applied) return fail("curation action did not apply")
 
-    return [action, null]
+    return ok(action)
   }
 
   state(): MappingCurationState {
@@ -84,12 +84,12 @@ export class MappingCurationEngine {
 
   private applyDecision(decision: CurationDecision, author: string): Result<boolean, string> {
     const [applied, error] = this.applyAction(decision.action, decision.at, author)
-    if (error !== null) return [null, error]
-    if (!applied) return [null, "curation action did not apply"]
+    if (error !== null) return fail(error)
+    if (!applied) return fail("curation action did not apply")
 
     this.decisions.push(decision)
 
-    return [true, null]
+    return ok(true)
   }
 
   private applyAction(action: CurationAction, at: string, author: string): Result<boolean, string> {
@@ -121,25 +121,25 @@ export class MappingCurationEngine {
 
   private accept(target: string, at: string, author: string): Result<boolean, string> {
     const [area, error] = this.resolve(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, `unknown area '${target}'`]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(`unknown area '${target}'`)
 
     area.confidence = "observed"
     area.provenance = this.humanProvenance(author, at)
     area.resolved = true
 
-    return [true, null]
+    return ok(true)
   }
 
   private reject(target: string): Result<boolean, string> {
     const [area, error] = this.resolve(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, `unknown area '${target}'`]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(`unknown area '${target}'`)
 
     this.areas.delete(area.id)
     this.removeLinksTo(area.id)
 
-    return [true, null]
+    return ok(true)
   }
 
   private acceptRelation(
@@ -152,13 +152,13 @@ export class MappingCurationEngine {
       action.target,
       action.type,
     )
-    if (relationError !== null) return [null, relationError]
-    if (relation === null) return [null, "relation failed to resolve"]
+    if (relationError !== null) return fail(relationError)
+    if (relation === null) return fail("relation failed to resolve")
 
     relation.link.confidence = "observed"
     relation.link.provenance = this.humanProvenance(author, at)
 
-    return [true, null]
+    return ok(true)
   }
 
   private rejectRelation(
@@ -169,25 +169,25 @@ export class MappingCurationEngine {
       action.target,
       action.type,
     )
-    if (relationError !== null) return [null, relationError]
-    if (relation === null) return [null, "relation failed to resolve"]
+    if (relationError !== null) return fail(relationError)
+    if (relation === null) return fail("relation failed to resolve")
 
     relation.source.links = relation.source.links.filter((link) => link !== relation.link)
 
-    return [true, null]
+    return ok(true)
   }
 
   private rename(target: string, title: string): Result<boolean, string> {
     const [area, error] = this.resolve(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, `unknown area '${target}'`]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(`unknown area '${target}'`)
 
     const [available, availableError] = this.titleAvailable(title, area.id)
-    if (availableError !== null) return [null, availableError]
-    if (!available) return [null, `another area is already named '${title}'`]
+    if (availableError !== null) return fail(availableError)
+    if (!available) return fail(`another area is already named '${title}'`)
     area.title = title
 
-    return [true, null]
+    return ok(true)
   }
 
   private merge(
@@ -197,16 +197,16 @@ export class MappingCurationEngine {
     author: string,
   ): Result<boolean, string> {
     const [sources, sourceError] = this.resolveMany(targets)
-    if (sourceError !== null) return [null, sourceError]
-    if (sources === null) return [null, "areas failed to resolve"]
-    if (sources.length < 2) return [null, "merge requires at least two areas"]
+    if (sourceError !== null) return fail(sourceError)
+    if (sources === null) return fail("areas failed to resolve")
+    if (sources.length < 2) return fail("merge requires at least two areas")
 
     const [available, availableError] = this.titleAvailable(
       title,
       ...sources.map((area) => area.id),
     )
-    if (availableError !== null) return [null, availableError]
-    if (!available) return [null, `another area is already named '${title}'`]
+    if (availableError !== null) return fail(availableError)
+    if (!available) return fail(`another area is already named '${title}'`)
 
     const sourceIds = new Set(sources.map((area) => area.id))
     const id = uniqueElementId(this.prefixFor(sources[0]?.kind ?? "component"), title, this.usedIds)
@@ -231,7 +231,7 @@ export class MappingCurationEngine {
     )
     this.usedIds.add(id)
 
-    return [true, null]
+    return ok(true)
   }
 
   private split(
@@ -241,14 +241,14 @@ export class MappingCurationEngine {
     author: string,
   ): Result<boolean, string> {
     const [source, sourceError] = this.resolve(target)
-    if (sourceError !== null) return [null, sourceError]
-    if (source === null) return [null, `unknown area '${target}'`]
-    if (parts.length < 2) return [null, "split requires at least two parts"]
+    if (sourceError !== null) return fail(sourceError)
+    if (source === null) return fail(`unknown area '${target}'`)
+    if (parts.length < 2) return fail("split requires at least two parts")
 
     for (const part of parts) {
       const [available, availableError] = this.titleAvailable(part, source.id)
-      if (availableError !== null) return [null, availableError]
-      if (!available) return [null, `another area is already named '${part}'`]
+      if (availableError !== null) return fail(availableError)
+      if (!available) return fail(`another area is already named '${part}'`)
     }
 
     const links = source.links.filter((link) => link.to !== source.id)
@@ -274,7 +274,7 @@ export class MappingCurationEngine {
       )
     }
 
-    return [true, null]
+    return ok(true)
   }
 
   private setMetadata(
@@ -283,12 +283,12 @@ export class MappingCurationEngine {
     value: string,
   ): Result<boolean, string> {
     const [area, error] = this.resolve(target)
-    if (error !== null) return [null, error]
-    if (area === null) return [null, `unknown area '${target}'`]
+    if (error !== null) return fail(error)
+    if (area === null) return fail(`unknown area '${target}'`)
 
     area[field] = value
 
-    return [true, null]
+    return ok(true)
   }
 
   private openQuestion(
@@ -298,8 +298,8 @@ export class MappingCurationEngine {
     let target: DraftElement | null = null
     if (action.target !== undefined) {
       const [resolved, error] = this.resolve(action.target)
-      if (error !== null) return [null, error]
-      if (resolved === null) return [null, `unknown area '${action.target}'`]
+      if (error !== null) return fail(error)
+      if (resolved === null) return fail(`unknown area '${action.target}'`)
       target = resolved
     }
 
@@ -311,37 +311,36 @@ export class MappingCurationEngine {
       at,
     })
 
-    return [true, null]
+    return ok(true)
   }
 
   private resolve(target: string): Result<MutableArea | null, string> {
     const exact = this.areas.get(target)
-    if (exact !== undefined) return [exact, null]
+    if (exact !== undefined) return ok(exact)
 
     const normalized = target.trim().toLowerCase()
     const matches = [...this.areas.values()].filter(
       (area) => area.title.trim().toLowerCase() === normalized,
     )
     if (matches.length > 1) {
-      return [
-        null,
+      return fail(
         `area name '${target}' is ambiguous; use the technical identity in --technical output`,
-      ]
+      )
     }
 
-    return [matches[0] ?? null, null]
+    return ok(matches[0] ?? null)
   }
 
   private resolveMany(targets: string[]): Result<MutableArea[], string> {
     const areas: MutableArea[] = []
     for (const target of targets) {
       const [area, error] = this.resolve(target)
-      if (error !== null) return [null, error]
-      if (area === null) return [null, `unknown area '${target}'`]
+      if (error !== null) return fail(error)
+      if (area === null) return fail(`unknown area '${target}'`)
       areas.push(area)
     }
 
-    return [areas, null]
+    return ok(areas)
   }
 
   private resolveRelation(
@@ -350,12 +349,12 @@ export class MappingCurationEngine {
     type: string | undefined,
   ): Result<ResolvedRelation, string> {
     const [source, sourceError] = this.resolve(sourceTarget)
-    if (sourceError !== null) return [null, sourceError]
-    if (source === null) return [null, `unknown area '${sourceTarget}'`]
+    if (sourceError !== null) return fail(sourceError)
+    if (source === null) return fail(`unknown area '${sourceTarget}'`)
 
     const [target, targetError] = this.resolve(targetTarget)
-    if (targetError !== null) return [null, targetError]
-    if (target === null) return [null, `unknown area '${targetTarget}'`]
+    if (targetError !== null) return fail(targetError)
+    if (target === null) return fail(`unknown area '${targetTarget}'`)
 
     const expectedType = type === undefined ? null : normalizeRelationType(type)
     const matches = source.links.filter(
@@ -367,27 +366,27 @@ export class MappingCurationEngine {
 
     if (matches.length === 0) {
       const qualifier = type === undefined ? "" : ` of type '${type}'`
-      return [null, `unknown relation '${label}'${qualifier}`]
+      return fail(`unknown relation '${label}'${qualifier}`)
     }
     if (matches.length > 1) {
-      return [null, `relation '${label}' is ambiguous; supply a type`]
+      return fail(`relation '${label}' is ambiguous; supply a type`)
     }
 
     const link = matches[0]
-    if (link === undefined) return [null, `unknown relation '${label}'`]
+    if (link === undefined) return fail(`unknown relation '${label}'`)
 
-    return [{ source, link }, null]
+    return ok({ source, link })
   }
 
   private titleAvailable(title: string, ...excludedIds: string[]): Result<boolean, string> {
     const normalized = title.trim().toLowerCase()
-    if (normalized === "") return [null, "title is required"]
+    if (normalized === "") return fail("title is required")
     const excluded = new Set(excludedIds)
     const exists = [...this.areas.values()].some(
       (area) => !excluded.has(area.id) && area.title.trim().toLowerCase() === normalized,
     )
 
-    return [!exists, null]
+    return ok(!exists)
   }
 
   private mergedLinks(sources: MutableArea[], id: string, sourceIds: Set<string>): DraftLink[] {

@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises"
 import { basename, isAbsolute, join, relative } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { shouldIgnoreDirectory } from "./fs"
 import { slugify, uniqueElementId } from "./ids"
 import type {
@@ -180,8 +180,8 @@ export class GenericDiscovery {
 
   private async readManifest(manifestPath: string): Promise<Result<ManifestRead, string>> {
     const [text, readError] = await attemptAsync(() => Bun.file(manifestPath).text())
-    if (readError) return [null, readError]
-    if (text === null) return [null, "manifest is unreadable"]
+    if (readError) return fail(readError)
+    if (text === null) return fail("manifest is unreadable")
 
     const fileName = basename(manifestPath)
     if (fileName === "package.json" || fileName === "composer.json") {
@@ -191,20 +191,20 @@ export class GenericDiscovery {
       return this.readTomlManifest(fileName, text)
     }
     if (fileName === "go.mod") {
-      return [this.readGoManifest(text), null]
+      return ok(this.readGoManifest(text))
     }
 
-    return [{ name: null, dependencies: [] }, null]
+    return ok({ name: null, dependencies: [] })
   }
 
   private readJsonManifest(fileName: string, text: string): Result<ManifestRead, string> {
     const [value, parseError] = attempt(() => JSON.parse(text) as unknown)
-    if (parseError) return [null, parseError]
-    if (!this.isRecord(value)) return [null, "manifest must be an object"]
+    if (parseError) return fail(parseError)
+    if (!this.isRecord(value)) return fail("manifest must be an object")
 
     const name = typeof value.name === "string" && value.name.trim() !== "" ? value.name : null
     if (fileName === "composer.json") {
-      return [{ name, dependencies: this.recordKeys(value.require) }, null]
+      return ok({ name, dependencies: this.recordKeys(value.require) })
     }
 
     const dependencies = new Set<string>()
@@ -212,13 +212,13 @@ export class GenericDiscovery {
       for (const dependency of this.recordKeys(value[group])) dependencies.add(dependency)
     }
 
-    return [{ name, dependencies: [...dependencies].sort() }, null]
+    return ok({ name, dependencies: [...dependencies].sort() })
   }
 
   private readTomlManifest(fileName: string, text: string): Result<ManifestRead, string> {
     const [value, parseError] = attempt(() => Bun.TOML.parse(text) as unknown)
-    if (parseError) return [null, parseError]
-    if (!this.isRecord(value)) return [null, "manifest must be an object"]
+    if (parseError) return fail(parseError)
+    if (!this.isRecord(value)) return fail("manifest must be an object")
 
     if (fileName === "Cargo.toml") {
       const packageValue = value.package
@@ -229,7 +229,7 @@ export class GenericDiscovery {
           ? packageValue.name
           : null
 
-      return [{ name, dependencies: this.recordKeys(value.dependencies) }, null]
+      return ok({ name, dependencies: this.recordKeys(value.dependencies) })
     }
 
     const project = value.project
@@ -261,7 +261,7 @@ export class GenericDiscovery {
       }
     }
 
-    return [{ name: projectName ?? poetryName, dependencies: [...dependencies].sort() }, null]
+    return ok({ name: projectName ?? poetryName, dependencies: [...dependencies].sort() })
   }
 
   private readGoManifest(text: string): ManifestRead {

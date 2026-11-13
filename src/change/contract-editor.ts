@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import type { ProposalContractFields } from "./types"
 
 export interface ContractFile {
@@ -41,20 +41,20 @@ export class ContractEditor {
     for (const path of files) {
       const [text, readError] = await attemptAsync(() => Bun.file(path).text())
       if (readError !== null || text === null) {
-        return [null, readError === null ? `cannot read ${path}` : readError]
+        return fail(readError === null ? `cannot read ${path}` : readError)
       }
       const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
       if (parseError !== null || !isRecord(parsed)) {
-        return [null, `invalid contract sidecar ${path}: ${parseError ?? "expected an object"}`]
+        return fail(`invalid contract sidecar ${path}: ${parseError ?? "expected an object"}`)
       }
       const id = readString(parsed["id"])
       if (id === null) continue
-      if (seen.has(id)) return [null, `duplicate contract ID '${id}'`]
+      if (seen.has(id)) return fail(`duplicate contract ID '${id}'`)
       seen.add(id)
       documents.push({ path, original: text, fields: { ...parsed }, text })
     }
 
-    return [new ContractEditor(documents), null]
+    return ok(new ContractEditor(documents))
   }
 
   has(id: string): boolean {
@@ -77,21 +77,21 @@ export class ContractEditor {
 
   patch(id: string, patch: ProposalContractFields): Result<boolean, string> {
     const document = this.documentFor(id)
-    if (document === null) return [null, `unknown contract '${id}'`]
+    if (document === null) return fail(`unknown contract '${id}'`)
 
     const suppliedId = patch["id"]
     if (suppliedId !== undefined && suppliedId !== id) {
-      return [null, "contract ID cannot change"]
+      return fail("contract ID cannot change")
     }
 
     const next = { ...document.fields, ...patch, id }
     const validationError = validateContract(next)
-    if (validationError !== null) return [null, validationError]
+    if (validationError !== null) return fail(validationError)
 
     document.fields = next
     document.text = `${JSON.stringify(next, null, 2)}\n`
 
-    return [true, null]
+    return ok(true)
   }
 
   files(): ContractFile[] {

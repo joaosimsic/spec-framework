@@ -1,5 +1,5 @@
 import { isAbsolute, join, relative, resolve, sep } from "node:path"
-import { attempt, attemptAsync, type Result } from "../core/result"
+import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import type { Diagnostic } from "../core/types"
 import { EvidenceFactory, type EvidenceRecord } from "../evidence"
 import type { AdapterContext, AdapterRun, NativeAdapter } from "./types"
@@ -33,41 +33,37 @@ class CompilerConfigLoader {
   async load(): Promise<Result<CompileConfig, CompilerConfigFailure>> {
     const [exists, existsError] = await attemptAsync(() => Bun.file(this.configPath).exists())
     if (existsError) {
-      return [
-        null,
+      return fail(
         this.failure("IMPL-COMPILE-NO-CONFIG", `cannot read ${this.configPath}: ${existsError}`),
-      ]
+      )
     }
     if (!exists) {
-      return [
-        null,
+      return fail(
         this.failure(
           "IMPL-COMPILE-NO-CONFIG",
           `missing ${this.configPath}; add spec/implementation/compile.json`,
         ),
-      ]
+      )
     }
 
     const [text, readError] = await attemptAsync(() => Bun.file(this.configPath).text())
     if (readError) {
-      return [
-        null,
+      return fail(
         this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}: ${readError}`),
-      ]
+      )
     }
     if (text === null) {
-      return [null, this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}`)]
+      return fail(this.failure("IMPL-COMPILE-BAD-CONFIG", `cannot read ${this.configPath}`))
     }
 
     const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
     if (parseError) {
-      return [
-        null,
+      return fail(
         this.failure(
           "IMPL-COMPILE-BAD-CONFIG",
           `invalid JSON in ${this.configPath}: ${parseError}`,
         ),
-      ]
+      )
     }
 
     return this.validate(parsed)
@@ -75,73 +71,73 @@ class CompilerConfigLoader {
 
   private validate(value: unknown): Result<CompileConfig, CompilerConfigFailure> {
     if (!this.isRecord(value)) {
-      return [null, this.bad("configuration must be an object")]
+      return fail(this.bad("configuration must be an object"))
     }
     if (!Array.isArray(value.checks)) {
-      return [null, this.bad("checks must be an array")]
+      return fail(this.bad("checks must be an array"))
     }
     if (value.checks.length === 0) {
-      return [null, this.failure("IMPL-COMPILE-NO-CHECKS", "configuration contains no checks")]
+      return fail(this.failure("IMPL-COMPILE-NO-CHECKS", "configuration contains no checks"))
     }
 
     const checks: CompileCheck[] = []
     const identifiers = new Set<string>()
     for (const [index, candidate] of value.checks.entries()) {
       const [check, checkFailure] = this.readCheck(candidate, index)
-      if (checkFailure) return [null, checkFailure]
-      if (check === null) return [null, this.bad(`checks[${index}] produced no result`)]
+      if (checkFailure) return fail(checkFailure)
+      if (check === null) return fail(this.bad(`checks[${index}] produced no result`))
       if (identifiers.has(check.id)) {
-        return [null, this.bad(`duplicate check id '${check.id}'`)]
+        return fail(this.bad(`duplicate check id '${check.id}'`))
       }
       identifiers.add(check.id)
       checks.push(check)
     }
 
-    return [{ checks }, null]
+    return ok({ checks })
   }
 
   private readCheck(value: unknown, index: number): Result<CompileCheck, CompilerConfigFailure> {
     if (!this.isRecord(value)) {
-      return [null, this.bad(`checks[${index}] must be an object`)]
+      return fail(this.bad(`checks[${index}] must be an object`))
     }
     if (typeof value.id !== "string" || value.id.trim() === "") {
-      return [null, this.bad(`checks[${index}].id must be a non-empty string`)]
+      return fail(this.bad(`checks[${index}].id must be a non-empty string`))
     }
 
     const [command, commandFailure] = this.readCommand(value.command)
-    if (commandFailure) return [null, commandFailure]
-    if (command === null) return [null, this.bad(`checks[${index}].command produced no result`)]
+    if (commandFailure) return fail(commandFailure)
+    if (command === null) return fail(this.bad(`checks[${index}].command produced no result`))
 
     const [workingDirectory, directoryFailure] = this.readWorkingDirectory(value.workingDirectory)
-    if (directoryFailure) return [null, directoryFailure]
+    if (directoryFailure) return fail(directoryFailure)
     if (workingDirectory === null) {
-      return [null, this.bad(`checks[${index}].workingDirectory produced no result`)]
+      return fail(this.bad(`checks[${index}].workingDirectory produced no result`))
     }
 
     const [timeoutMs, timeoutFailure] = this.readTimeout(value.timeoutMs)
-    if (timeoutFailure) return [null, timeoutFailure]
+    if (timeoutFailure) return fail(timeoutFailure)
 
-    return [{ id: value.id, command, workingDirectory, timeoutMs: timeoutMs ?? undefined }, null]
+    return ok({ id: value.id, command, workingDirectory, timeoutMs: timeoutMs ?? undefined })
   }
 
   private readCommand(value: unknown): Result<string[], CompilerConfigFailure> {
     if (!this.isStringArray(value) || value.length === 0) {
-      return [null, this.bad("command must be a non-empty string array")]
+      return fail(this.bad("command must be a non-empty string array"))
     }
     if (value[0].trim() === "") {
-      return [null, this.bad("command executable must be a non-empty string")]
+      return fail(this.bad("command executable must be a non-empty string"))
     }
 
-    return [[...value], null]
+    return ok([...value])
   }
 
   private readWorkingDirectory(value: unknown): Result<string, CompilerConfigFailure> {
-    if (value === undefined) return [".", null]
+    if (value === undefined) return ok(".")
     if (typeof value !== "string" || value.trim() === "") {
-      return [null, this.bad("workingDirectory must be a non-empty relative path")]
+      return fail(this.bad("workingDirectory must be a non-empty relative path"))
     }
     if (isAbsolute(value)) {
-      return [null, this.bad(`workingDirectory must be relative: ${value}`)]
+      return fail(this.bad(`workingDirectory must be relative: ${value}`))
     }
 
     const resolvedDirectory = resolve(this.target, value)
@@ -151,19 +147,19 @@ class CompilerConfigLoader {
       relativeDirectory.startsWith(`..${sep}`) ||
       isAbsolute(relativeDirectory)
     if (escapesTarget) {
-      return [null, this.bad(`workingDirectory must stay inside the project: ${value}`)]
+      return fail(this.bad(`workingDirectory must stay inside the project: ${value}`))
     }
 
-    return [value, null]
+    return ok(value)
   }
 
   private readTimeout(value: unknown): Result<number | null, CompilerConfigFailure> {
-    if (value === undefined) return [null, null]
+    if (value === undefined) return ok(null)
     if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-      return [null, this.bad("timeoutMs must be a positive integer")]
+      return fail(this.bad("timeoutMs must be a positive integer"))
     }
 
-    return [value, null]
+    return ok(value)
   }
 
   private isStringArray(value: unknown): value is string[] {

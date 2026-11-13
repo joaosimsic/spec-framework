@@ -12,7 +12,7 @@ import {
   type ProposalMode,
   type ProposalOperation,
 } from "./change/index"
-import { attemptAsync } from "./core/result"
+import { attemptAsync, fail, type Result } from "./core/result"
 import { ArchitectureModelGenerator } from "./core/architecture-generate"
 import { initProject } from "./core/init"
 import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
@@ -251,12 +251,12 @@ interface MapArguments {
   error?: string
 }
 
-async function readActionSource(value: string): Promise<[CurationAction[] | null, string | null]> {
+async function readActionSource(value: string): Promise<Result<CurationAction[] | null, string>> {
   const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
   if (existsError === null && exists === true) {
     const [text, readError] = await attemptAsync(() => Bun.file(value).text())
     if (readError !== null || text === null) {
-      return [null, readError === null ? `cannot read ${value}` : readError]
+      return fail(readError === null ? `cannot read ${value}` : readError)
     }
 
     return CurationParser.parseJson(text)
@@ -694,12 +694,12 @@ interface ChangeArguments {
 
 async function readOperationSource(
   value: string,
-): Promise<[ProposalOperation[] | null, string | null]> {
+): Promise<Result<ProposalOperation[] | null, string>> {
   const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
   if (existsError === null && exists === true) {
     const [text, readError] = await attemptAsync(() => Bun.file(value).text())
     if (readError !== null || text === null) {
-      return [null, readError === null ? `cannot read ${value}` : readError]
+      return fail(readError === null ? `cannot read ${value}` : readError)
     }
 
     return ProposalOperationParser.parseJson(text)

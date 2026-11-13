@@ -3,17 +3,22 @@ import { describeFailure, getSession, setCsrfToken } from "./api"
 import { WorkbenchErrorBoundary } from "./components/WorkbenchErrorBoundary"
 import { EvolutionView } from "./views/EvolutionView"
 import { FindingsView } from "./views/FindingsView"
+import { InterpretationsView } from "./views/InterpretationsView"
 import { FlowsView } from "./views/FlowsView"
 import { GeneratedDocumentsView } from "./views/GeneratedDocumentsView"
 import { SystemView } from "./views/SystemView"
+import { VerificationView } from "./views/VerificationView"
 import type { WorkbenchSession } from "../types"
 
-type ViewName = "system" | "flows" | "findings" | "evolution" | "documents"
+type ViewName =
+  "system" | "flows" | "findings" | "verification" | "interpretations" | "evolution" | "documents"
 
 const VIEW_LABELS: Record<ViewName, string> = {
   system: "System",
   flows: "Flows",
   findings: "Findings",
+  verification: "Verification",
+  interpretations: "Interpretations",
   evolution: "Evolution",
   documents: "Generated documents",
 }
@@ -146,6 +151,10 @@ function ViewContent({
       return <FlowsView {...props} />
     case "findings":
       return <FindingsView {...props} />
+    case "verification":
+      return <VerificationView {...props} />
+    case "interpretations":
+      return <InterpretationsView {...props} />
     case "evolution":
       return <EvolutionView {...props} />
     case "documents":

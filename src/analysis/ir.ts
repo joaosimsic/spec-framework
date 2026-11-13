@@ -117,6 +117,10 @@ export interface IrFinding {
   explanation: string
   recommendation: string
   confidence: number
+  provider?: string
+  model?: string
+  promptVersion?: string
+  inputHashes?: string[]
 }
 
 export type FlowEvidence = "static" | "runtime" | "test" | "ai_inferred" | "human_verified"

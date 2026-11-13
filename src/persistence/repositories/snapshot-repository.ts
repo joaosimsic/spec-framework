@@ -104,6 +104,21 @@ export class SnapshotRepository {
     })
   }
 
+  updateFindingCount(snapshotId: string, count: number): Result<number, string> {
+    const [changed, updateError] = attempt(
+      () =>
+        this.database.connection
+          .query("UPDATE analysis_snapshots SET finding_count = ? WHERE id = ?")
+          .run(count, snapshotId).changes,
+    )
+    if (updateError !== null || changed === null) {
+      return fail(updateError ?? "finding count was not updated")
+    }
+    if (changed !== 1) return fail("snapshot not found")
+
+    return ok(count)
+  }
+
   count(): number {
     const row = this.database.connection
       .query<{ total: number }, []>("SELECT COUNT(*) AS total FROM analysis_snapshots")

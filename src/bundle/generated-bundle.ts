@@ -3,11 +3,14 @@ import { mkdir, rm } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { attemptAsync, fail, ok, type Result } from "../core/result"
 import type { GeneratedSpec } from "../spec"
+import type { InterpretationRunDetails, VerificationRunDetails } from "../persistence"
 import { GeneratedPdfRenderer } from "./pdf"
 
 export interface GeneratedBundleOptions {
   output?: string
   force?: boolean
+  verification?: VerificationRunDetails | null
+  interpretations?: InterpretationRunDetails | null
 }
 
 export interface GeneratedBundleResult {
@@ -33,7 +36,7 @@ export class GeneratedBundleWriter {
       return fail(readyError ?? "cannot create bundle directory")
 
     const json = `${JSON.stringify(spec, null, 2)}\n`
-    const lines = this.lines(spec)
+    const lines = this.lines(spec, options.verification ?? null, options.interpretations ?? null)
     const html = this.html(lines)
     const pdf = new GeneratedPdfRenderer().render(lines)
     const files: Array<[string, string | Uint8Array]> = [
@@ -43,6 +46,16 @@ export class GeneratedBundleWriter {
       ["flows.json", `${JSON.stringify(spec.flows, null, 2)}\n`],
       ["findings.json", `${JSON.stringify(spec.findings, null, 2)}\n`],
       ["evidence.json", `${JSON.stringify(spec.evidence, null, 2)}\n`],
+      ...(options.verification === undefined || options.verification === null
+        ? []
+        : ([
+            ["verification.json", `${JSON.stringify(options.verification, null, 2)}\n`],
+          ] satisfies Array<[string, string | Uint8Array]>)),
+      ...(options.interpretations === undefined || options.interpretations === null
+        ? []
+        : ([
+            ["interpretations.json", `${JSON.stringify(options.interpretations, null, 2)}\n`],
+          ] satisfies Array<[string, string | Uint8Array]>)),
     ]
     const manifest = {
       version: 1,
@@ -67,7 +80,11 @@ export class GeneratedBundleWriter {
     })
   }
 
-  private lines(spec: GeneratedSpec): string[] {
+  private lines(
+    spec: GeneratedSpec,
+    verification: VerificationRunDetails | null,
+    interpretations: InterpretationRunDetails | null,
+  ): string[] {
     return [
       "Generated spec audit bundle",
       `Project: ${spec.project.name}`,
@@ -77,9 +94,20 @@ export class GeneratedBundleWriter {
       `Analyzer: ${spec.snapshot.analyzer} ${spec.snapshot.analyzer_version}`,
       "",
       "Architecture",
-      ...spec.architecture.elements.map(
-        (element) => `${element.type} ${element.label} (${element.confidence})`,
-      ),
+      ...[
+        spec.architecture.system,
+        ...spec.architecture.subsystems,
+        ...spec.architecture.components,
+        ...spec.architecture.interfaces,
+        ...spec.architecture.data_stores,
+        ...spec.architecture.external_systems,
+      ].map((element) => `${element.type} ${element.label} (${element.confidence})`),
+      "",
+      "Implementation mappings",
+      ...spec.mappings.map((mapping) => `${mapping.conceptual_id} -> ${mapping.implementation_id}`),
+      "",
+      "AI hypotheses",
+      ...spec.hypotheses.map((hypothesis) => `${hypothesis.conceptual_id}: ${hypothesis.text}`),
       "",
       "Observed behavior",
       ...spec.requirements.map((record) => `${record.title} (${record.confidence})`),
@@ -89,6 +117,26 @@ export class GeneratedBundleWriter {
       "",
       "Verification",
       ...spec.verification.map((record) => `${record.title}: ${record.result}`),
+      "",
+      "Verification run",
+      ...(verification === null
+        ? ["No verification run was recorded."]
+        : [
+            `Run: ${verification.run.id} (${verification.run.result})`,
+            ...verification.results.map(
+              (result) => `${result.checkId}: ${result.result} (${result.durationMs}ms)`,
+            ),
+          ]),
+      "",
+      "AI interpretations",
+      ...(interpretations === null
+        ? ["No interpretation run was recorded."]
+        : [
+            `Run: ${interpretations.run.id} (${interpretations.interpretations.length} interpretations)`,
+            ...interpretations.interpretations.map(
+              (item) => `${item.targetKind} ${item.targetId}: ${item.text}`,
+            ),
+          ]),
       "",
       "Unknowns",
       ...spec.unknowns.map((unknown) => `${unknown.reason} (${unknown.source})`),

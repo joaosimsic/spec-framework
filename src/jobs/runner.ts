@@ -7,7 +7,6 @@ import {
   AnnotationRepository,
   CodeArtifactRepository,
   ElementRepository,
-  EMPTY_COVERAGE,
   EntryPointRepository,
   FindingRepository,
   FlowRepository,
@@ -26,10 +25,12 @@ import {
 import { SpecFrameworkConfigLoader } from "../config"
 import { DiagnosticsConfigFactory } from "../diagnostics/config"
 import { DiagnosticsEngine } from "../diagnostics/engine"
+import { ConceptualArchitectureBuilder } from "../architecture"
 import { GeneratedSpecBuilder } from "../generation"
-import { SystemProjectionBuilder } from "../implementation"
-import { GeneratedSpecWriter } from "../spec"
+import { GeneratedSpecIdentity, GeneratedSpecWriter } from "../spec"
 import { JobEventBus } from "./events"
+import type { AiComponentHypothesisGenerator } from "../ai/hypotheses"
+import type { AiDiagnosisGenerator } from "../ai/diagnosis"
 import type {
   AnalysisExecutionRequest,
   AnalysisExecutor,
@@ -48,6 +49,8 @@ interface QueuedJob {
 export interface AnalysisJobRunnerOptions {
   concurrency?: number
   now?: () => string
+  hypotheses?: AiComponentHypothesisGenerator
+  diagnoses?: AiDiagnosisGenerator
 }
 
 export class AnalysisJobRunner {
@@ -64,6 +67,8 @@ export class AnalysisJobRunner {
   private readonly runs: AnalysisRunRepository
   private readonly now: () => string
   private readonly concurrency: number
+  private readonly hypotheses: AiComponentHypothesisGenerator | null
+  private readonly diagnoses: AiDiagnosisGenerator | null
   private readonly queue: QueuedJob[] = []
   private readonly active = new Map<string, QueuedJob>()
 
@@ -86,6 +91,8 @@ export class AnalysisJobRunner {
     this.runs = new AnalysisRunRepository(database)
     this.now = options.now ?? (() => new Date().toISOString())
     this.concurrency = Math.max(1, options.concurrency ?? 1)
+    this.hypotheses = options.hypotheses ?? null
+    this.diagnoses = options.diagnoses ?? null
   }
 
   start(project: ProjectRecord): Result<JobRecord, string> {
@@ -230,7 +237,7 @@ export class AnalysisJobRunner {
       dirty: result.dirty,
       analyzer: result.analyzer,
       analyzerVersion: result.analyzerVersion,
-      schemaVersion: 1,
+      schemaVersion: 2,
       ruleVersion: result.ruleVersion,
       promptVersion: result.promptVersion,
       modelVersion: result.modelVersion,
@@ -243,6 +250,38 @@ export class AnalysisJobRunner {
     if (configError !== null || config === null) {
       return fail(configError ?? "spec-framework.json unavailable")
     }
+    const architecture = await new ConceptualArchitectureBuilder().build({
+      projectName: project.name,
+      root: project.repositoryPath,
+      elements: result.nodes,
+      relationships: result.edges,
+      entryPoints: result.entryPoints,
+      flows: result.flows,
+    })
+    const coverage = architecture.architecture.coverage
+    const diagnostics = new DiagnosticsEngine().run({
+      elements: result.nodes,
+      relationships: result.edges,
+      entryPoints: result.entryPoints,
+      coverage,
+      components: architecture.architecture.components,
+      config: DiagnosticsConfigFactory.fromRecord(config.diagnostics),
+    })
+    const implementationIds = new Set([
+      ...architecture.implementation.files.map((file) => file.id),
+      ...architecture.implementation.symbols.map((symbol) => symbol.id),
+    ])
+    const conceptualIds = new Set([
+      architecture.architecture.system.id,
+      ...architecture.architecture.subsystems.map((element) => element.id),
+      ...architecture.architecture.components.map((element) => element.id),
+      ...architecture.architecture.interfaces.map((element) => element.id),
+      ...architecture.architecture.data_stores.map((element) => element.id),
+      ...architecture.architecture.external_systems.map((element) => element.id),
+    ])
+    const findings = [...result.findings, ...diagnostics].filter((finding) =>
+      finding.affectedElements.every((id) => implementationIds.has(id) || conceptualIds.has(id)),
+    )
     const provisional: SnapshotRecord = {
       id: identity.id,
       projectId: project.id,
@@ -251,7 +290,7 @@ export class AnalysisJobRunner {
       dirty: result.dirty,
       analyzer: result.analyzer,
       analyzerVersion: result.analyzerVersion,
-      schemaVersion: 1,
+      schemaVersion: 2,
       ruleVersion: result.ruleVersion,
       promptVersion: result.promptVersion,
       modelVersion: result.modelVersion,
@@ -259,48 +298,92 @@ export class AnalysisJobRunner {
       nodeCount: result.nodes.length,
       edgeCount: result.edges.length,
       flowCount: result.flows.length,
-      findingCount: result.findings.length,
-      mapping: result.mapping,
-      coverage: result.coverage ?? EMPTY_COVERAGE,
+      findingCount: findings.length,
+      mapping: { coverage },
+      coverage,
       createdAt: this.now(),
     }
-    const projection = new SystemProjectionBuilder().build({
-      project,
-      snapshot: provisional,
-      elements: result.nodes,
-      relationships: result.edges,
-      entryPoints: result.entryPoints,
-    })
-    const diagnostics = new DiagnosticsEngine().run({
-      elements: result.nodes,
-      relationships: result.edges,
-      entryPoints: result.entryPoints,
-      coverage: projection.coverage,
-      config: DiagnosticsConfigFactory.fromRecord(config.diagnostics),
-    })
-    const architectureIds = new Set(projection.nodes.map((node) => node.id))
-    const findings = [...result.findings, ...diagnostics].filter((finding) =>
-      finding.affectedElements.every((id) => architectureIds.has(id)),
+    const [created, createError] = this.snapshots.create(provisional)
+    if (createError !== null || created === null) return fail(createError ?? "snapshot failed")
+
+    const hypothesisOutput =
+      this.hypotheses === null
+        ? null
+        : await this.hypotheses.generate({
+            root: project.repositoryPath,
+            snapshot: created,
+            elements: result.nodes,
+            relationships: result.edges,
+            files: result.files.map((file) => file.path),
+            components: architecture.architecture.components.map((component) => ({
+              id: component.id,
+              label: component.label,
+              summary: component.summary,
+              implementationIds: architecture.mappings
+                .filter((mapping) => mapping.conceptual_id === component.id)
+                .map((mapping) => mapping.implementation_id),
+            })),
+          })
+
+    const diagnosisOutput =
+      this.diagnoses === null
+        ? null
+        : await this.diagnoses.generate({
+            root: project.repositoryPath,
+            snapshot: created,
+            elements: result.nodes,
+            relationships: result.edges,
+            files: result.files.map((file) => file.path),
+            components: architecture.architecture.components.map((component) => ({
+              id: component.id,
+              label: component.label,
+              summary: component.summary,
+              implementationIds: architecture.mappings
+                .filter((mapping) => mapping.conceptual_id === component.id)
+                .map((mapping) => mapping.implementation_id),
+              entryPointCount: component.entry_points.length,
+              publicSurfaceCount: component.public_surface.length,
+              dataAccessCount: component.data_access.length,
+              unknownCount: component.unknowns.length,
+            })),
+          })
+    const allFindings = [...findings, ...(diagnosisOutput?.findings ?? [])].filter((finding) =>
+      finding.affectedElements.every((id) => implementationIds.has(id) || conceptualIds.has(id)),
     )
-    const snapshot: SnapshotRecord = {
-      ...provisional,
-      findingCount: findings.length,
-      mapping: { coverage: projection.coverage },
-      coverage: projection.coverage,
-    }
+
     const generatedSpec = await new GeneratedSpecBuilder().build({
       root: project.repositoryPath,
       config,
       project,
-      snapshot,
+      snapshot: created,
       elements: result.nodes,
       relationships: result.edges,
       entryPoints: result.entryPoints,
+      files: result.files.map((file) => ({ path: file.path })),
       flows: result.flows,
-      findings,
+      findings: allFindings,
+      architecture,
+      hypotheses: hypothesisOutput?.hypotheses ?? [],
     })
-    const [created, createError] = this.snapshots.create(snapshot)
-    if (createError !== null || created === null) return fail(createError ?? "snapshot failed")
+    generatedSpec.unknowns = [
+      ...new Map(
+        [
+          ...generatedSpec.unknowns,
+          ...(hypothesisOutput?.failures ?? []).map((reason) => ({
+            id: GeneratedSpecIdentity.unknown(`ai:hypothesis:${reason}`),
+            reason,
+            source: "ai:hypothesis",
+            confidence: "unknown" as const,
+          })),
+          ...(diagnosisOutput?.failures ?? []).map((reason) => ({
+            id: GeneratedSpecIdentity.unknown(`ai:diagnosis:${reason}`),
+            reason,
+            source: "ai:diagnosis",
+            confidence: "unknown" as const,
+          })),
+        ].map((unknown) => [unknown.id, unknown]),
+      ).values(),
+    ].sort((left, right) => left.id.localeCompare(right.id))
 
     const artifacts = result.files.map((file): CodeArtifactRecord => ({
       id: AnalysisIds.artifact(created.id, file.path),
@@ -320,8 +403,10 @@ export class AnalysisJobRunner {
     if (relationshipsError !== null) return fail(relationshipsError)
     const [, entryPointsError] = this.entryPoints.replace(created.id, result.entryPoints)
     if (entryPointsError !== null) return fail(entryPointsError)
-    const [, findingsError] = this.findings.replace(created.id, findings)
+    const [, findingsError] = this.findings.replace(created.id, allFindings)
     if (findingsError !== null) return fail(findingsError)
+    const [, findingCountError] = this.snapshots.updateFindingCount(created.id, allFindings.length)
+    if (findingCountError !== null) return fail(findingCountError)
     const [, flowsError] = this.flows.replace(created.id, result.flows)
     if (flowsError !== null) return fail(flowsError)
     const [, specError] = this.generatedSpecs.save(created.id, generatedSpec)
@@ -337,7 +422,7 @@ export class AnalysisJobRunner {
       nodes: result.nodes,
       edges: result.edges,
       flows: result.flows,
-      findings,
+      findings: allFindings,
       annotations: this.annotations.list(project.id),
     })
     if (exportError !== null) return fail(exportError)

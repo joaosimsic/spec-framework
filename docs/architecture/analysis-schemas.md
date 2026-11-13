@@ -95,7 +95,7 @@ Rules:
 {
   "id": "CMP-...",
   "type": "component",
-  "label": "Configuration API",
+  "label": "HTTP /config",
   "summary": "Handles configuration read and update behavior.",
   "confidence": "observed",
   "status": "observed",

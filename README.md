@@ -24,14 +24,16 @@ behavior.
   data access, and external boundaries. Directories and files are implementation
   evidence.
 - Generates observed behavior and contract records with source evidence.
-- Generates verification records from tests and configured checks.
+- Generates verification targets from tests and configured checks, then records real `spec check` outcomes as derived runs.
 - Traces bounded static flows from entry points to sources and sinks.
 - Runs deterministic architectural diagnostics.
 - Separates AI-assisted hypotheses from deterministic findings.
+- Interprets observed contracts and failed checks only through explicit
+  `spec interpret`.
 - Stores analysis snapshots per commit in `.spec/analysis.sqlite`.
 - Exports `spec/generated/spec.gen.json`.
-- Serves the generated System view, flows, findings, and evolution in a local
-  workbench.
+- Serves the generated System, flows, findings, verification, interpretations,
+  and evolution views in a local workbench.
 - Produces a generated audit bundle.
 
 It does not approve specifications, infer normative intent, prove formal
@@ -75,6 +77,7 @@ spec snapshots [list|show <id>|compare <from> <to>] [--json]
 spec export [--json]
 spec query [--json]
 spec check [--json]
+spec interpret [--kind contract|verification|all] [--json]
 spec bundle [--output <dir>] [--force] [--json]
 spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]... [--analysis-root <path>]...
 spec version
@@ -90,6 +93,8 @@ The retired commands `init`, `map`, `architecture generate`, `start`, `change`,
 .spec/analysis.sqlite
 spec/generated/spec.gen.json
 spec/generated/analysis.gen.json
+spec/generated/verification.gen.json
+spec/generated/interpretations.gen.json
 spec/generated/architecture.gen.c4
 spec/generated/requirements.gen.sdoc
 spec/audit/

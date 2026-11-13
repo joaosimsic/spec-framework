@@ -1,4 +1,4 @@
-import type { GeneratedElement, GeneratedSpec } from "../spec"
+import type { GeneratedConceptualElement, GeneratedSpec } from "../spec"
 
 export const PLUGIN_CONTRACT_VERSION = 1
 
@@ -28,7 +28,7 @@ export interface PluginStatusView {
 export interface PluginQueryView {
   snapshot_id: string
   commit: string
-  elements: GeneratedElement[]
+  elements: GeneratedConceptualElement[]
 }
 
 export interface PluginContextView {

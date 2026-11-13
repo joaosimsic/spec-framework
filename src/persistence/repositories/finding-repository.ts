@@ -13,6 +13,9 @@ interface FindingRow {
   explanation: string
   recommendation: string
   affected_elements_json: string
+  provider: string | null
+  model: string | null
+  prompt_version: string | null
   input_hashes_json: string
 }
 
@@ -29,8 +32,9 @@ export class FindingRepository {
         const insert = this.database.connection.query(
           `INSERT INTO findings
             (id, snapshot_id, rule_id, family, title, severity, status, confidence, explanation,
-             recommendation, affected_elements_json, input_hashes_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             recommendation, affected_elements_json, provider, model, prompt_version,
+             input_hashes_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         const evidence = this.database.connection.query(
           `INSERT INTO finding_evidence (id, snapshot_id, finding_id, kind, reference, file_path, line, hash)
@@ -49,7 +53,10 @@ export class FindingRepository {
             finding.explanation,
             finding.recommendation,
             JSON.stringify(finding.affectedElements),
-            JSON.stringify([]),
+            finding.provider ?? null,
+            finding.model ?? null,
+            finding.promptVersion ?? null,
+            JSON.stringify(finding.inputHashes ?? []),
           )
           for (const [index, item] of finding.evidence.entries()) {
             evidence.run(
@@ -96,6 +103,7 @@ export class FindingRepository {
         () => JSON.parse(row.affected_elements_json) as string[],
       )
       if (parseError !== null || affected === null) return []
+      const [inputHashes] = attempt(() => JSON.parse(row.input_hashes_json) as string[])
       return [
         {
           id: row.id,
@@ -109,6 +117,10 @@ export class FindingRepository {
           explanation: row.explanation,
           recommendation: row.recommendation,
           confidence: row.confidence,
+          ...(row.provider === null ? {} : { provider: row.provider }),
+          ...(row.model === null ? {} : { model: row.model }),
+          ...(row.prompt_version === null ? {} : { promptVersion: row.prompt_version }),
+          ...(Array.isArray(inputHashes) && inputHashes.length > 0 ? { inputHashes } : {}),
         },
       ]
     })

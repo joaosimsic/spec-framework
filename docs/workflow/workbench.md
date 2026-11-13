@@ -1,6 +1,6 @@
 # Workbench
 
-Status: version 1 implemented; behavior-derived conceptual architecture planned.
+Status: implemented with behavior-derived conceptual architecture.
 
 ## Purpose
 
@@ -13,6 +13,11 @@ It reads:
 - `spec/generated/spec.gen.json`;
 - `spec/generated/analysis.gen.json`;
 - Git metadata for staleness.
+
+Verification runs and AI interpretations are stored in `.spec/analysis.sqlite`
+and exported to `spec/generated/verification.gen.json` and
+`spec/generated/interpretations.gen.json` for portability. The workbench reads
+the stored records; it never executes checks or AI calls.
 
 It does not read:
 
@@ -63,6 +68,18 @@ and limits.
 Deterministic diagnostics separated from AI-assisted hypotheses. Humans can
 locally confirm, reject, or mark findings as needing investigation.
 
+### Verification
+
+Latest `spec check` run: overall result, consistency findings, configured
+checks, exit codes, durations, bounded output, and hashes. The workbench never
+runs checks.
+
+### Interpretations
+
+Latest explicit `spec interpret` run: AI contract and failed-check hypotheses
+with file/line evidence, provider, model, prompt version, and confidence.
+AI-inferred only; no approval or verdict.
+
 ### Evolution
 
 Comparison of two generated snapshots by commit.
@@ -92,6 +109,6 @@ analysis, query generated output, compare snapshots, and produce bundles.
 
 - No curated spec reader is reachable from the workbench.
 - No approval or proposal route exists.
-- System, Flows, Findings, Evolution, and generated documents work from one
-  snapshot.
+- System, Flows, Findings, Verification, Interpretations, Evolution, and
+  generated documents work from one snapshot.
 - Generated output cannot be edited through the API.

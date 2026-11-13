@@ -2,8 +2,15 @@ import type { Database } from "bun:sqlite"
 import { attempt, type Result, ok, fail } from "../core/result"
 import { INITIAL_SCHEMA, type Migration } from "./migrations/001-initial"
 import { GENERATED_SPEC_SCHEMA } from "./migrations/002-generated-spec"
+import { VERIFICATION_RUNS_SCHEMA } from "./migrations/003-verification-runs"
+import { INTERPRETATIONS_SCHEMA } from "./migrations/004-interpretations"
 
-const MIGRATIONS: Migration[] = [INITIAL_SCHEMA, GENERATED_SPEC_SCHEMA]
+const MIGRATIONS: Migration[] = [
+  INITIAL_SCHEMA,
+  GENERATED_SPEC_SCHEMA,
+  VERIFICATION_RUNS_SCHEMA,
+  INTERPRETATIONS_SCHEMA,
+]
 
 interface AppliedMigration {
   version: number

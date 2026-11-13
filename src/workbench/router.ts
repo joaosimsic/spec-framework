@@ -41,7 +41,15 @@ export class WorkbenchRouter {
       snapshot_id: snapshot?.id ?? null,
       commit: snapshot?.commit ?? "",
       dirty: snapshot?.dirty ?? false,
-      views: ["system", "flows", "findings", "evolution", "documents"],
+      views: [
+        "system",
+        "flows",
+        "findings",
+        "verification",
+        "interpretations",
+        "evolution",
+        "documents",
+      ],
       asset_ready: this.options.assetReady,
     }
 

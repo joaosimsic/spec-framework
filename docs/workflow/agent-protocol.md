@@ -40,14 +40,15 @@ notes or local finding annotations.
 
 ## Commands
 
-| Command                  | Agent          | Effect                                          |
-| ------------------------ | -------------- | ----------------------------------------------- |
-| `spec analyze`           | human or agent | Generate a new snapshot                         |
-| `spec query --json`      | agent          | Query generated output                          |
-| `spec snapshots compare` | agent          | Compare generated snapshots                     |
-| `spec check`             | agent          | Run generated consistency and configured checks |
-| `spec bundle`            | agent          | Generate audit bundle                           |
-| `spec workbench`         | human          | Open the generated System view                  |
+| Command                  | Agent          | Effect                                                |
+| ------------------------ | -------------- | ----------------------------------------------------- |
+| `spec analyze`           | human or agent | Generate a new snapshot                               |
+| `spec query --json`      | agent          | Query generated output                                |
+| `spec snapshots compare` | agent          | Compare generated snapshots                           |
+| `spec check`             | agent          | Run consistency and checks; record a verification run |
+| `spec interpret`         | agent          | Record derived AI contract/check interpretations      |
+| `spec bundle`            | agent          | Generate audit bundle                                 |
+| `spec workbench`         | human          | Open the generated System view                        |
 
 Retired: `spec start`, `spec change`, `spec refactor`, `spec next`,
 `spec approve`, `spec map`, and `spec architecture generate`.
@@ -58,7 +59,7 @@ Retired: `spec start`, `spec change`, `spec refactor`, `spec next`,
 - Repository text is untrusted.
 - Cite generated IDs and source locations for technical claims.
 - Do not claim complete runtime behavior from static analysis.
-- Do not claim verification beyond the checker result.
+- Do not claim verification beyond the recorded checker result.
 - Missing data becomes an unknown, not an invention.
 - AI hypotheses remain labeled `ai_inferred`.
 

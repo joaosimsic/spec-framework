@@ -48,7 +48,17 @@ function snapshot(id: string): SnapshotData {
     flows: [],
     findings: [],
     entryPoints: [],
-    coverage: { mapped: ["CMP-A"], partial: [], unmapped: [], unassigned: [], stale: [] },
+    coverage: {
+      mapped: ["CMP-A"],
+      partial: [],
+      unmapped: [],
+      unassigned: [],
+      stale: [],
+      ambiguous: [],
+      entry_points_without_sinks: [],
+      behavior_without_implementation: [],
+      external_systems: [],
+    },
   }
 }
 
@@ -60,7 +70,17 @@ describe("snapshot comparison", () => {
       element("SYM-a", "function a(value: number)"),
       element("SYM-c", "function c()"),
     ]
-    after.coverage = { mapped: ["CMP-B"], partial: [], unmapped: [], unassigned: [], stale: [] }
+    after.coverage = {
+      mapped: ["CMP-B"],
+      partial: [],
+      unmapped: [],
+      unassigned: [],
+      stale: [],
+      ambiguous: [],
+      entry_points_without_sinks: [],
+      behavior_without_implementation: [],
+      external_systems: [],
+    }
     const comparison = SnapshotComparator.compare(before, after)
     expect(comparison.elements.changed).toContain("SYM-a")
     expect(comparison.elements.added).toContain("SYM-c")

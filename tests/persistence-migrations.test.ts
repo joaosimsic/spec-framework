@@ -27,6 +27,10 @@ describe("analysis persistence", () => {
     expect(tables).toContain("projects")
     expect(tables).toContain("analysis_snapshots")
     expect(tables).toContain("jobs")
+    expect(tables).toContain("verification_runs")
+    expect(tables).toContain("verification_results")
+    expect(tables).toContain("interpretation_runs")
+    expect(tables).toContain("interpretations")
     expect(tables).toContain("schema_migrations")
 
     const [applied, applyError] = new MigrationRunner(database.connection).apply()
@@ -74,7 +78,17 @@ describe("analysis persistence", () => {
       flowCount: 0,
       findingCount: 0,
       mapping: null,
-      coverage: { mapped: [], partial: [], unmapped: [], unassigned: [], stale: [] },
+      coverage: {
+        mapped: [],
+        partial: [],
+        unmapped: [],
+        unassigned: [],
+        stale: [],
+        ambiguous: [],
+        entry_points_without_sinks: [],
+        behavior_without_implementation: [],
+        external_systems: [],
+      },
       createdAt: "2026-11-13T00:00:00.000Z",
     })
     expect(snapshotError).toBeNull()

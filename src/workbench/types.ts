@@ -1,3 +1,10 @@
+import type {
+  InterpretationRecord,
+  InterpretationRunRecord,
+  VerificationCheckResultRecord,
+  VerificationRunRecord,
+} from "../persistence"
+
 export interface WorkbenchSession {
   csrf_token: string
   mode: "generated"
@@ -32,12 +39,30 @@ export interface WorkbenchSystemNode {
   signature: string | null
   visibility: string | null
   exported: boolean | null
-  responsibility: string | null
-  boundary: string | null
-  owner: string | null
-  technology: string | null
   entry_point_kind: string | null
   mapping_source: string | null
+  label_role: string | null
+  label_anchor: string | null
+  label_evidence: string[]
+  summary: string | null
+  entry_points: string[]
+  public_surface: string[]
+  data_access: Array<{ kind: string; channel: string; target: string; evidence: string[] }>
+  tests: string[]
+  unknowns: string[]
+  hypothesis: WorkbenchHypothesis | null
+}
+
+export interface WorkbenchHypothesis {
+  id: string
+  conceptual_id: string
+  text: string
+  evidence: Array<{ element_id: string; file_path: string; line: number }>
+  confidence: number
+  provider: string
+  model: string
+  prompt_version: string
+  status: string
 }
 
 export interface WorkbenchSystemEdge {
@@ -63,6 +88,9 @@ export interface WorkbenchSystemArchitecture {
     unassigned: string[]
     stale: string[]
     entryPointsWithoutSinks: string[]
+    ambiguous: string[]
+    behaviorWithoutImplementation: string[]
+    externalSystems: string[]
   }
   summary: {
     nodes: number
@@ -74,9 +102,28 @@ export interface WorkbenchSystemArchitecture {
   }
 }
 
+export interface WorkbenchMapping {
+  id: string
+  conceptual_id: string
+  implementation_id: string
+  confidence: string
+  evidence: string[]
+  provenance: string
+}
+
+export interface WorkbenchSystemImplementation {
+  files: WorkbenchSystemNode[]
+  symbols: WorkbenchSystemNode[]
+  mappings: WorkbenchMapping[]
+}
+
 export interface WorkbenchSystemGraph {
   nodes: WorkbenchSystemNode[]
   edges: WorkbenchSystemEdge[]
+}
+
+export interface WorkbenchUnassignedImplementation {
+  files: WorkbenchSystemNode[]
 }
 
 export interface WorkbenchFlowStep {
@@ -114,6 +161,20 @@ export interface WorkbenchFinding {
   explanation: string
   recommendation: string
   confidence: number
+  provider?: string
+  model?: string
+  promptVersion?: string
+  inputHashes?: string[]
+}
+
+export interface WorkbenchInterpretations {
+  run: InterpretationRunRecord | null
+  interpretations: InterpretationRecord[]
+}
+
+export interface WorkbenchVerification {
+  run: VerificationRunRecord | null
+  results: VerificationCheckResultRecord[]
 }
 
 export interface WorkbenchSnapshotSummary {

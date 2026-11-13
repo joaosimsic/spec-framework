@@ -1,6 +1,6 @@
 # Architecture intelligence roadmap
 
-Status: generated spec v1 implemented and validated. Behavior-derived conceptual architecture is the next migration.
+Status: generated spec v2 implemented and validated with behavior-derived conceptual architecture.
 
 ## Product question
 
@@ -80,20 +80,20 @@ Status: implemented.
 
 ## Phase 3b — Behavior-derived conceptual architecture
 
-Status: planned. Decision record [0017](../design-decisions/0017-behavior-derived-architecture.md).
+Status: implemented. Decision record [0017](../design-decisions/0017-behavior-derived-architecture.md).
 
-- [ ] Build behavior graph from entry points, public surfaces, calls, data access, and external boundaries.
-- [ ] Generate conceptual components from behavior anchors.
-- [ ] Cluster behavior-derived components into subsystems.
-- [ ] Keep files, symbols, and directories out of the conceptual graph.
-- [ ] Add deterministic role summaries with evidence.
-- [ ] Add implementation mappings with confidence.
-- [ ] Keep unassigned implementation explicit.
-- [ ] Make conceptual identity stable across directory renames.
-- [ ] Add optional AI responsibility hypotheses separately.
-- [ ] Update System view to conceptual-first graph with implementation overlay.
-- [ ] Add bad-directory-name and rename-stability fixtures.
-- [ ] Revalidate on three external repositories.
+- [x] Build behavior graph from entry points, public surfaces, calls, data access, and external boundaries.
+- [x] Generate conceptual components from behavior anchors.
+- [x] Cluster behavior-derived components into subsystems.
+- [x] Keep files, symbols, and directories out of the conceptual graph.
+- [x] Add deterministic role summaries with evidence.
+- [x] Add implementation mappings with confidence.
+- [x] Keep unassigned implementation explicit.
+- [x] Make conceptual identity stable across directory renames.
+- [x] Add optional AI responsibility hypotheses separately.
+- [x] Update System view to conceptual-first graph with implementation overlay.
+- [x] Add bad-directory-name and rename-stability fixtures.
+- [x] Revalidate on three external repositories.
 
 ## Phase 4 — Functional flows
 
@@ -120,7 +120,7 @@ Status: implemented.
 - [x] ARC-012 unclear ownership.
 - [x] Finding model and local annotations.
 - [x] Findings workbench view.
-- [ ] Map ARC-005, ARC-006, ARC-009, ARC-010 to AI hypotheses only.
+- [x] Map ARC-005, ARC-006, ARC-009, ARC-010 to AI hypotheses only.
 
 ## Phase 6 — AI interpretation
 
@@ -132,7 +132,8 @@ Status: implemented with fake-provider validation.
 - [x] Output schemas and reference validation.
 - [x] AI run persistence.
 - [x] Ask and responsibility endpoints.
-- [ ] Add generated-spec contract, verification, and architecture hypotheses.
+- [x] Add generated-spec architecture hypotheses.
+- [x] Add generated-spec contract and verification interpretation.
 
 ## Phase 7 — Generated spec product
 
@@ -142,6 +143,7 @@ Status: implemented.
 - [x] Generate observed behavior records.
 - [x] Generate observed contract records.
 - [x] Generate verification records.
+- [x] Persist configured check results as derived verification runs.
 - [x] Write `spec/generated/spec.gen.json`.
 - [x] Move configuration to `spec-framework.json`.
 - [x] Generate system/subsystem/component hierarchy.

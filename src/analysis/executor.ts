@@ -37,6 +37,12 @@ export class TypeScriptAnalysisExecutor implements AnalysisExecutor {
     if (scan === null) return fail("scanner returned no result")
     if (request.signal.aborted) return fail("analysis cancelled")
 
+    const [config, configError] = await new SpecFrameworkConfigLoader(
+      request.project.repositoryPath,
+    ).load()
+    if (configError !== null || config === null) {
+      return fail(configError ?? "spec-framework.json unavailable")
+    }
     const sourceFiles = scan.files.filter(
       (file) => file.language === "typescript" || file.language === "javascript",
     )
@@ -45,16 +51,13 @@ export class TypeScriptAnalysisExecutor implements AnalysisExecutor {
       progress: 0.35,
       message: `analyzing ${sourceFiles.length} source files`,
     })
-    const [ir, irError] = await this.adapter.analyze(request.project.repositoryPath, sourceFiles)
+    const [ir, irError] = await this.adapter.analyze(
+      request.project.repositoryPath,
+      sourceFiles,
+      config.analysis.entryPoints,
+    )
     if (irError !== null || ir === null) return fail(irError ?? "TypeScript analysis failed")
     if (request.signal.aborted) return fail("analysis cancelled")
-
-    const [config, configError] = await new SpecFrameworkConfigLoader(
-      request.project.repositoryPath,
-    ).load()
-    if (configError !== null || config === null) {
-      return fail(configError ?? "spec-framework.json unavailable")
-    }
     const flows = config.analysis.flowAnalysis
       ? new FlowAnalyzer().analyze(ir.elements, ir.relationships, ir.entryPoints)
       : []
@@ -75,7 +78,17 @@ export class TypeScriptAnalysisExecutor implements AnalysisExecutor {
       flows,
       findings: ir.findings,
       mapping: null,
-      coverage: { mapped: [], partial: [], unmapped: [], unassigned: [], stale: [] },
+      coverage: {
+        mapped: [],
+        partial: [],
+        unmapped: [],
+        unassigned: [],
+        stale: [],
+        ambiguous: [],
+        entry_points_without_sinks: [],
+        behavior_without_implementation: [],
+        external_systems: [],
+      },
     })
   }
 }

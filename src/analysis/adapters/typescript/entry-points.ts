@@ -6,15 +6,11 @@ import type { ScannedFile } from "../../types"
 import type { ElementIndex } from "./element-index"
 import type { TypeScriptProgram } from "./program"
 
-interface EntryPointConfig {
-  version: number
-  include: Array<{ kind: string; path: string }>
-  exclude: Array<{ path: string }>
-}
+import type { EntryPointOverride } from "../../../config"
 
-interface EntryPointMetadata {
-  kind: string
-  path: string
+export interface EntryPointOptions {
+  include: EntryPointOverride[]
+  exclude: Array<{ path: string }>
 }
 
 export class TypeScriptEntryPointExtractor {
@@ -26,16 +22,12 @@ export class TypeScriptEntryPointExtractor {
     private readonly files: ScannedFile[],
     elements: IrElement[],
     private readonly index: ElementIndex,
+    private readonly options: EntryPointOptions = { include: [], exclude: [] },
   ) {
     this.byId = new Map(elements.map((element) => [element.id, element]))
   }
 
   async extract(): Promise<Result<IrEntryPoint[], string>> {
-    const [config, configError] = await this.config()
-    if (configError !== null || config === null) {
-      return fail(configError ?? "entry point configuration unavailable")
-    }
-
     const entries = new Map<string, IrEntryPoint>()
     const [packageEntries, packageError] = await this.packageEntries()
     if (packageError !== null) return fail(packageError)
@@ -73,8 +65,8 @@ export class TypeScriptEntryPointExtractor {
       }
     }
 
-    for (const include of config.include) this.configured(entries, include)
-    const excluded = new Set(config.exclude.map((entry) => entry.path))
+    for (const include of this.options.include) this.configured(entries, include)
+    const excluded = new Set(this.options.exclude.map((entry) => entry.path))
 
     return ok(
       [...entries.values()]
@@ -134,6 +126,7 @@ export class TypeScriptEntryPointExtractor {
     kind: IrEntryPointKind,
     label: string,
     provenance: string,
+    metadata: Record<string, string> = {},
   ): void {
     const key = kind === "library_api" ? element.id : element.filePath
     const entry: IrEntryPoint = {
@@ -143,18 +136,21 @@ export class TypeScriptEntryPointExtractor {
       label,
       provenance: `${provenance}:${element.filePath}`,
       confidence: "observed",
-      metadata: { path: element.filePath },
+      metadata: { path: element.filePath, ...metadata },
     }
     entries.set(entry.id, entry)
   }
 
-  private configured(entries: Map<string, IrEntryPoint>, include: EntryPointMetadata): void {
+  private configured(entries: Map<string, IrEntryPoint>, include: EntryPointOverride): void {
     const file = this.files.find((candidate) => candidate.path === include.path)
     if (file === undefined) return
     const module = this.byId.get(IrIdentity.file(file.path))
     if (module === undefined) return
     const kind = this.kind(include.kind)
-    this.add(entries, module, kind, include.path, "configured")
+    this.add(entries, module, kind, include.path, "configured", {
+      path: file.path,
+      ...(include.name === undefined ? {} : { name: include.name }),
+    })
   }
 
   private kind(value: string): IrEntryPointKind {
@@ -181,30 +177,31 @@ export class TypeScriptEntryPointExtractor {
     const bin = (parsed as Record<string, unknown>)["bin"]
     const entries: IrEntryPoint[] = []
     if (typeof bin === "string") {
-      entries.push(...this.packageEntry(bin))
+      entries.push(...this.packageEntry(bin, null))
       return ok(entries)
     }
     if (typeof bin !== "object" || bin === null || Array.isArray(bin)) return ok(entries)
-    for (const value of Object.values(bin)) {
-      if (typeof value === "string") entries.push(...this.packageEntry(value))
+    for (const [name, value] of Object.entries(bin)) {
+      if (typeof value === "string") entries.push(...this.packageEntry(value, name))
     }
 
     return ok(entries)
   }
 
-  private packageEntry(path: string): IrEntryPoint[] {
+  private packageEntry(path: string, name: string | null): IrEntryPoint[] {
     const normalized = path.replace(/^\.\//, "")
     const module = this.byId.get(IrIdentity.file(normalized))
     if (module === undefined) return []
+    const anchor = name ?? normalized.split("/").at(-1) ?? "entry"
     return [
       {
-        id: IrIdentity.entry("cli", normalized),
+        id: IrIdentity.entry("cli", anchor),
         nodeId: module.id,
         kind: "cli",
-        label: path,
+        label: anchor,
         provenance: "package.json#bin",
         confidence: "observed",
-        metadata: { path: normalized },
+        metadata: { path: normalized, name: anchor },
       },
     ]
   }
@@ -214,41 +211,6 @@ export class TypeScriptEntryPointExtractor {
     if (readError !== null || text === null) return false
 
     return text.startsWith("#!")
-  }
-
-  private async config(): Promise<Result<EntryPointConfig, string>> {
-    const path = join(this.root, "spec", "implementation", "entrypoints.json")
-    const [text, readError] = await attemptAsync(async () => {
-      const file = Bun.file(path)
-      return (await file.exists()) ? file.text() : ""
-    })
-    if (readError !== null || text === null) return fail(readError ?? "cannot read entrypoints")
-    if (text === "") return ok({ version: 1, include: [], exclude: [] })
-
-    const [parsed, parseError] = attempt(() => JSON.parse(text) as unknown)
-    if (parseError !== null || parsed === null) return fail(parseError ?? "invalid entrypoints")
-    if (typeof parsed !== "object" || Array.isArray(parsed))
-      return fail("entrypoints must be an object")
-    const record = parsed as Record<string, unknown>
-    if (record["version"] !== 1) return fail("unsupported entrypoints version")
-
-    return ok({
-      version: 1,
-      include: this.entries(record["include"]),
-      exclude: this.entries(record["exclude"]),
-    })
-  }
-
-  private entries(value: unknown): Array<{ kind: string; path: string }> {
-    if (!Array.isArray(value)) return []
-    return value.flatMap((entry) => {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return []
-      const record = entry as Record<string, unknown>
-      if (typeof record["path"] !== "string") return []
-      return [
-        { kind: typeof record["kind"] === "string" ? record["kind"] : "cli", path: record["path"] },
-      ]
-    })
   }
 
   private line(sourceFile: ts.SourceFile, node: ts.Node): number {

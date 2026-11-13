@@ -1,6 +1,6 @@
 # Behavior-derived conceptual architecture
 
-Status: planned. Replaces directory-based reconstruction from the first
+Status: implemented. Replaces directory-based reconstruction from the first
 generated-spec implementation.
 
 The conceptual architecture describes what the system does. It does not describe
@@ -96,17 +96,25 @@ themselves.
 
 Labels come from observed evidence:
 
+Labels use one normalized grammar: `<ROLE> <anchor>`. The role comes from a
+closed set; the anchor is observed evidence kept verbatim.
+
 | Evidence               | Example label           |
 | ---------------------- | ----------------------- |
-| HTTP route prefix      | `Configuration API`     |
-| CLI namespace          | `Analyze command`       |
-| Package export surface | `@scope/package API`    |
-| Event or job family    | `Snapshot jobs`         |
-| Data channel           | `Snapshot storage`      |
-| External package       | `Git integration`       |
-| Ambiguous cluster      | `Unclassified behavior` |
+| HTTP route prefix      | `HTTP /config`          |
+| HTTP interface         | `HTTP GET /config`      |
+| CLI bin or command     | `CLI spec`              |
+| Package export surface | `API @scope/package`    |
+| Application main       | `APP @scope/package`    |
+| Event or job family    | `JOBS snapshot.created` |
+| Configured entry       | `ENTRY migrate`         |
+| Data channel           | `DATA environment:PORT` |
+| External package       | `EXTERNAL node:fs`      |
+| Ambiguous cluster      | `UNCLASSIFIED behavior` |
 
-Directory names are not conceptual labels.
+Directory names are not conceptual labels. Normalization never uses synonyms,
+title-cased semantics, package descriptions, or AI output. Every label records
+`label_evidence`.
 
 ## Summaries
 

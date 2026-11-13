@@ -8,7 +8,11 @@ import type {
   WorkbenchSnapshotSummary,
   WorkbenchSystemArchitecture,
   WorkbenchSystemGraph,
+  WorkbenchSystemImplementation,
   WorkbenchSystemNode,
+  WorkbenchHypothesis,
+  WorkbenchVerification,
+  WorkbenchInterpretations,
 } from "../types"
 
 export interface ApiFailure {
@@ -48,6 +52,28 @@ export async function getSystemGraph(
   depth = 2,
 ): Promise<ApiResult<WorkbenchSystemGraph>> {
   return requestV1<WorkbenchSystemGraph>(`/api/v1/projects/${projectId}/graph?depth=${depth}`)
+}
+
+export async function getSystemImplementation(
+  elementId: string,
+): Promise<ApiResult<{ nodes: WorkbenchSystemNode[]; mappings: unknown[] }>> {
+  return requestV1(`/api/v1/elements/${encodeURIComponent(elementId)}/implementation`)
+}
+
+export async function getProjectImplementation(
+  projectId: string,
+): Promise<ApiResult<WorkbenchSystemImplementation>> {
+  return requestV1<WorkbenchSystemImplementation>(`/api/v1/projects/${projectId}/implementation`)
+}
+
+export async function getUnassignedImplementation(
+  projectId: string,
+): Promise<ApiResult<WorkbenchSystemNode[]>> {
+  return requestV1<WorkbenchSystemNode[]>(`/api/v1/projects/${projectId}/unassigned`)
+}
+
+export async function getHypotheses(projectId: string): Promise<ApiResult<WorkbenchHypothesis[]>> {
+  return requestV1<WorkbenchHypothesis[]>(`/api/v1/projects/${projectId}/hypotheses`)
 }
 
 export async function getSystemChildren(
@@ -101,6 +127,18 @@ export async function patchFinding(
 
 export async function getProjectFlows(projectId: string): Promise<ApiResult<WorkbenchFlow[]>> {
   return requestV1<WorkbenchFlow[]>(`/api/v1/projects/${projectId}/flows`)
+}
+
+export async function getProjectVerification(
+  projectId: string,
+): Promise<ApiResult<WorkbenchVerification>> {
+  return requestV1<WorkbenchVerification>(`/api/v1/projects/${projectId}/verification`)
+}
+
+export async function getProjectInterpretations(
+  projectId: string,
+): Promise<ApiResult<WorkbenchInterpretations>> {
+  return requestV1<WorkbenchInterpretations>(`/api/v1/projects/${projectId}/interpretations`)
 }
 
 export async function getGeneratedSection(

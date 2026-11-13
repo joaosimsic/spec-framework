@@ -1,4 +1,4 @@
-import type { GeneratedSpec } from "../spec"
+import type { GeneratedConceptualElement, GeneratedSpec } from "../spec"
 import { GeneratedSpecValidator } from "../spec"
 import type { ValidationCounts } from "./types"
 
@@ -24,30 +24,46 @@ export class GeneratedSpecQualityCheck {
       const [, referenceError] = validator.checkReferences(validated)
       if (referenceError !== null) issues.push(referenceError)
     }
+    const conceptual = conceptualElements(spec)
     const json = JSON.stringify(spec)
     if (json.includes(root)) issues.push("generated spec contains an absolute repository path")
     if (this.hasApprovedStatus(spec)) issues.push("generated spec contains an approved status")
     if (/node_modules|(?:^|["/])\.env(?:["/]|$)|(?:^|["/])\.git\//.test(json)) {
       issues.push("generated spec references excluded or secret paths")
     }
-    const elementIds = new Set(spec.architecture.elements.map((element) => element.id))
+    const implementationIds = new Set([
+      ...spec.implementation.files.map((file) => file.id),
+      ...spec.implementation.symbols.map((symbol) => symbol.id),
+    ])
+    const conceptualIds = new Set(conceptual.map((element) => element.id))
     const evidenceIds = new Set(spec.evidence.map((item) => item.id))
-    const types = new Set(spec.architecture.elements.map((element) => element.type))
-    for (const type of ["system", "subsystem", "component", "file"]) {
-      if (!types.has(type)) issues.push(`generated architecture has no ${type}`)
+    const types = new Set(conceptual.map((element) => element.type))
+    if (!types.has("system")) issues.push("generated architecture has no system")
+    if (!types.has("component")) warnings.push("generated architecture has no component")
+    if (!types.has("interface")) warnings.push("no interfaces detected")
+    const forbidden = conceptual.filter((element) =>
+      ["file", "module", "symbol", "directory"].includes(element.type),
+    )
+    if (forbidden.length > 0) issues.push("implementation nodes appear in conceptual architecture")
+    const directoryOnly = conceptual.filter(
+      (element) =>
+        element.provenance.includes("directory") ||
+        element.label_evidence.length === 0 ||
+        element.label_anchor.trim() === "",
+    )
+    if (directoryOnly.length > 0) {
+      issues.push(`${directoryOnly.length} conceptual elements lack behavior label evidence`)
     }
-    if (
-      !spec.architecture.elements.some(
-        (element) =>
-          !["system", "subsystem", "component", "file", "entry_point"].includes(element.type),
-      )
-    ) {
-      warnings.push("generated architecture has no symbol nodes")
+    const summariesWithoutEvidence = conceptual.filter(
+      (element) => element.summary.trim() === "" || element.label_evidence.length === 0,
+    )
+    if (summariesWithoutEvidence.length > 0) {
+      issues.push(`${summariesWithoutEvidence.length} conceptual summaries lack evidence`)
     }
-    if (!types.has("entry_point")) warnings.push("no entry points detected")
     for (const record of spec.requirements) {
-      for (const id of record.evidence)
+      for (const id of record.evidence) {
         if (!evidenceIds.has(id)) issues.push(`behavior record references missing evidence ${id}`)
+      }
     }
     for (const record of spec.contracts) {
       for (const id of record.evidence)
@@ -58,10 +74,17 @@ export class GeneratedSpecQualityCheck {
         if (!evidenceIds.has(id))
           issues.push(`verification record references missing evidence ${id}`)
     }
+    for (const hypothesis of spec.hypotheses) {
+      if (!conceptualIds.has(hypothesis.conceptual_id)) {
+        issues.push(`hypothesis references missing conceptual element ${hypothesis.conceptual_id}`)
+      }
+    }
     const findings = spec.findings as Array<{ affectedElements?: string[] }>
     for (const finding of findings) {
       for (const id of finding.affectedElements ?? []) {
-        if (!elementIds.has(id)) issues.push(`finding references missing element ${id}`)
+        if (!conceptualIds.has(id) && !implementationIds.has(id)) {
+          issues.push(`finding references missing element ${id}`)
+        }
       }
     }
     const unknownIds = spec.unknowns.map((unknown) => unknown.id)
@@ -69,15 +92,15 @@ export class GeneratedSpecQualityCheck {
       issues.push("unknown records are not sorted")
     if (new Set(evidenceIds).size !== spec.evidence.length)
       issues.push("duplicate evidence identities")
+    const unassignedFiles = spec.architecture.coverage.unassigned.length
+    const files = spec.implementation.files.length
+    const unassignedPercent = files === 0 ? 0 : (unassignedFiles / files) * 100
+    const mappedFilesPerComponent = this.mappedFilesPerComponent(spec)
 
     return {
       counts: {
-        files: new Set(
-          spec.architecture.elements
-            .filter((element) => element.type === "file")
-            .map((element) => element.file_path),
-        ).size,
-        elements: spec.architecture.elements.length,
+        files,
+        elements: conceptual.length,
         relationships: spec.architecture.relationships.length,
         behavior: spec.requirements.length,
         contracts: spec.contracts.length,
@@ -88,10 +111,28 @@ export class GeneratedSpecQualityCheck {
         evidence: spec.evidence.length,
         specBytes,
         databaseBytes,
+        conceptualComponents: spec.architecture.components.length,
+        directoryOnlyComponents: directoryOnly.length,
+        unassignedFiles,
+        unassignedPercent,
+        mappedFilesPerComponent,
+        summariesWithoutEvidence: summariesWithoutEvidence.length,
+        hypotheses: spec.hypotheses.length,
+        aiFindings: spec.findings.filter((finding) => finding.family === "ai_assisted").length,
       },
       issues: [...new Set(issues)],
       warnings: [...new Set(warnings)],
     }
+  }
+
+  private mappedFilesPerComponent(spec: GeneratedSpec): number {
+    const components = new Set(spec.architecture.components.map((component) => component.id))
+    if (components.size === 0) return 0
+    const files = new Set(spec.implementation.files.map((file) => file.id))
+    const mapped = spec.mappings.filter(
+      (mapping) => components.has(mapping.conceptual_id) && files.has(mapping.implementation_id),
+    )
+    return mapped.length / components.size
   }
 
   private hasApprovedStatus(value: unknown): boolean {
@@ -102,4 +143,15 @@ export class GeneratedSpecQualityCheck {
 
     return Object.values(record).some((item) => this.hasApprovedStatus(item))
   }
+}
+
+function conceptualElements(spec: GeneratedSpec): GeneratedConceptualElement[] {
+  return [
+    spec.architecture.system,
+    ...spec.architecture.subsystems,
+    ...spec.architecture.components,
+    ...spec.architecture.interfaces,
+    ...spec.architecture.data_stores,
+    ...spec.architecture.external_systems,
+  ]
 }

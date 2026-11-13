@@ -4,7 +4,7 @@ import { IrValidator } from "../../ir-validator"
 import type { ScannedFile } from "../../types"
 import { ElementIndex } from "./element-index"
 import { TypeScriptEdgeExtractor } from "./edges"
-import { TypeScriptEntryPointExtractor } from "./entry-points"
+import { TypeScriptEntryPointExtractor, type EntryPointOptions } from "./entry-points"
 import { TypeScriptProgramBuilder } from "./program"
 import { TypeScriptElementExtractor } from "./symbols"
 
@@ -12,7 +12,11 @@ export class TypeScriptAdapter {
   readonly id = "typescript"
   readonly version = "1"
 
-  async analyze(root: string, files: ScannedFile[]): Promise<Result<IrSnapshot, string>> {
+  async analyze(
+    root: string,
+    files: ScannedFile[],
+    entryPointOptions: EntryPointOptions = { include: [], exclude: [] },
+  ): Promise<Result<IrSnapshot, string>> {
     if (files.length === 0) {
       return ok({
         version: IR_VERSION,
@@ -45,6 +49,7 @@ export class TypeScriptAdapter {
       files,
       elements,
       index,
+      entryPointOptions,
     ).extract()
     if (entryError !== null || entryPoints === null) {
       return fail(entryError ?? "entry points unavailable")

@@ -8,7 +8,10 @@ import { WorkbenchServer } from "../src/workbench"
 async function createRepository(): Promise<string> {
   const target = await mkdtemp(join(tmpdir(), "analysis-api-"))
   await mkdir(join(target, "src"), { recursive: true })
-  await writeFile(join(target, "src", "index.ts"), "export const value = 1\n")
+  await writeFile(
+    join(target, "src", "index.ts"),
+    "export function value(): number {\n  return 1\n}\n",
+  )
   await writeFile(join(target, ".gitignore"), ".spec/\n")
   execFileSync("git", ["init"], { cwd: target, stdio: "ignore" })
   execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: target })
@@ -98,7 +101,48 @@ describe("analysis API", () => {
       const graphBody = (await graph.json()) as {
         data: { nodes: Array<{ id: string; kind: string }> }
       }
-      expect(graphBody.data.nodes.some((node) => node.kind === "file")).toBe(true)
+      expect(graphBody.data.nodes.some((node) => node.kind === "file")).toBe(false)
+      expect(
+        graphBody.data.nodes.some((node) =>
+          [
+            "system",
+            "subsystem",
+            "component",
+            "interface",
+            "data_store",
+            "external_system",
+          ].includes(node.kind),
+        ),
+      ).toBe(true)
+
+      const implementation = await fetch(
+        `${origin}/api/v1/projects/${registered.data.id}/implementation`,
+      )
+      const implementationBody = (await implementation.json()) as {
+        data: { files: unknown[]; symbols: unknown[]; mappings: unknown[] }
+      }
+      expect(implementationBody.data.files.length).toBeGreaterThan(0)
+      expect(implementationBody.data.mappings.length).toBeGreaterThan(0)
+
+      const verification = await fetch(
+        `${origin}/api/v1/projects/${registered.data.id}/verification`,
+      )
+      expect(verification.status).toBe(200)
+      const verificationBody = (await verification.json()) as {
+        data: { run: unknown | null; results: unknown[] }
+      }
+      expect(verificationBody.data.run).toBeNull()
+      expect(verificationBody.data.results).toEqual([])
+
+      const interpretations = await fetch(
+        `${origin}/api/v1/projects/${registered.data.id}/interpretations`,
+      )
+      expect(interpretations.status).toBe(200)
+      const interpretationsBody = (await interpretations.json()) as {
+        data: { run: unknown | null; interpretations: unknown[] }
+      }
+      expect(interpretationsBody.data.run).toBeNull()
+      expect(interpretationsBody.data.interpretations).toEqual([])
     } finally {
       handle.close()
     }

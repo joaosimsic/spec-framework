@@ -28,4 +28,16 @@ export class AnalysisIds {
   static run(now: string): string {
     return this.prefix("RUN-", `${now}\u0000${crypto.randomUUID()}`)
   }
+
+  static verificationRun(snapshotId: string, now: string): string {
+    return this.prefix("VRUN-", `${snapshotId}\u0000${now}\u0000${crypto.randomUUID()}`)
+  }
+
+  static interpretationRun(snapshotId: string, now: string): string {
+    return this.prefix("INTRUN-", `${snapshotId}\u0000${now}\u0000${crypto.randomUUID()}`)
+  }
+
+  static interpretation(runId: string, targetKind: string, targetId: string): string {
+    return this.prefix("INTP-", `${runId}\u0000${targetKind}\u0000${targetId}`)
+  }
 }

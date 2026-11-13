@@ -22,7 +22,17 @@ const snapshot: SnapshotRecord = {
   flowCount: 0,
   findingCount: 0,
   mapping: null,
-  coverage: { mapped: [], partial: [], unmapped: [], unassigned: [], stale: [] },
+  coverage: {
+    mapped: [],
+    partial: [],
+    unmapped: [],
+    unassigned: [],
+    stale: [],
+    ambiguous: [],
+    entry_points_without_sinks: [],
+    behavior_without_implementation: [],
+    external_systems: [],
+  },
   createdAt: "2026-11-13T00:00:00.000Z",
 }
 
@@ -85,6 +95,126 @@ describe("AI validation", () => {
       input,
     )
     expect(invalidLine[1]).toContain("line")
+  })
+
+  test("accepts diagnosis output with valid component and source evidence", () => {
+    const [findings, validationError] = new AiOutputValidator().validateDiagnosis(
+      JSON.stringify({
+        findings: [
+          {
+            ruleId: "ARC-005",
+            title: "Multiple responsibilities",
+            explanation: "The component serves unrelated request paths.",
+            recommendation: "Split by request behavior.",
+            affectedElements: ["CMP-test"],
+            evidence: [{ elementId: "SYM-src/a.ts#run", filePath: "src/a.ts", line: 4 }],
+            confidence: 0.7,
+          },
+        ],
+      }),
+      {
+        elements: input.elements,
+        files: input.files,
+        conceptualIds: ["CMP-test"],
+      },
+    )
+    expect(validationError).toBeNull()
+    expect(findings?.[0]?.ruleId).toBe("ARC-005")
+  })
+
+  test("rejects unsupported diagnosis rules, missing references, and authority claims", () => {
+    const validator = new AiOutputValidator()
+    const diagnosis = (overrides: Record<string, unknown>) =>
+      JSON.stringify({
+        findings: [
+          {
+            ruleId: "ARC-005",
+            title: "Multiple responsibilities",
+            explanation: "The component serves unrelated request paths.",
+            recommendation: "Split by request behavior.",
+            affectedElements: ["CMP-test"],
+            evidence: [{ elementId: "SYM-src/a.ts#run", filePath: "src/a.ts", line: 4 }],
+            confidence: 0.7,
+            ...overrides,
+          },
+        ],
+      })
+    const context = {
+      elements: input.elements,
+      files: input.files,
+      conceptualIds: ["CMP-test"],
+    }
+
+    const rule = validator.validateDiagnosis(diagnosis({ ruleId: "ARC-001" }), context)
+    expect(rule[1]).toContain("unsupported rule")
+
+    const component = validator.validateDiagnosis(
+      diagnosis({ affectedElements: ["CMP-missing"] }),
+      context,
+    )
+    expect(component[1]).toContain("missing component")
+
+    const file = validator.validateDiagnosis(
+      diagnosis({
+        evidence: [{ elementId: "SYM-src/a.ts#run", filePath: "src/missing.ts", line: 4 }],
+      }),
+      context,
+    )
+    expect(file[1]).toContain("missing file")
+
+    const line = validator.validateDiagnosis(
+      diagnosis({
+        evidence: [{ elementId: "SYM-src/a.ts#run", filePath: "src/a.ts", line: 99 }],
+      }),
+      context,
+    )
+    expect(line[1]).toContain("out of range")
+
+    const authority = validator.validateDiagnosis(
+      diagnosis({ explanation: "This component is approved." }),
+      context,
+    )
+    expect(authority[1]).toContain("claims authority")
+  })
+
+  test("validates derived interpretations and rejects authority claims", () => {
+    const validator = new AiOutputValidator()
+    const subject = {
+      kind: "contract" as const,
+      id: "CON-test",
+      title: "CLI commands",
+      prompt: "Observed CLI contract.",
+    }
+    const valid = validator.validateInterpretation(
+      JSON.stringify({
+        explanation: "The contract exposes one command.",
+        evidence: [{ filePath: "src/a.ts", line: 4, reference: "CON-test" }],
+        confidence: 0.6,
+      }),
+      { files: input.files, subject },
+    )
+    expect(valid[1]).toBeNull()
+    expect(valid[0]?.targetId).toBe("CON-test")
+
+    const missingFile = validator.validateInterpretation(
+      JSON.stringify({
+        explanation: "The contract exposes one command.",
+        evidence: [{ filePath: "src/missing.ts", line: 4, reference: "CON-test" }],
+        confidence: 0.6,
+      }),
+      { files: input.files, subject },
+    )
+    expect(missingFile[1]).toContain("missing file")
+
+    const authority = validator.validateInterpretation(
+      JSON.stringify({
+        explanation: "This contract is approved.",
+        evidence: [{ filePath: "src/a.ts", line: 4, reference: "CON-test" }],
+        confidence: 0.6,
+      }),
+      { files: input.files, subject },
+    )
+    expect(authority[1]).toContain("claims authority")
   })
 
   test("redacts secrets and environment values", () => {

@@ -1,11 +1,11 @@
 # Implementation checks
 
-Status: implemented; migration to generated verification records in progress.
+Status: implemented. Configured checks produce derived verification runs.
 
 ## Purpose
 
-Configured build, typecheck, and test commands produce verification evidence for
-the generated spec. A passing command proves only that command's result.
+Configured build, typecheck, and test commands produce verification evidence in
+separate verification runs. A passing command proves only that command's result.
 
 ## Scope
 
@@ -17,7 +17,8 @@ In scope:
 - configured working directory;
 - timeout and output bounds;
 - tool and input hashes;
-- generated verification records.
+- generated verification records;
+- persisted verification runs and a derived artifact.
 
 Out of scope:
 
@@ -68,11 +69,24 @@ The configuration is trusted build input. It is reviewed like a package script.
 - Never invoke a shell.
 - Resolve the executable explicitly.
 - Constrain the working directory to the repository root.
+- Reject duplicate check IDs and invalid timeouts.
 - Enforce a timeout.
 - Bound captured output.
-- Record exact command, tool version, working directory, input hashes, result,
-  and output hash.
-- Fail closed on malformed configuration.
+- Record exact command, runner version, working directory, input hashes,
+  result, exit code, duration, and output hash.
+- Fail closed on malformed or escaping configuration.
+- Run only from `spec check`, never during analysis.
+
+## Canonical target versus run result
+
+`spec/generated/spec.gen.json` contains deterministic verification targets. A
+configured check target has `result: "unknown"` because analysis does not execute
+code.
+
+`spec check` executes the checks and records a verification run in SQLite and at
+`spec/generated/verification.gen.json`. The run links to the snapshot and spec
+hash it checked. Canonical spec output is never mutated by a run. See
+[0018](../design-decisions/0018-verification-runs.md).
 
 ## Generated verification record
 

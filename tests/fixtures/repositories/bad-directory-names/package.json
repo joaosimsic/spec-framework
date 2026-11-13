@@ -1,0 +1,7 @@
+{
+  "name": "bad-directory-names",
+  "private": true,
+  "exports": {
+    ".": "./nondescript/whatever.ts"
+  }
+}

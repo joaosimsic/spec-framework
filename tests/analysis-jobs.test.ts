@@ -49,7 +49,17 @@ class FakeExecutor implements AnalysisExecutor {
       flows: [],
       findings: [],
       mapping: null,
-      coverage: { mapped: [], partial: [], unmapped: [], unassigned: [], stale: [] },
+      coverage: {
+        mapped: [],
+        partial: [],
+        unmapped: [],
+        unassigned: [],
+        stale: [],
+        ambiguous: [],
+        entry_points_without_sinks: [],
+        behavior_without_implementation: [],
+        external_systems: [],
+      },
     })
   }
 }

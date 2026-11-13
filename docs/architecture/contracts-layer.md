@@ -7,10 +7,9 @@ not approve compatibility or normative API policy.
 
 - package `exports` and `bin` entries;
 - exported TypeScript symbols and signatures;
-- CLI commands and help/version snapshots when configured;
-- HTTP routes;
-- JSON Schema files if present;
-- data format files if present;
+- observed CLI entry points;
+- HTTP routes grouped by route family;
+- `*.schema.json` files if present;
 - configured contract checks.
 
 ## Record shape
@@ -26,6 +25,18 @@ not approve compatibility or normative API policy.
   "confidence": "observed"
 }
 ```
+
+## Current generated kinds
+
+- `cli`;
+- `http_routes`;
+- `json_schema`;
+- `library_api`;
+- `package_exports`.
+
+Route records use surface entries such as `GET /orders`. CLI records keep
+package bin entries and observed command names distinct. JSON Schema records
+include `$id`, `title`, and `$schema` values when present.
 
 ## Rules
 

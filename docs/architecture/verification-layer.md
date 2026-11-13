@@ -1,7 +1,8 @@
 # Verification records
 
 Generated verification records connect observed targets to tests, compiler
-checks, and configured external commands.
+checks, and configured external commands. Canonical verification targets are
+deterministic. Actual check outcomes are recorded as separate verification runs.
 
 ## Methods
 
@@ -10,6 +11,24 @@ checks, and configured external commands.
 - `analysis`: deterministic analysis result;
 - `inspection`: generated evidence requiring human reading;
 - `external`: configured external checker or validator.
+
+## Verification runs
+
+`spec check` executes configured commands and stores a derived run:
+
+- snapshot and canonical spec hash;
+- runner version and timestamp;
+- overall result and consistency errors/warnings;
+- per-check command, working directory, exit code, timeout flag, duration,
+  result, confidence, bounded output, output hash, and input hashes.
+
+Runs are stored in `.spec/analysis.sqlite` and
+`spec/generated/verification.gen.json`. They never mutate `spec.gen.json` and
+never approve a requirement.
+
+AI may explain failed or missing checks through `spec interpret --kind
+verification`. AI interpretations are stored separately in
+`spec/generated/interpretations.gen.json` and never change a result.
 
 ## Record shape
 

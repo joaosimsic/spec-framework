@@ -8,14 +8,14 @@ export class ValidationReportWriter {
       `Generated: ${report.generatedAt}`,
       `Analyzer version: ${report.analyzerVersion}`,
       "",
-      "| Repository | Commit | Analysis | Elements | Relationships | Behavior | Flows | Findings | Deterministic | API depth 2 | API depth 4 |",
-      "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |",
+      "| Repository | Commit | Analysis | Conceptual | Components | Relationships | Behavior | Flows | Findings | Unassigned | Directory-only | Deterministic | API depth 2 | API depth 4 |",
+      "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |",
     ]
     for (const item of report.repositories) {
       const depth2 = item.api.find((entry) => entry.path.includes("depth=2"))
       const depth4 = item.api.find((entry) => entry.path.includes("depth=4"))
       lines.push(
-        `| ${item.name} | ${item.commit.slice(0, 8)} | ${(item.timing.milliseconds / 1000).toFixed(2)}s | ${item.counts.elements} | ${item.counts.relationships} | ${item.counts.behavior} | ${item.counts.flows} | ${item.counts.findings} | ${item.deterministic ? "yes" : "no"} | ${depth2?.medianMs.toFixed(0) ?? "n/a"}ms | ${depth4?.medianMs.toFixed(0) ?? "n/a"}ms |`,
+        `| ${item.name} | ${item.commit.slice(0, 8)} | ${(item.timing.milliseconds / 1000).toFixed(2)}s | ${item.counts.elements} | ${item.counts.conceptualComponents} | ${item.counts.relationships} | ${item.counts.behavior} | ${item.counts.flows} | ${item.counts.findings} | ${item.counts.unassignedPercent.toFixed(1)}% | ${item.counts.directoryOnlyComponents} | ${item.deterministic ? "yes" : "no"} | ${depth2?.medianMs.toFixed(0) ?? "n/a"}ms | ${depth4?.medianMs.toFixed(0) ?? "n/a"}ms |`,
       )
     }
     lines.push("", "## Repository details", "")
@@ -28,6 +28,13 @@ export class ValidationReportWriter {
         `- clone: ${item.clonePath}`,
         `- original clean before/after: ${item.cleanBefore}/${item.cleanAfter}`,
         `- files: ${item.counts.files}`,
+        `- conceptual components: ${item.counts.conceptualComponents}`,
+        `- directory-only components: ${item.counts.directoryOnlyComponents}`,
+        `- unassigned implementation: ${item.counts.unassignedFiles} files (${item.counts.unassignedPercent.toFixed(1)}%)`,
+        `- mapped files per component: ${item.counts.mappedFilesPerComponent.toFixed(2)}`,
+        `- summaries without evidence: ${item.counts.summariesWithoutEvidence}`,
+        `- AI hypotheses: ${item.counts.hypotheses}`,
+        `- AI-assisted findings: ${item.counts.aiFindings}`,
         `- behavior records: ${item.counts.behavior}`,
         `- contracts: ${item.counts.contracts}`,
         `- verification: ${item.counts.verification}`,

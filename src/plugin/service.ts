@@ -1,6 +1,11 @@
 import { fail, ok, type Result } from "../core/result"
 import { AnalysisRuntime } from "../workbench/analysis-runtime"
-import { GeneratedSpecValidator, type GeneratedElement, type GeneratedSpec } from "../spec"
+import { conceptualElements } from "../query"
+import {
+  GeneratedSpecValidator,
+  type GeneratedConceptualElement,
+  type GeneratedSpec,
+} from "../spec"
 import type {
   PluginAnalyzeView,
   PluginCheckView,
@@ -37,7 +42,7 @@ export class SpecPluginService {
       snapshot_id: snapshot?.id ?? null,
       commit: snapshot?.commit ?? "",
       dirty: snapshot?.dirty ?? false,
-      architecture: spec?.architecture.elements.length ?? 0,
+      architecture: spec === null ? 0 : conceptualElements(spec).length,
       flows: spec?.flows.length ?? 0,
       findings: spec?.findings.length ?? 0,
       unknowns: spec?.unknowns.length ?? 0,
@@ -63,7 +68,7 @@ export class SpecPluginService {
     if (specError !== null || spec === null)
       return fail(specError ?? { code: "SPEC-PLUGIN-SPEC", message: "generated spec unavailable" })
     const handle = input.ref ?? input.name
-    const elements = spec.architecture.elements.filter((element) => {
+    const elements = conceptualElements(spec).filter((element) => {
       if (
         handle !== undefined &&
         element.id !== handle &&
@@ -156,6 +161,6 @@ export class SpecPluginService {
   }
 }
 
-export function summarizeElement(element: GeneratedElement): string {
+export function summarizeElement(element: GeneratedConceptualElement): string {
   return `${element.label} - ${element.type} (${element.confidence})`
 }

@@ -108,6 +108,10 @@ AI-assisted findings additionally record:
 - validated references;
 - confidence.
 
+AI-assisted findings are limited to `ARC-005`, `ARC-006`, `ARC-009`, and
+`ARC-010`. They are stored with `family: "ai_assisted"` and never change a
+deterministic finding. See [AI layer](ai-layer.md#architecture-diagnosis).
+
 ## Human feedback
 
 - Confirm: the finding is real.

@@ -25,7 +25,15 @@ describe("generated workbench session", () => {
         snapshot_id: string | null
       }
       expect(session.mode).toBe("generated")
-      expect(session.views).toEqual(["system", "flows", "findings", "evolution", "documents"])
+      expect(session.views).toEqual([
+        "system",
+        "flows",
+        "findings",
+        "verification",
+        "interpretations",
+        "evolution",
+        "documents",
+      ])
       expect(session.snapshot_id).toBeNull()
       const legacy = await fetch(`${handle.url}/api/graph`)
       expect(legacy.status).toBe(404)

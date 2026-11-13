@@ -81,3 +81,5 @@ proposals, and hash-locked approval are retired by decision record
 - [0015 Retire legacy roadmap and Explorer](design-decisions/0015-retire-legacy-roadmap-and-explorer.md)
 - [0016 Generated spec product](design-decisions/0016-generated-spec-product.md)
 - [0017 Behavior-derived conceptual architecture](design-decisions/0017-behavior-derived-architecture.md)
+- [0018 Verification runs are derived evidence](design-decisions/0018-verification-runs.md)
+- [0019 AI interpretations are derived evidence](design-decisions/0019-derived-ai-interpretations.md)

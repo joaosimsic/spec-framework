@@ -1,6 +1,6 @@
 # System workspace
 
-Status: version 1 implemented; behavior-derived conceptual architecture planned.
+Status: implemented with behavior-derived conceptual architecture.
 
 ## Purpose
 
@@ -22,6 +22,8 @@ Views:
 | System              | Default. Generated hierarchy with implementation drill-down. |
 | Flows               | Entry points, processing paths, sources, sinks.              |
 | Findings            | Deterministic diagnostics and AI-assisted hypotheses.        |
+| Verification        | Latest `spec check` results and consistency findings.        |
+| Interpretations     | Derived AI contract and failed-check explanations.           |
 | Evolution           | Snapshot comparison.                                         |
 | Generated documents | Rendered generated spec sections and technical metadata.     |
 

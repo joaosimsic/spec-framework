@@ -1,7 +1,6 @@
 # Generated spec model
 
-Status: version 1 implemented; version 2 planned for behavior-derived
-architecture.
+Status: version 2 implemented with behavior-derived conceptual architecture.
 
 The generated spec is one deterministic artifact produced from one analysis
 snapshot.
@@ -34,6 +33,7 @@ spec/generated/spec.gen.json
     "symbols": []
   },
   "mappings": [],
+  "hypotheses": [],
   "requirements": [],
   "contracts": [],
   "verification": [],
@@ -63,8 +63,11 @@ Every conceptual element contains:
 {
   "id": "CMP-...",
   "type": "component",
-  "label": "Configuration API",
-  "summary": "Handles configuration read and update behavior.",
+  "label": "HTTP /config",
+  "label_role": "HTTP",
+  "label_anchor": "/config",
+  "label_evidence": ["http:/config"],
+  "summary": "Observed entry points: GET /config, DELETE /config.",
   "confidence": "observed",
   "status": "observed",
   "provenance": "analysis:anchor",
@@ -124,8 +127,9 @@ but the primary owner should be explicit and ambiguous mappings must be marked.
 | `CON-`   | observed contract     | surface key                            |
 | `VER-`   | verification record   | check or test key                      |
 | `FLOW-`  | flow                  | entry point                            |
-| `FIND-`  | finding               | rule and affected identity             |
+| `FIND-`  | finding               | rule, affected identity, and AI model  |
 | `EVD-`   | evidence              | input hashes and tool identity         |
+| `HYP-`   | AI hypothesis         | conceptual element and model identity  |
 
 Conceptual IDs do not depend on directory paths.
 
@@ -157,6 +161,52 @@ Conceptual relationships:
 Implementation relationships remain imports, calls, references, inheritance,
 data access, and containment.
 
+## AI hypotheses
+
+AI output is optional and stored separately. It never changes labels, identity,
+summaries, status, or conceptual relationships.
+
+```json
+{
+  "id": "HYP-...",
+  "conceptual_id": "CMP-...",
+  "text": "AI responsibility hypothesis.",
+  "evidence": [{ "element_id": "SYM-...", "file_path": "src/config.ts", "line": 4 }],
+  "confidence": 0.5,
+  "provider": "local",
+  "model": "model-id",
+  "prompt_version": "1",
+  "input_hashes": [],
+  "status": "valid"
+}
+```
+
+## Findings
+
+Findings are either deterministic or AI-assisted hypotheses. AI-assisted
+findings must include provider, model, prompt version, and input hashes. They
+never share a rule result with deterministic findings.
+
+```json
+{
+  "id": "FIND-ARC-005-...",
+  "ruleId": "ARC-005",
+  "family": "ai_assisted",
+  "title": "Mixed request responsibilities",
+  "severity": "warning",
+  "status": "open",
+  "affectedElements": ["CMP-..."],
+  "evidence": [{ "kind": "source", "reference": "SYM-...", "file": "src/config.ts", "line": 4 }],
+  "explanation": "The component serves unrelated request paths.",
+  "recommendation": "Review whether the behavior should be split.",
+  "confidence": 0.6,
+  "provider": "local",
+  "model": "model-id",
+  "promptVersion": "1",
+  "inputHashes": ["..."]
+}
+```
+
 ## Requirements
 
 Generated behavior records link to conceptual components:
@@ -165,7 +215,7 @@ Generated behavior records link to conceptual components:
 {
   "id": "REQ-...",
   "kind": "observed_behavior",
-  "title": "Analyze command",
+  "title": "CLI spec",
   "component": "CMP-...",
   "entry_point": "ENTRY-cli-analyze",
   "evidence": [],
@@ -188,6 +238,8 @@ interfaces, contracts, and conceptual components.
 ## Versioning
 
 - Version 2 replaces the mixed conceptual/implementation architecture model.
+- Verification runs and AI interpretations are derived artifacts outside the
+  canonical spec.
 - Readers reject unsupported major versions.
 - The workbench refuses to render incompatible snapshots.
 - Version 1 validation remains historical.

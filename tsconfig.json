@@ -8,7 +8,11 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
+    "paths": {
+      "@spec-framework/cli/plugin": ["./src/plugin/index.ts"]
+    },
     "types": ["bun"]
   },
-  "include": ["src", "bin", "tests", "plugin", "scripts"]
+  "include": ["src", "bin", "tests", "plugin", "scripts"],
+  "exclude": ["node_modules", "dist", "spec", "tmp"]
 }

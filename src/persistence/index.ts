@@ -16,10 +16,12 @@ export { EntryPointRepository } from "./repositories/entry-point-repository"
 export { FindingRepository } from "./repositories/finding-repository"
 export { FlowRepository } from "./repositories/flow-repository"
 export { GeneratedSpecRepository } from "./repositories/generated-spec-repository"
+export { InterpretationRunRepository } from "./repositories/interpretation-run-repository"
 export { JobRepository } from "./repositories/job-repository"
 export { ProjectRepository } from "./repositories/project-repository"
 export { RelationshipRepository } from "./repositories/relationship-repository"
 export { SnapshotRepository } from "./repositories/snapshot-repository"
+export { VerificationRunRepository } from "./repositories/verification-run-repository"
 export {
   ANALYSIS_SCHEMA_VERSION,
   DEFAULT_ANALYSIS_OPTIONS,
@@ -35,4 +37,14 @@ export {
   type SnapshotConfidence,
   type SnapshotCoverage,
   type SnapshotRecord,
+  type InterpretationEvidence,
+  type InterpretationRecord,
+  type InterpretationRequestKind,
+  type InterpretationRunDetails,
+  type InterpretationRunRecord,
+  type InterpretationTargetKind,
+  type VerificationCheckResultRecord,
+  type VerificationRunDetails,
+  type VerificationRunRecord,
+  type VerificationRunResult,
 } from "./types"

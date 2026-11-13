@@ -4,6 +4,7 @@ import { attempt, attemptAsync, fail, ok, type Result } from "../core/result"
 export interface EntryPointOverride {
   kind: string
   path: string
+  name?: string
 }
 
 export interface AnalysisConfig {
@@ -156,7 +157,13 @@ export class SpecFrameworkConfigLoader {
       const record = entry as Record<string, unknown>
       if (typeof record["path"] !== "string") return []
       return [
-        { kind: typeof record["kind"] === "string" ? record["kind"] : "cli", path: record["path"] },
+        {
+          kind: typeof record["kind"] === "string" ? record["kind"] : "cli",
+          path: record["path"],
+          ...(typeof record["name"] === "string" && record["name"].trim() !== ""
+            ? { name: record["name"].trim() }
+            : {}),
+        },
       ]
     })
   }

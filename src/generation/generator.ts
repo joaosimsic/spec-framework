@@ -1,13 +1,8 @@
 import type { IrElement, IrEntryPoint, IrFinding, IrFlow, IrRelationship } from "../analysis/ir"
+import type { ConceptualArchitecture } from "../architecture"
 import type { SpecFrameworkConfig } from "../config"
-import { SystemProjectionBuilder } from "../implementation"
 import type { ProjectRecord, SnapshotRecord } from "../persistence"
-import {
-  GENERATED_SPEC_VERSION,
-  type GeneratedElement,
-  type GeneratedRelationship,
-  type GeneratedSpec,
-} from "../spec"
+import { GENERATED_SPEC_VERSION, type GeneratedHypothesis, type GeneratedSpec } from "../spec"
 import { GeneratedRecordFactory } from "./records"
 
 export interface GeneratedSpecInput {
@@ -18,26 +13,39 @@ export interface GeneratedSpecInput {
   elements: IrElement[]
   relationships: IrRelationship[]
   entryPoints: IrEntryPoint[]
+  files: Array<{ path: string }>
   flows: IrFlow[]
   findings: IrFinding[]
+  architecture: ConceptualArchitecture
+  hypotheses?: GeneratedHypothesis[]
 }
 
 export class GeneratedSpecBuilder {
   async build(input: GeneratedSpecInput): Promise<GeneratedSpec> {
     const factory = new GeneratedRecordFactory(input.root, input.config)
-    const projection = new SystemProjectionBuilder().build({
-      project: input.project,
-      snapshot: input.snapshot,
-      elements: input.elements,
-      relationships: input.relationships,
-      entryPoints: input.entryPoints,
-    })
-    const behavior = factory.behavior(input.elements, input.entryPoints, input.flows, projection)
-    const contracts = await factory.contracts(input.elements)
+    const architecture = input.architecture.architecture
+    const behavior = factory.behavior(
+      input.elements,
+      input.entryPoints,
+      input.flows,
+      input.architecture.component_by_entry,
+    )
+    const contracts = await factory.contracts(input.elements, input.entryPoints, input.files)
     const verification = factory.verification(input.elements)
-    const architectureIds = new Set(projection.nodes.map((node) => node.id))
+    const implementationIds = new Set([
+      ...input.architecture.implementation.files.map((file) => file.id),
+      ...input.architecture.implementation.symbols.map((symbol) => symbol.id),
+    ])
+    const conceptualIds = new Set([
+      architecture.system.id,
+      ...architecture.subsystems.map((element) => element.id),
+      ...architecture.components.map((element) => element.id),
+      ...architecture.interfaces.map((element) => element.id),
+      ...architecture.data_stores.map((element) => element.id),
+      ...architecture.external_systems.map((element) => element.id),
+    ])
     const findings = input.findings.filter((finding) =>
-      finding.affectedElements.every((id) => architectureIds.has(id)),
+      finding.affectedElements.every((id) => implementationIds.has(id) || conceptualIds.has(id)),
     )
     const evidence = this.dedupe([
       ...behavior.evidence,
@@ -62,19 +70,10 @@ export class GeneratedSpecBuilder {
         root: ".",
         language: this.language(input.elements),
       },
-      architecture: {
-        elements: projection.nodes.map((node) => this.element(node)),
-        relationships: projection.edges
-          .filter((edge) => edge.type !== "contains")
-          .map((edge) => this.relationship(edge)),
-        coverage: {
-          mapped: projection.coverage.mapped,
-          partial: projection.coverage.partial,
-          unmapped: projection.coverage.unmapped,
-          unassigned: projection.coverage.unassigned,
-          stale: projection.coverage.stale,
-        },
-      },
+      architecture,
+      implementation: input.architecture.implementation,
+      mappings: input.architecture.mappings,
+      hypotheses: input.hypotheses ?? [],
       requirements: behavior.records,
       contracts: contracts.records,
       verification: verification.records,
@@ -83,67 +82,6 @@ export class GeneratedSpecBuilder {
       evidence,
       unknowns: factory.unknowns(input.findings, input.flows),
     }
-  }
-
-  private element(node: {
-    id: string
-    label: string
-    kind: string
-    parentId: string | null
-    filePath?: string
-    startLine?: number
-    endLine?: number
-    signature?: string
-    confidence: string
-    provenance: string
-  }): GeneratedElement {
-    return {
-      id: node.id,
-      type: node.kind,
-      label: node.label,
-      parent_id: node.parentId,
-      file_path: node.filePath ?? null,
-      start_line: node.startLine ?? null,
-      end_line: node.endLine ?? null,
-      signature: node.signature ?? null,
-      confidence: this.confidence(node.confidence),
-      status: this.confidence(node.confidence),
-      provenance: node.provenance,
-      evidence: [node.provenance],
-    }
-  }
-
-  private relationship(edge: {
-    id: string
-    sourceId: string
-    targetId: string
-    type: string
-    resolution: string
-    confidence: string
-    provenance: string
-  }): GeneratedRelationship {
-    return {
-      id: edge.id,
-      source_id: edge.sourceId,
-      target_id: edge.targetId,
-      type: edge.type,
-      resolution: edge.resolution,
-      confidence: this.confidence(edge.confidence),
-      provenance: edge.provenance,
-    }
-  }
-
-  private confidence(value: string): GeneratedElement["confidence"] {
-    if (
-      value === "observed" ||
-      value === "inferred" ||
-      value === "ambiguous" ||
-      value === "unknown"
-    ) {
-      return value
-    }
-
-    return "unknown"
   }
 
   private language(elements: IrElement[]): string {

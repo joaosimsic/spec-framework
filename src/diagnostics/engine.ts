@@ -1,5 +1,5 @@
 import type { IrElement, IrEntryPoint, IrFinding, IrRelationship } from "../analysis/ir"
-import type { GeneratedCoverage } from "../spec"
+import type { GeneratedConceptualElement, GeneratedCoverage } from "../spec"
 import type { DiagnosticsConfig } from "./config"
 import { DEFAULT_DIAGNOSTICS } from "./config"
 
@@ -8,6 +8,7 @@ export interface DiagnosticsInput {
   relationships: IrRelationship[]
   entryPoints: IrEntryPoint[]
   coverage: GeneratedCoverage
+  components?: GeneratedConceptualElement[]
   config?: DiagnosticsConfig
 }
 
@@ -22,6 +23,7 @@ export class DiagnosticsEngine {
     this.unused(input.elements, input.relationships, input.entryPoints)
     this.directions(input.elements, input.relationships, config)
     this.coverage(input.coverage)
+    this.missingTests(input)
 
     return [...this.findings.values()].sort((left, right) => left.id.localeCompare(right.id))
   }
@@ -226,14 +228,38 @@ export class DiagnosticsEngine {
         [element],
         [
           {
-            kind: "mapping",
+            kind: "coverage",
             reference: element,
-            file: "spec/implementation/mapping.json",
+            file: "spec/generated/spec.gen.json",
             line: 1,
           },
         ],
         `${element} has no resolved implementation mapping.`,
-        "Add or update a mapping selector for this conceptual element.",
+        "Review behavior anchors and implementation reachability, then add or correct evidence for this conceptual element.",
+      )
+    }
+  }
+
+  private missingTests(input: DiagnosticsInput): void {
+    const mapped = new Set(input.coverage.mapped)
+    for (const component of input.components ?? []) {
+      if (!mapped.has(component.id)) continue
+      if (component.entry_points.length === 0 && component.public_surface.length === 0) continue
+      if (component.tests.length > 0) continue
+      this.add(
+        "ARC-011",
+        "Missing test coverage",
+        [component.id],
+        [
+          {
+            kind: "coverage",
+            reference: component.id,
+            file: "spec/generated/spec.gen.json",
+            line: 1,
+          },
+        ],
+        `${component.label} has observed behavior but no test evidence in this snapshot.`,
+        "Add a test that reaches this component or record the coverage gap as unknown.",
       )
     }
   }

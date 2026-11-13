@@ -1,13 +1,14 @@
 import { fail, ok, type Result } from "../core/result"
 import { SpecFrameworkConfigLoader } from "../config"
 import { GeneratedSpecValidator, type GeneratedSpec } from "../spec"
-import { CheckRunner } from "./runner"
+import { CheckRunner, type CheckExecution } from "./runner"
 
 export interface GeneratedCheckResult {
   errors: number
   warnings: number
   findings: string[]
   output: string[]
+  executions: CheckExecution[]
 }
 
 export class GeneratedCheck {
@@ -29,6 +30,12 @@ export class GeneratedCheck {
     }
     findings.push(...checks.output.filter((line) => line.includes(": failed")))
 
-    return ok({ errors: findings.length, warnings: 0, findings, output: checks.output })
+    return ok({
+      errors: findings.length,
+      warnings: 0,
+      findings,
+      output: checks.output,
+      executions: checks.executions,
+    })
   }
 }

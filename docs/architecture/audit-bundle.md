@@ -8,25 +8,27 @@ snapshot.
 ```text
 manifest.json
 spec.gen.json
-spec.html
+index.html
 spec.pdf
-architecture.gen.c4
-requirements.gen.sdoc
 flows.json
 findings.json
-evidence/
+verification.json
+interpretations.json
+evidence.json
 ```
 
 ## Rules
 
-- Deterministic for the same snapshot and renderer version.
+- Deterministic for the same snapshot and renderer version unless a derived
+  verification run is included.
 - No approval lock.
 - No proposal change report.
 - No hand-edited content.
 - No absolute paths.
 - No secrets.
 - Every rendered section cites generated identity and evidence.
-- Generation timestamps are metadata only.
+- Verification and AI interpretation artifacts are derived evidence, not snapshot
+  determinism.
 
 ## Manifest
 

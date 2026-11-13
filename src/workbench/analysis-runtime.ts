@@ -14,8 +14,15 @@ import {
   RelationshipRepository,
   EntryPointRepository,
   CodeArtifactRepository,
+  VerificationRunRepository,
+  InterpretationRunRepository,
 } from "../persistence"
-import type { ProjectRecord, SnapshotRecord } from "../persistence"
+import type {
+  InterpretationRunDetails,
+  ProjectRecord,
+  SnapshotRecord,
+  VerificationRunDetails,
+} from "../persistence"
 import {
   SnapshotComparator,
   type SnapshotComparison,
@@ -24,9 +31,12 @@ import {
 import { AnalysisJobRunner, JobEventBus } from "../jobs"
 import { AnalysisRootPolicy, ProjectRegistry } from "../projects"
 import { SystemProjectionService } from "../implementation"
+import { GENERATED_SPEC_VERSION } from "../spec"
 import { AiConfigLoader } from "../ai/config"
-import { OpenAiCompatibleProvider } from "../ai/provider"
+import { AiComponentHypothesisGenerator } from "../ai/hypotheses"
+import { AiDiagnosisGenerator } from "../ai/diagnosis"
 import { AiInterpreter } from "../ai/interpreter"
+import { OpenAiCompatibleProvider } from "../ai/provider"
 import type { AiConfig, AiProvider } from "../ai/types"
 
 export interface AnalysisRuntimeOptions {
@@ -54,6 +64,8 @@ export class AnalysisRuntime {
     readonly relationships: RelationshipRepository,
     readonly artifacts: CodeArtifactRepository,
     readonly aiRuns: AiRunRepository,
+    readonly verificationRuns: VerificationRunRepository,
+    readonly interpretationRuns: InterpretationRunRepository,
     readonly aiConfig: AiConfig | null,
     readonly aiProvider: AiProvider | null,
     private readonly currentPath: string,
@@ -97,9 +109,19 @@ export class AnalysisRuntime {
     const aiConfig = options.aiConfig ?? loadedConfig
     const aiProvider =
       options.aiProvider ?? (aiConfig === null ? null : new OpenAiCompatibleProvider(aiConfig))
+    const aiRuns = new AiRunRepository(database)
+    const interpreter =
+      aiConfig === null || aiProvider === null
+        ? null
+        : new AiInterpreter(aiConfig, aiProvider, aiRuns)
+    const hypotheses =
+      interpreter === null ? undefined : new AiComponentHypothesisGenerator(interpreter)
+    const diagnoses = interpreter === null ? undefined : new AiDiagnosisGenerator(interpreter)
     const runner = new AnalysisJobRunner(database, executor, new JobEventBus(), {
       concurrency: options.concurrency,
       now: options.now,
+      ...(hypotheses === undefined ? {} : { hypotheses }),
+      ...(diagnoses === undefined ? {} : { diagnoses }),
     })
 
     return ok(
@@ -118,7 +140,9 @@ export class AnalysisRuntime {
         new EntryPointRepository(database),
         new RelationshipRepository(database),
         new CodeArtifactRepository(database),
-        new AiRunRepository(database),
+        aiRuns,
+        new VerificationRunRepository(database),
+        new InterpretationRunRepository(database),
         aiConfig,
         aiProvider,
         target,
@@ -127,11 +151,20 @@ export class AnalysisRuntime {
   }
 
   spec(project: ProjectRecord): import("../spec").GeneratedSpec | null {
-    return this.generatedSpecs.latest(project.id)
+    const spec = this.generatedSpecs.latest(project.id)
+    return spec !== null && spec.version === GENERATED_SPEC_VERSION ? spec : null
   }
 
   latest(project: ProjectRecord): SnapshotRecord | null {
     return this.snapshots.latest(project.id)
+  }
+
+  latestVerification(project: ProjectRecord): VerificationRunDetails | null {
+    return this.verificationRuns.latest(project.id)
+  }
+
+  latestInterpretation(project: ProjectRecord): InterpretationRunDetails | null {
+    return this.interpretationRuns.latest(project.id)
   }
 
   currentProject(): ProjectRecord | null {

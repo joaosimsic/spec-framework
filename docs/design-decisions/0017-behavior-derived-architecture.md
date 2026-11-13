@@ -88,7 +88,12 @@ Names are derived from observed anchors and public surfaces:
 Directory names may increase mapping confidence but cannot name a conceptual
 element.
 
-When behavior is too ambiguous, the component is named `Unclassified behavior`
+Labels use one normalized grammar, `<ROLE> <verbatim anchor>`. For example
+`HTTP /config`, `CLI spec`, `API @scope/package`, `DATA environment:PORT`, and
+`EXTERNAL node:fs`. No synonyms, title-cased semantics, package descriptions, or
+AI output change a label.
+
+When behavior is too ambiguous, the component is named `UNCLASSIFIED behavior`
 and marked ambiguous. The generator does not invent a purpose.
 
 ## Explanations

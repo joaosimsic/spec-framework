@@ -35,7 +35,7 @@ export function formatQuery(view: PluginQueryView): string {
   return view.elements
     .map(
       (element) =>
-        `${element.label} - ${element.type} (${element.confidence})${element.file_path === null ? "" : ` - ${element.file_path}`}`,
+        `${element.label} - ${element.type} (${element.confidence}) - ${element.summary}`,
     )
     .join("\n")
 }

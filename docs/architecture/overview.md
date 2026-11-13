@@ -39,7 +39,7 @@ flowchart TB
 | Implementation mapping  | IR and behavior reachability                 | Generated     | Files and symbols mapped to conceptual elements                           |
 | Observed behavior       | Entry points, public surface, calls          | Generated     | Behavior records with evidence                                            |
 | Observed contracts      | Package exports, routes, CLI, public API     | Generated     | Contract records                                                          |
-| Verification            | Tests, compiler, configured checks           | Generated     | Verification records and evidence                                         |
+| Verification            | Tests, compiler, configured checks           | Generated     | Verification targets and derived check runs                               |
 | Flows                   | Resolved call graph and data access          | Generated     | Entry-to-source/sink paths                                                |
 | Diagnostics             | Graph metrics, cycles, mapping coverage      | Deterministic | Findings                                                                  |
 | AI interpretation       | Generated context                            | AI-inferred   | Hypotheses and explanations                                               |

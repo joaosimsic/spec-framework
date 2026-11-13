@@ -1,7 +1,7 @@
 # Architecture graph and traceability
 
-Status: version 1 directory reconstruction implemented; behavior-derived
-architecture planned.
+Status: implemented. Generated-spec v2 uses behavior-derived conceptual
+architecture.
 
 The architecture graph is generated from one analysis snapshot. It separates the
 conceptual system from its implementation.
@@ -63,7 +63,7 @@ Implementation nodes never appear as conceptual architecture children.
 Conceptual elements map to implementation:
 
 ```text
-CMP-Configuration-API
+CMP-...
   -> FILE-src/config.ts
   -> SYM-src/config.ts#loadConfig
   -> SYM-src/config.ts#saveConfig

@@ -67,6 +67,12 @@ export function FindingsView({ onStatus, onError }: WorkbenchViewProps) {
               </p>
               <p>{finding.explanation}</p>
               <p>{finding.recommendation}</p>
+              {finding.family === "ai_assisted" ? (
+                <p className="meta">
+                  Hypothesis from {finding.provider ?? "unknown provider"} /{" "}
+                  {finding.model ?? "unknown model"} / prompt {finding.promptVersion ?? "unknown"}
+                </p>
+              ) : null}
               <ul className="plain-list">
                 {finding.evidence.map((item, index) => (
                   <li key={`${item.reference}:${index}`}>

@@ -21,24 +21,45 @@ export class AiContextBuilder {
     elements: IrElement[],
     relationships: IrRelationship[],
   ): Promise<Result<AiContext, string>> {
+    return this.buildMany([targetId], elements, relationships)
+  }
+
+  async buildMany(
+    targetIds: string[],
+    elements: IrElement[],
+    relationships: IrRelationship[],
+  ): Promise<Result<AiContext, string>> {
     const byId = new Map(elements.map((element) => [element.id, element]))
-    const target = byId.get(targetId)
-    if (target === undefined) return fail("AI context target does not exist")
+    const targets = [...new Set(targetIds)].sort()
+    if (targets.length === 0) return fail("AI context has no targets")
+    for (const id of targets) {
+      if (!byId.has(id)) return fail(`AI context target does not exist: ${id}`)
+    }
+    const targetSet = new Set(targets)
     const neighborIds = relationships
       .filter(
-        (relationship) => relationship.sourceId === targetId || relationship.targetId === targetId,
+        (relationship) =>
+          targetSet.has(relationship.sourceId) || targetSet.has(relationship.targetId),
       )
       .flatMap((relationship) =>
-        relationship.sourceId === targetId ? [relationship.targetId] : [relationship.sourceId],
+        targetSet.has(relationship.sourceId) ? [relationship.targetId] : [relationship.sourceId],
       )
-    const ids = [...new Set([targetId, ...neighborIds])].sort()
+      .filter((id) => !targetSet.has(id))
+      .sort()
+    const ids = [...targets, ...neighborIds].slice(0, 80)
     const lines = ids.flatMap((id) => {
       const element = byId.get(id)
       return element === undefined ? [] : [this.describe(element)]
     })
-    const [excerpt, excerptError] = await this.excerpt(target)
-    if (excerptError !== null) return fail(excerptError)
-    const text = SecretRedactor.redact([...lines, excerpt].join("\n")).slice(0, this.budget)
+    const excerpts: string[] = []
+    for (const id of targets.slice(0, 2)) {
+      const element = byId.get(id)
+      if (element === undefined) continue
+      const [excerpt, excerptError] = await this.excerpt(element)
+      if (excerptError !== null) return fail(excerptError)
+      excerpts.push(excerpt)
+    }
+    const text = SecretRedactor.redact([...lines, ...excerpts].join("\n")).slice(0, this.budget)
     const inputHashes = [
       createHash("sha256").update(text, "utf8").digest("hex"),
       ...ids.map((id) => createHash("sha256").update(id, "utf8").digest("hex")),

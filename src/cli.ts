@@ -1,7 +1,8 @@
 import pkg from "../package.json"
 import { GeneratedBundleWriter } from "./bundle"
-import { GeneratedCheck } from "./checks"
-import { GeneratedQuery } from "./query"
+import { GeneratedCheck, VerificationRunRecorder } from "./checks"
+import { InterpretationRunner } from "./interpretations"
+import { GeneratedQuery, conceptualElements } from "./query"
 import { GeneratedSpecWriter, type GeneratedSpec } from "./spec"
 import { AnalysisRuntime } from "./workbench/analysis-runtime"
 import { WorkbenchServer } from "./workbench/index"
@@ -18,6 +19,7 @@ Usage:
   spec export [--json]
   spec query [--name <text>] [--kind <kind>] [--section <name>] [--json]
   spec check [--json]
+  spec interpret [--kind contract|verification|all] [--json]
   spec bundle [--output <dir>] [--force] [--json]
   spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]... [--analysis-root <path>]...
   spec version
@@ -120,7 +122,7 @@ async function commandAnalyze(args: string[]): Promise<number> {
     console.log(`analysis complete: ${current.snapshotId ?? "no snapshot"}`)
     if (spec !== null) {
       console.log(
-        `${spec.architecture.elements.length} architecture elements, ${spec.requirements.length} behavior records, ${spec.findings.length} findings`,
+        `${conceptualElements(spec).length} conceptual elements, ${spec.requirements.length} behavior records, ${spec.findings.length} findings`,
       )
     }
   } else console.error(`analysis ${current.state}: ${current.error ?? current.message}`)
@@ -191,6 +193,9 @@ function section(spec: GeneratedSpec, name: string): unknown {
     project: spec.project,
     snapshot: spec.snapshot,
     architecture: spec.architecture,
+    implementation: spec.implementation,
+    mappings: spec.mappings,
+    hypotheses: spec.hypotheses,
     requirements: spec.requirements,
     contracts: spec.contracts,
     verification: spec.verification,
@@ -367,24 +372,107 @@ async function commandCheck(args: string[]): Promise<number> {
     console.error("check: no generated spec is available")
     return 1
   }
+  const snapshot = runtime.latest(project)
+  if (snapshot === null) {
+    runtime.close()
+    console.error("check: no analysis snapshot is available")
+    return 1
+  }
   const [result, checkError] = await new GeneratedCheck().run(project.repositoryPath, spec)
-  runtime.close()
   if (checkError !== null || result === null) {
+    runtime.close()
     console.error(`check: ${checkError ?? "check failed"}`)
     return 1
   }
-  if (hasFlag(args, "--json")) console.log(JSON.stringify(result, null, 2))
+  const [verification, verificationError] = await new VerificationRunRecorder(
+    runtime.verificationRuns,
+  ).record(project.repositoryPath, { project, snapshot, spec, check: result })
+  runtime.close()
+  if (verificationError !== null || verification === null) {
+    console.error(`check: ${verificationError ?? "verification run was not saved"}`)
+    return 1
+  }
+  if (hasFlag(args, "--json")) console.log(JSON.stringify({ ...result, verification }, null, 2))
   else
     console.log(
       [
         `errors: ${result.errors}`,
         `warnings: ${result.warnings}`,
+        `verification: ${verification.run.id} (${verification.run.result})`,
         ...result.findings,
         ...result.output,
       ].join("\n"),
     )
 
   return result.errors === 0 ? 0 : 1
+}
+
+async function commandInterpret(args: string[]): Promise<number> {
+  const requested = option(args, "--kind") ?? "all"
+  if (requested !== "contract" && requested !== "verification" && requested !== "all") {
+    console.error("interpret: --kind must be contract, verification, or all")
+    return 2
+  }
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
+  })
+  if (runtimeError !== null || runtime === null) {
+    console.error(`interpret: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
+  }
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  const snapshot = project === null ? null : runtime.latest(project)
+  const interpreter = runtime.interpreter()
+  if (project === null || spec === null || snapshot === null) {
+    runtime.close()
+    console.error("interpret: no generated spec is available")
+    return 1
+  }
+  if (interpreter === null) {
+    runtime.close()
+    console.error("interpret: AI is not configured")
+    return 1
+  }
+  const verification = requested === "contract" ? null : runtime.latestVerification(project)
+  if (requested !== "contract" && verification === null) {
+    runtime.close()
+    console.error("interpret: no verification run is available; run spec check first")
+    return 1
+  }
+  const [result, error] = await new InterpretationRunner(
+    interpreter,
+    runtime.interpretationRuns,
+  ).run({
+    root: project.repositoryPath,
+    project,
+    snapshot,
+    spec,
+    kind: requested,
+    verification,
+    elements: runtime.elements.list(snapshot.id),
+    relationships: runtime.relationships.list(snapshot.id),
+    files: runtime.artifacts.list(snapshot.id).map((artifact) => artifact.path),
+  })
+  runtime.close()
+  if (error !== null || result === null) {
+    console.error(`interpret: ${error ?? "interpretation failed"}`)
+    return 1
+  }
+  if (hasFlag(args, "--json")) console.log(JSON.stringify(result, null, 2))
+  else
+    console.log(
+      [
+        `interpretations: ${result.interpretations.length}`,
+        `failures: ${result.run.failures.length}`,
+        ...result.interpretations.map(
+          (item) => `${item.targetKind} ${item.targetId}: ${item.text}`,
+        ),
+        ...result.run.failures,
+      ].join("\n"),
+    )
+
+  return result.run.failures.length === 0 ? 0 : 1
 }
 
 async function commandBundle(args: string[]): Promise<number> {
@@ -405,6 +493,8 @@ async function commandBundle(args: string[]): Promise<number> {
   const [result, error] = await new GeneratedBundleWriter().write(project.repositoryPath, spec, {
     output: option(args, "--output"),
     force: hasFlag(args, "--force"),
+    verification: runtime.latestVerification(project),
+    interpretations: runtime.latestInterpretation(project),
   })
   runtime.close()
   if (error !== null || result === null) {
@@ -541,6 +631,8 @@ export async function main(args: string[]): Promise<number> {
       return commandQuery(args)
     case "check":
       return commandCheck(args)
+    case "interpret":
+      return commandInterpret(args)
     case "bundle":
       return commandBundle(args)
     case "workbench":

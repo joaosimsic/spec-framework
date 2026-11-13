@@ -11,6 +11,14 @@ export interface ValidationCounts {
   evidence: number
   specBytes: number
   databaseBytes: number
+  conceptualComponents: number
+  directoryOnlyComponents: number
+  unassignedFiles: number
+  unassignedPercent: number
+  mappedFilesPerComponent: number
+  summariesWithoutEvidence: number
+  hypotheses: number
+  aiFindings: number
 }
 
 export interface ValidationTiming {

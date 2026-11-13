@@ -1,7 +1,11 @@
 # 0011 — Interactive use-case modes and a human-facing experience layer
 
-**Status:** accepted
+**Status:** accepted; Explorer reference superseded by 0015
 **Date:** 2026-11-11
+
+> Decision 0015 retires the separate read-only Explorer. The workbench System
+> workspace is the human navigation surface, and the proposal and approval
+> boundaries in this record still apply.
 
 ## Context
 
@@ -83,8 +87,8 @@ The workbench is interactive, not read-only:
 - same-origin and CSRF checks for mutations;
 - workspace-relative paths only.
 
-The existing read-only Explorer remains a review aid. The workbench is the
-proposal-authoring surface.
+The workbench is the proposal-authoring and System navigation surface. Decision
+0015 retires the separate read-only Explorer.
 
 ## Agent boundary
 

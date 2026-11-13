@@ -1,7 +1,11 @@
 # 0009 — Reqvire feature adoption
 
-**Status:** accepted
+**Status:** accepted; Explorer and MCP commitments retired by 0015
 **Date:** 2026-11-11
+
+> Decision 0015 retires the Explorer and the old Phase 2/3 roadmap commitments.
+> Capability, semantic, and verification design remains unscheduled. The
+> implemented read-only `spec query` and the opencode plugin remain.
 
 ## Context
 
@@ -38,12 +42,11 @@ Adopt in the model documentation now:
 - a read-only local Explorer;
 - an optional multi-repository workspace model.
 
-Defer implementation:
+Not scheduled:
 
-- multi-repository workspaces and branch contexts to Phase 3;
-- model migration and versioning to Phase 3;
-- mutation-enabled MCP and Explorer tools until a separate decision accepts the
-  trust and approval implications;
+- multi-repository workspaces and branch contexts;
+- model migration and versioning;
+- mutation-enabled MCP and Explorer tools;
 - a full ontology authoring UI.
 
 Reject:
@@ -66,11 +69,11 @@ Reject:
 | Requirement-owned contracts and bindings       | Contract sections and cross-subgraph bindings                                            | 2     |
 | Verification objectives and methods            | `VOBJ-*` and `VER-*` elements over test, formal, analysis, inspection, and demonstration | 2     |
 | Typed change impact                            | Cross-layer impact traversal and report                                                  | 2     |
-| Unified graph query and MCP                    | Read-only query CLI, MCP resources/tools/prompts, skills                                 | 2     |
-| Explorer UI                                    | Read-only local Explorer                                                                 | 2     |
-| Multi-repository workspace and branch contexts | Manifest, pins, admission, cross-repo impact                                             | 3     |
-| Model migration and lint repair                | Versioned model lifecycle                                                                | 3     |
-| Mutation-enabled authoring over MCP/Explorer   | Deferred behind a separate decision                                                      | 3+    |
+| Unified graph query and MCP                    | Read-only query CLI and skills; MCP retired by 0015                                      | 2     |
+| Explorer UI                                    | Retired by 0015; System workspace replaces it                                            | —     |
+| Multi-repository workspace and branch contexts | Retired by 0015                                                                          | —     |
+| Model migration and lint repair                | Retired by 0015                                                                          | —     |
+| Mutation-enabled authoring over MCP/Explorer   | Retired by 0015                                                                          | —     |
 
 ## Consequences
 
@@ -82,7 +85,8 @@ Reject:
   methods, and cross-layer impact.
 - The agent interface becomes a first-class read-only surface. It must never
   become an approval or mutation path by accident.
-- The Explorer is a review aid, not the source of truth or an approval record.
+- The Explorer was a review aid, not the source of truth or an approval record.
+  Decision 0015 retires it; the System workspace replaces it.
 - Documentation for these capabilities does not imply implementation. The
   roadmap and README must state the phase of each capability.
 - The framework keeps its differentiators: executable formal models, hash-locked

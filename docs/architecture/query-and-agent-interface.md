@@ -5,8 +5,9 @@
 > Quint modules and properties, contract sidecars, and evidence artifacts stored
 > under `spec/evidence/`, with id, kind, and status filters. The display model
 > carries names, plain-language state, blockers, open questions, and opaque refs.
-> The opencode plugin and MCP remain design. MCP and the broader agent surface
-> are Phase 2.
+> The opencode plugin is implemented. MCP and `spec serve` are retired by
+> decision [0015](../design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
+> Impact, coverage, and semantic query forms are unscheduled design.
 
 ## Purpose
 
@@ -19,7 +20,7 @@ It is the unified query surface for:
 - agents that need scoped implementation context;
 - reviewers who need impact and coverage;
 - CI that needs machine-readable status;
-- MCP clients and the Explorer.
+- the System workspace and the opencode plugin.
 
 ## Read-only default
 
@@ -32,9 +33,9 @@ The query interface is read-only.
 - It refuses to answer from a dirty tree unless explicitly allowed for local
   inspection.
 
-Mutation is a separate concern. Authoring over MCP or Explorer requires a later
-decision, explicit enablement, branch isolation, validation, and human approval.
-It is not part of this interface.
+Mutation is a separate concern. Authoring through the workbench or opencode
+plugin goes through typed proposal operations, branch isolation, validation, and
+human approval. It is not part of this interface.
 
 ## Presentation projection and refs
 
@@ -163,38 +164,12 @@ and contract sources join the same graph. The query requires a git worktree and
 refuses a dirty tree unless `--allow-dirty` is passed. Impact, coverage, and
 semantic query forms remain design.
 
-## MCP surface
+## Agent access
 
-The MCP server exposes the same read-only model over Streamable HTTP and stdio.
-
-Resources:
-
-- model summary;
-- element by ID;
-- kind and status listings;
-- coverage and impact reports;
-- semantic graph views;
-- evidence summaries.
-
-Tools:
-
-- inspect element;
-- find references and dependents;
-- compute impact;
-- report gaps and coverage;
-- query semantic graph;
-- list approved scope and approval hashes.
-
-Prompts:
-
-- explain a requirement and its evidence;
-- plan a change from a direction;
-- review verification coverage;
-- find unverified or orphaned elements;
-- resolve IDs to implementation references.
-
-The MCP server does not expose approval, `spec.lock` writes, or source mutation
-by default.
+The [opencode plugin](../workflow/opencode-plugin.md) is the conversational
+client of this interface. It exposes status, context, query, impact, proposal,
+validation, decision, next, diff, and workbench tools. It has no approval tool
+and cannot write `spec/spec.lock`.
 
 ## Skills
 
@@ -207,7 +182,7 @@ Agent skills package recurring workflows:
 - build a change impact report.
 
 Skills call the same read-only query and validation tools. Installing a skill
-does not install or start an MCP server.
+does not add an approval or mutation path.
 
 ## Context rules
 
@@ -224,7 +199,7 @@ does not install or start an MCP server.
 
 - Bind to localhost by default.
 - Require explicit host and origin configuration for non-local access.
-- Bound query result size and SPARQL execution time.
+- Bound query result size and semantic query execution time when the optional layer is active.
 - Reject queries that request secrets or files outside the workspace.
 - Treat external vocabulary terms as untrusted data.
 - Log the tool contract version and model commit for every response.

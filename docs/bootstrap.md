@@ -66,13 +66,13 @@ This is not a reduced product mode. It is a preflight that gives immediate feedb
 
 | Missing           | Effect                                                                                    |
 | ----------------- | ----------------------------------------------------------------------------------------- |
-| LikeC4            | architecture validation, views, and MCP unavailable; affected approval blocked            |
+| LikeC4            | architecture validation and views unavailable; affected approval blocked                  |
 | Capability lint   | capability coverage and hierarchy unavailable; affected approval blocked                  |
 | StrictDoc         | traceability and PDF/HTML audit export unavailable; approval blocked                      |
 | Semantic adapter  | semantic validation and SHACL evidence unavailable when active; affected approval blocked |
 | Verification plan | verification coverage and method tracking unavailable; affected approval blocked          |
-| Query/MCP         | read-only graph access unavailable; validation and approval still work                    |
-| Explorer          | local review surface unavailable; validation and approval still work                      |
+| Query             | read-only graph access unavailable; validation and approval still work                    |
+| System workspace  | local review and drill-down unavailable; validation and approval still work               |
 | Quint             | formal properties unverified; affected approval blocked                                   |
 | Apalache          | model checking unavailable; formal approval blocked                                       |
 | Contract adapter  | boundary evidence missing; affected approval blocked                                      |

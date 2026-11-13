@@ -86,6 +86,7 @@ contracts before code.
 - [x] Write ADR 0012: architecture intelligence direction.
 - [x] Write ADR 0013: local persistence and analysis snapshots.
 - [x] Write ADR 0014: AI interpretation boundary.
+- [x] Write ADR 0015: retire the legacy roadmap and Explorer.
 - [x] Write the analysis engine architecture.
 - [x] Write the architecture graph and traceability model.
 - [x] Write the functional flow model.
@@ -103,9 +104,12 @@ contracts before code.
 - [x] Review `docs/architecture/implementation-layer.md` scope.
 - [x] Review `docs/workflow/workbench.md` view contract.
 - [x] Review `docs/security.md` trust boundaries.
+- [x] Remove Explorer and old Phase 2/3 references from front-door docs.
+- [x] Complete the documentation consistency pass across the remaining docs.
 
-Exit criteria: all documents agree on one product boundary, one persistence
-model, one graph model, one AI boundary.
+Exit criteria: all documents agree on one product direction, one persistence
+model, one graph model, one AI boundary, and one primary human surface. The
+System workspace is that surface.
 
 ## Phase 1 — Local platform foundation
 

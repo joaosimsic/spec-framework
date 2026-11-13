@@ -118,7 +118,7 @@ Drift is a finding, not an automatic architecture change.
 
 The first mapping fixture is `spec-framework` itself:
 
-1. Build the Phase 1 skeleton.
+1. Build the implemented baseline.
 2. Run `spec init --existing` and `spec map --draft`.
 3. Review the framework's own module graph.
 4. Approve its architecture.

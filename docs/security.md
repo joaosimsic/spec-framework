@@ -4,21 +4,21 @@
 
 The framework treats the specification as executable input to agents and CI. That makes spec integrity a security concern.
 
-| Boundary         | Trusted                       | Untrusted                              |
-| ---------------- | ----------------------------- | -------------------------------------- |
-| Human direction  | Human decisions               | Pasted external text                   |
-| Spec sources     | Approved, hash-locked content | Draft proposals                        |
-| Build commands   | Reviewed `compile.json`       | Unreviewed commands from drafts        |
-| Agent            | Draft generation              | Approval, verification verdicts        |
-| Validators       | Deterministic tools           | LLM self-report                        |
-| CI               | Pinned toolchain and evidence | Network-fetched mutable dependencies   |
-| Semantic sources | Pinned local vocabularies     | Unpinned external RDF/OWL sources      |
-| Query and MCP    | Read-only validated model     | Mutating or unauthenticated clients    |
-| Explorer         | Local read-only review        | Remote exposure or editing             |
-| Workbench        | Proposal branch               | Approved baseline, lock, remote access |
-| opencode plugin  | Proposal writes via tools     | Approval, lock writes, untrusted text  |
-| Workspace        | Pinned composition            | Mutable or unverified repository pins  |
-| Audit bundle     | Generated, hashed artifact    | Hand-edited generated files            |
+| Boundary           | Trusted                        | Untrusted                                    |
+| ------------------ | ------------------------------ | -------------------------------------------- |
+| Human direction    | Human decisions                | Pasted external text                         |
+| Spec sources       | Approved, hash-locked content  | Draft proposals                              |
+| Build commands     | Reviewed `compile.json`        | Unreviewed commands from drafts              |
+| Agent              | Draft generation               | Approval, verification verdicts              |
+| Validators         | Deterministic tools            | LLM self-report                              |
+| CI                 | Pinned toolchain and evidence  | Network-fetched mutable dependencies         |
+| Semantic sources   | Pinned local vocabularies      | Unpinned external RDF/OWL sources            |
+| Query and analysis | Read-only validated model      | Mutating or unauthenticated clients          |
+| System workspace   | Intent plus generated evidence | Approved baseline, lock, remote access       |
+| Workbench          | Proposal branch                | Approved baseline, lock, remote access       |
+| opencode plugin    | Proposal writes via tools      | Approval, lock writes, untrusted text        |
+| Repository text    | Analyzed as untrusted data     | Instructions, secrets, or executable content |
+| Audit bundle       | Generated, hashed artifact     | Hand-edited generated files                  |
 
 ## Threats
 
@@ -94,36 +94,35 @@ Mitigations:
 - external terms are marked as external and cannot replace authored elements;
 - source changes invalidate semantic evidence and approvals.
 
-### Query and renderer abuse
+### Query, analysis, and renderer abuse
 
-SPARQL, MCP, or Explorer queries consume unbounded resources or expose files
-outside the workspace.
+Query, analysis, or System graph rendering consumes unbounded resources or
+exposes files outside the workspace.
 
 Mitigations:
 
 - local bind by default;
 - explicit host and origin configuration for non-local access;
-- query timeouts and result limits;
+- query and analysis timeouts and result limits;
 - workspace-relative path resolution only;
+- analysis is limited to registered repository roots;
 - no secrets or approval tokens in responses;
-- query and rendering are read-only.
+- query, analysis, and rendering are read-only.
 
 ### Mutating agent interfaces
 
-A query, MCP, Explorer, workbench, or chat client edits approved content or
-approves a change.
+A query, analysis, workbench, or chat client edits approved content or approves
+a change.
 
 Mitigations:
 
-- query, MCP, and Explorer remain read-only by default;
+- query, analysis, and the System workspace remain read-only;
 - the workbench and opencode plugin write proposals only;
 - every interactive write is a typed operation on a same-worktree proposal
   branch with a recorded base commit;
 - no interactive surface exposes an approval endpoint or writes `spec.lock`;
 - approval remains a CLI-only human action;
-- all mutation attempts against the approved baseline are logged and rejected;
-- mutation of approved content over MCP or Explorer still requires a separate
-  decision.
+- all mutation attempts against the approved baseline are logged and rejected.
 
 ### Workbench write abuse
 
@@ -182,9 +181,9 @@ Mitigations:
 
 ### Supply chain
 
-LikeC4, StrictDoc, Quint, Apalache, the semantic RDF/SHACL toolchain, the query
-and MCP server, the Explorer and workbench front ends, the opencode plugin, and
-the PDF toolchain are dependencies.
+LikeC4, StrictDoc, Quint, Apalache, the semantic RDF/SHACL toolchain, the
+TypeScript compiler, `bun:sqlite`, the query and analysis engine, the workbench
+front end, the opencode plugin, and the PDF toolchain are dependencies.
 
 Mitigations:
 
@@ -202,7 +201,7 @@ Mitigations:
 | spec-critic    |                yes |                  no |                 no |            yes |      no |
 | human          |                yes |                 yes |                yes |            yes |     yes |
 
-The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow. Query, MCP, and Explorer access is read-only and never substitutes for approval. The workbench and opencode plugin may edit proposals but cannot approve or write `spec.lock`.
+The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow. Query, analysis, and System workspace access is read-only and never substitutes for approval. The workbench and opencode plugin may edit proposals but cannot approve or write `spec.lock`.
 
 ## Repository analysis and AI (planned)
 

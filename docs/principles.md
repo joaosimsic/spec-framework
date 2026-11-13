@@ -42,7 +42,7 @@ Contracts are language APIs, data formats, CLIs, wire protocols, and hardware in
 
 ## 11. Compose; do not reinvent
 
-Use mature tools for architecture, requirements, formal methods, and contracts. Build only the cross-layer glue, approval model, and audit bundle.
+Use mature tools for architecture, requirements, formal methods, contracts, and code analysis. Build only the cross-layer glue, approval model, audit bundle, and analysis IR. The analysis engine composes the TypeScript compiler and `bun:sqlite`; it does not introduce a new specification language.
 
 ## 12. Every gate must be reproducible
 
@@ -63,3 +63,11 @@ The default profile includes capabilities, architecture, requirements, verificat
 ## 16. Time to first value is a requirement
 
 `spec init` and the structural preflight must produce a useful gap report immediately, before every native tool is installed. Provisioning must not be a prerequisite for understanding the project's specification gaps.
+
+## 17. Intent, implementation, and mapping stay distinct
+
+The intent graph is human-approved truth. The implementation graph is generated evidence. The mapping layer is curated or inferred. They are joined only by an explicit projection, never silently merged into one unqualified model.
+
+## 18. AI is evidence-bound and never a verdict
+
+AI may explain and hypothesize over structured evidence. It never approves, never writes `spec/spec.lock`, and never passes or fails a check. Deterministic rules and human decisions remain the only sources of verdicts.

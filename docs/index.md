@@ -1,6 +1,6 @@
 # Documentation index
 
-`spec-framework` is an implemented Phase 1 skeleton with complete design documentation. Read in this order for the full argument.
+`spec-framework` is an architecture intelligence platform in active development. The implemented baseline captures intent, approval, evidence, and proposals. The next direction reconstructs implementation, maps intent to code, traces flows, and surfaces architectural problems. Read in this order for the full argument.
 
 ## Orientation
 
@@ -15,26 +15,7 @@
 | [Landscape](landscape.md)           | What already exists, and why not use one tool? |
 | [Glossary](glossary.md)             | What do the terms mean?                        |
 
-## Model
-
-| Document                                                               | Question it answers                                               |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Architecture overview](architecture/overview.md)                      | How do the layers fit together?                                   |
-| [Spec model](architecture/spec-model.md)                               | What is a spec element, ID, relation, status?                     |
-| [Architecture layer](architecture/architecture-layer.md)               | How is architecture captured and reviewed?                        |
-| [Capability layer](architecture/capability-layer.md)                   | How are system abilities linked to requirements and verification? |
-| [Discovery layer](architecture/discovery-layer.md)                     | How are existing repos mapped into draft specs?                   |
-| [Requirements layer](architecture/requirements-layer.md)               | How are requirements structured and traced?                       |
-| [Semantic layer](architecture/semantic-layer.md)                       | How are ontologies, concepts, and semantic contracts modeled?     |
-| [Verification layer](architecture/verification-layer.md)               | How is verification planned beyond formal checking?               |
-| [Formal layer](architecture/formal-layer.md)                           | How is behavior made executable and checked?                      |
-| [Contracts layer](architecture/contracts-layer.md)                     | How are non-web interfaces specified?                             |
-| [Implementation layer](architecture/implementation-layer.md)           | How is compiler output used as a deterministic preflight?         |
-| [Query and agent interface](architecture/query-and-agent-interface.md) | How do agents and tools query the spec graph?                     |
-| [Workspace and branches](architecture/workspace-and-branches.md)       | How are multi-repo models and branch contexts composed?           |
-| [Audit bundle](architecture/audit-bundle.md)                           | What does the final readable artifact contain?                    |
-
-## Architecture intelligence (planned)
+## Primary direction
 
 | Document                                                                  | Question it answers                                        |
 | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -50,20 +31,36 @@
 | [Analysis jobs and snapshots](workflow/analysis-jobs-and-snapshots.md)    | How do analysis runs and comparisons work?                 |
 | [Architecture intelligence API](api/architecture-intelligence-api.md)     | What are the REST and SSE contracts?                       |
 
+## Current intent model
+
+| Document                                                               | Question it answers                                               |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [Architecture overview](architecture/overview.md)                      | How do the intent, implementation, and mapping layers fit?        |
+| [Spec model](architecture/spec-model.md)                               | What is a spec element, ID, relation, status?                     |
+| [Architecture layer](architecture/architecture-layer.md)               | How is architecture captured and reviewed?                        |
+| [Capability layer](architecture/capability-layer.md)                   | How are system abilities linked to requirements and verification? |
+| [Discovery layer](architecture/discovery-layer.md)                     | How are existing repos mapped into draft specs?                   |
+| [Requirements layer](architecture/requirements-layer.md)               | How are requirements structured and traced?                       |
+| [Semantic layer](architecture/semantic-layer.md)                       | How are ontologies, concepts, and semantic contracts modeled?     |
+| [Verification layer](architecture/verification-layer.md)               | How is verification planned beyond formal checking?               |
+| [Formal layer](architecture/formal-layer.md)                           | How is behavior made executable and checked?                      |
+| [Contracts layer](architecture/contracts-layer.md)                     | How are non-web interfaces specified?                             |
+| [Implementation layer](architecture/implementation-layer.md)           | How is compiler output used as a deterministic preflight?         |
+| [Query and agent interface](architecture/query-and-agent-interface.md) | How do agents and tools query the spec graph?                     |
+| [Audit bundle](architecture/audit-bundle.md)                           | What does the final readable artifact contain?                    |
+
 ## Workflow
 
-| Document                                           | Question it answers                                   |
-| -------------------------------------------------- | ----------------------------------------------------- |
-| [Use-case modes](workflow/use-cases.md)            | How do scratch, mapping, and refactor differ?         |
-| [Authoring](workflow/authoring.md)                 | How does a change go from direction to approved spec? |
-| [Agent protocol](workflow/agent-protocol.md)       | What may an LLM do, and what may it not do?           |
-| [opencode plugin](workflow/opencode-plugin.md)     | How does conversational planning work?                |
-| [Change management](workflow/change-management.md) | How are changes reviewed and re-verified?             |
-| [Approval](workflow/approval.md)                   | How does human authority work mechanically?           |
-| [Workbench](workflow/workbench.md)                 | What does the interactive proposal surface show?      |
-| [Self-host MVP](mvp.md)                            | How do I test the core loop end to end?               |
-| [Explorer](workflow/explorer.md)                   | What does the read-only review surface show?          |
-| [Model lifecycle](workflow/model-lifecycle.md)     | How are model versions migrated and verified?         |
+| Document                                           | Question it answers                                         |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| [Use-case modes](workflow/use-cases.md)            | How do scratch, mapping, and refactor differ?               |
+| [Authoring](workflow/authoring.md)                 | How does a change go from direction to approved spec?       |
+| [Agent protocol](workflow/agent-protocol.md)       | What may an LLM do, and what may it not do?                 |
+| [opencode plugin](workflow/opencode-plugin.md)     | How does conversational planning work?                      |
+| [Change management](workflow/change-management.md) | How are changes reviewed and re-verified?                   |
+| [Approval](workflow/approval.md)                   | How does human authority work mechanically?                 |
+| [Workbench](workflow/workbench.md)                 | What does the interactive System and proposal surface show? |
+| [Self-host MVP](mvp.md)                            | How do I test the core loop end to end?                     |
 
 ## Depth
 
@@ -95,3 +92,4 @@
 - [0012 Architecture intelligence direction](design-decisions/0012-architecture-intelligence.md)
 - [0013 Analysis persistence and snapshots](design-decisions/0013-analysis-persistence.md)
 - [0014 AI interpretation boundary](design-decisions/0014-ai-interpretation-boundary.md)
+- [0015 Retire legacy roadmap and Explorer](design-decisions/0015-retire-legacy-roadmap-and-explorer.md)

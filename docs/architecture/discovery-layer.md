@@ -40,7 +40,12 @@ Outputs:
 - draft data stores from declared databases or file-format packages when observable;
 - confidence and provenance for each element.
 
-Generic discovery does not parse arbitrary source code into a call graph. That would produce false confidence and duplicate language tooling.
+Generic discovery does not parse arbitrary source code into a call graph. That
+would produce false confidence and duplicate language tooling. TypeScript
+symbol, call, entry-point, and data-access analysis belongs to the separate
+[analysis engine](analysis-engine.md), which owns the AST and type-checker
+pipeline. Generic discovery stays manifest-level, and the analysis engine never
+approves or infers intent.
 
 ## Adapter activation
 
@@ -197,7 +202,7 @@ the approved model.
 
 ## Non-goals
 
-- Full semantic call graphs for every language.
+- Full semantic call graphs for languages without an analysis adapter.
 - Runtime topology discovery.
 - Automatic requirement extraction.
 - Automatic capability, ontology, or verification-plan inference.

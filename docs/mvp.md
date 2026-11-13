@@ -166,9 +166,7 @@ Use these questions to decide whether the direction is right:
 
 - Approving or promoting the full repo graph.
 - Zero-drift checks against the draft graph.
-- A visual graph canvas in the workbench.
 - Approving every self-hosted requirement.
-- Capability and verification planning.
-- Semantic adapters, MCP, Explorer, workspaces, and migration.
+- The architecture intelligence analysis engine and System workspace.
 - Release binaries and macOS packaging.
 - Waiver workflows.

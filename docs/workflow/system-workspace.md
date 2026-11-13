@@ -16,7 +16,7 @@ The workspace never presents observed code as approved intent.
 
 ## Navigation
 
-Proposed views:
+Views:
 
 | View         | Purpose                                                          |
 | ------------ | ---------------------------------------------------------------- |
@@ -27,8 +27,8 @@ Proposed views:
 | Review       | Existing proposal and approval surfaces                          |
 | Technical    | IDs, hashes, provenance, and diagnostics on demand               |
 
-The existing Architecture and Code Map views remain available until the System
-view reaches parity.
+The System view is the primary surface. The existing Architecture and Code Map
+views remain only as transitional views until the System view reaches parity.
 
 ## Layout
 

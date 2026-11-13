@@ -28,7 +28,7 @@
 
 **Evidence**: A machine-generated artifact that supports a verification claim, such as a model-checking report, trace replay result, compatibility report, or test log.
 
-**Explorer**: A local read-only UI over the validated spec graph. It is a review aid, not a source of truth or an approval surface. It is distinct from the [workbench](workflow/workbench.md), which may edit proposals.
+**System workspace**: The workbench's primary human surface. It joins approved intent with the generated implementation graph, mapping, flows, and findings. It is read-only over approved content and never approves.
 
 **Experience layer**: The names, summaries, plain-language state, and named questions shown to humans. It never approves and never replaces identity. See [presentation and internal identity](ux/presentation.md).
 
@@ -36,9 +36,17 @@
 
 **Formalization**: The link from a requirement to the formal property or action that verifies it. A requirement without a formalization needs a human-approved waiver.
 
-**LikeC4**: Architecture-as-code tool used for systems, components, relations, views, validation, and MCP access.
+**LikeC4**: Architecture-as-code tool used for systems, components, relations, views, and validation.
 
-**MCP**: Model Context Protocol. In this framework it exposes the spec graph as read-only resources, tools, and prompts for agents.
+**Analysis IR**: The language-neutral intermediate representation of files, symbols, imports, references, calls, entry points, and data access. It is generated evidence, not approved intent.
+
+**Implementation graph**: The generated graph of packages, directories, files, symbols, entry points, data entities, and data stores. It stays distinct from the intent graph.
+
+**Mapping**: The curated or inferred layer that links conceptual intent elements to implementation files and symbols. It is never silently merged into approved intent.
+
+**Snapshot**: A deterministic analysis result associated with a project, commit, analyzer version, rule version, and fingerprint. SQLite is disposable local state; generated JSON is the portable export.
+
+**Finding**: A diagnostic result. Deterministic rule violations and AI-assisted hypotheses carry different evidence classes.
 
 **Internal identity**: Stable IDs, status values, confidence values, provenance, hashes, and diagnostic codes used by tools and audit records. It is not the default human interface.
 

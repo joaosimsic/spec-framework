@@ -17,8 +17,8 @@ Adopting the framework must not require rewriting the project, freezing developm
 The `spec start` scratch entry and the `spec map --review` mapping entry are
 implemented. Area-level and relation-level mapping curation actions, promotion
 into proposed architecture, architecture approval, drift checks, the local
-workbench, and the opencode plugin are implemented. The implemented Phase 1
-path remains `spec init`, `spec map --draft`, `spec check`, and `spec approve`.
+workbench, and the opencode plugin are implemented. The baseline adoption path
+remains `spec init`, `spec map --draft`, `spec check`, and `spec approve`.
 
 ## Greenfield
 
@@ -101,23 +101,23 @@ Mapping is not approval. Extracted structure describes what the code does, not w
 
 ## Support matrix
 
-| Capability              | Supported in Phase 1 | Fallback                    |
-| ----------------------- | -------------------- | --------------------------- |
-| Generic discovery       | yes                  | manual model                |
-| Capabilities            | Phase 2              | manual capability records   |
-| Verification planning   | Phase 2              | manual verification records |
-| Semantic layer          | Phase 2, optional    | glossary terms and prose    |
-| Read-only query/MCP     | Phase 2              | CLI queries and bundle      |
-| Explorer                | Phase 2              | audit bundle                |
-| Multi-repo workspace    | Phase 3              | separate repositories       |
-| Rust discovery          | yes                  | generic discovery           |
-| Rust API contracts      | yes                  | rustdoc/rustdoc JSON        |
-| JSON Schema contracts   | yes                  | manual table                |
-| CLI contracts           | yes                  | help snapshots              |
-| TypeScript discovery    | later                | generic discovery           |
-| PHP discovery           | later                | generic discovery           |
-| Protobuf/wire contracts | later                | manual schema               |
-| Hardware contracts      | later                | manual schema               |
+| Capability                | Supported now     | Fallback                              |
+| ------------------------- | ----------------- | ------------------------------------- |
+| Generic discovery         | yes               | manual model                          |
+| TypeScript discovery      | imports and files | generic discovery                     |
+| Read-only query           | yes               | audit bundle                          |
+| Rust discovery            | yes               | generic discovery                     |
+| Rust API contracts        | yes               | rustdoc/rustdoc JSON                  |
+| JSON Schema contracts     | yes               | manual table                          |
+| CLI contracts             | yes               | help snapshots                        |
+| Architecture intelligence | planned           | generic discovery and manual modeling |
+| PHP discovery             | not scheduled     | generic discovery                     |
+| Protobuf/wire contracts   | not scheduled     | manual schema                         |
+| Hardware contracts        | not scheduled     | manual schema                         |
+| Capabilities              | not scheduled     | manual capability records             |
+| Verification planning     | not scheduled     | manual verification records           |
+| Semantic layer            | not scheduled     | glossary terms and prose              |
+| Multi-repo workspace      | retired           | separate repositories                 |
 
 The support matrix is explicit. The framework does not claim automatic support for a stack it cannot inspect.
 

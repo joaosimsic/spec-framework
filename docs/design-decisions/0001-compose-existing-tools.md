@@ -1,7 +1,11 @@
 # 0001 — Compose existing tools
 
-**Status:** accepted
+**Status:** accepted; extended by 0012
 **Date:** 2026-11-10
+
+> Decision 0012 extends this record with a separate generated implementation
+> graph and analysis engine. That engine composes the TypeScript compiler and
+> `bun:sqlite`; it does not introduce a new specification language.
 
 ## Context
 

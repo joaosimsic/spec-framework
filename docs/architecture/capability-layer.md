@@ -1,6 +1,8 @@
 # Capability layer
 
-> Status: Phase 2 design. Capability tooling is not implemented.
+> Status: unscheduled intent-model design. Capability tooling is not
+> implemented and is not part of the current architecture intelligence
+> direction. See decision [0015](../design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
 
 ## Purpose
 

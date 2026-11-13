@@ -1,7 +1,11 @@
 # 0008 — Compiler preflight adapter
 
-**Status:** accepted
+**Status:** accepted; extended by 0012
 **Date:** 2026-11-11
+
+> Decision 0012 adds a separate analysis engine for AST parsing, symbols, call
+> graphs, entry points, and data access. This adapter remains a narrow build and
+> typecheck gate and does not become conformance evidence.
 
 ## Context
 

@@ -1,6 +1,29 @@
 # Roadmap
 
-## Phase 0 — Design and repository
+## Next direction — architecture intelligence
+
+Status: planned, not implemented. Full platform MVP.
+
+The product direction extends the framework from intent and discovery into
+repository understanding:
+
+- language-neutral analysis IR for files, symbols, calls, entry points, and data access;
+- local SQLite snapshots with generated JSON export;
+- architecture reconstruction with direct conceptual-to-code traceability;
+- static functional flows from entry points to sources, sinks, and outputs;
+- deterministic architectural diagnostics plus clearly separated AI-assisted hypotheses;
+- an evidence-bound AI interpretation layer that never approves or passes a check;
+- a workbench System view with drill-down from components to files and functions;
+- a phased Obsidian-style graph with labels, radial expansion, and large-graph performance.
+
+The detailed execution checklist, phase gates, and acceptance criteria live in
+[Architecture intelligence roadmap](roadmap/architecture-intelligence.md).
+
+Decision records [0012](design-decisions/0012-architecture-intelligence.md) and
+[0015](design-decisions/0015-retire-legacy-roadmap-and-explorer.md) fix the
+direction and retire the legacy roadmap and Explorer.
+
+## Baseline: design and repository
 
 Status: complete.
 
@@ -12,7 +35,7 @@ Status: complete.
 
 Exit criteria: docs complete, repository public, decisions recorded.
 
-## Phase 1 — Full-stack vertical slice
+## Baseline: full-stack vertical slice
 
 Status: in progress. Core CLI, `spec init`, `spec doctor`, automatic project-local provisioning of pinned LikeC4, Quint, and StrictDoc under `.spec/tools`, structural checks, generic and Rust draft discovery via `spec map --draft`, human approval with a hash lock for SDoc requirements and acceptance criteria, the deterministic `spec bundle` audit output, the LikeC4 validation adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate automatically from detected sources or language markers, or explicitly from config.
 
@@ -23,7 +46,7 @@ Build one end-to-end path:
 - `spec doctor`, `spec doctor --fix`;
 - structural checks over SDoc;
 - human approval: `spec approve` hash-locks proposed SDoc requirement and acceptance records plus native evidence; approval writes evidence artifacts under `spec/evidence/`;
-- LikeC4 adapter: validation with hashed evidence; views and MCP pending;
+- LikeC4 adapter: validation with hashed evidence; generated view embedding pending;
 - StrictDoc adapter: validation with hashed evidence; traceability, HTML/PDF pending;
 - Quint adapter: typecheck plus Apalache verify wired into `spec check` with per-module evidence; native view embedding pending;
 - contract adapters: JSON Schema, CLI snapshots, and Rust public API wired into `spec check` with compatibility evidence;
@@ -46,7 +69,7 @@ Exit criteria:
 - default agent cannot edit approved specs;
 - self-hosted bundle exists.
 
-## Phase 1.5 — Interactive use-case paths
+## Baseline: interactive use-case paths
 
 Status: in progress. The deterministic graph builder and read-only
 `spec query` identity and experience views are implemented over SDoc records,
@@ -84,7 +107,7 @@ dependencies. Decision record
 - presentation projection with names, plain-language state, and opaque refs
   (implemented);
 - proposal engine with typed operations and same-worktree proposal branches
-  (all Phase 1.5 operations implemented);
+  (all interactive operations implemented);
 - typed change impact over the unified SDoc, architecture, formal, and contract
   graph (implemented);
 - formal source collector (implemented);
@@ -115,64 +138,14 @@ Exit criteria:
 - the plugin cannot approve or edit `spec.lock`;
 - the audit bundle keeps full identity and hashes.
 
-## Phase 2 — Adapters, semantic model, and verification
+## Retired
 
-- capability model (`CAP-*`) and coverage;
-- verification objectives and cases (`VOBJ-*`, `VER-*`);
-- optional RDF/OWL/SKOS/SHACL semantic layer and adapter;
-- requirement-owned contracts and cross-subgraph bindings;
-- TypeScript discovery (subsystem and file imports implemented); PHP discovery;
-- TypeScript and PHP public API contracts;
-- Protobuf/CDDL contract adapters;
-- generic conformance trace replay;
-- improved cross-layer change impact analysis;
-- read-only unified graph query and MCP server;
-- read-only local Explorer;
-- agent skills for authoring, audit, and impact;
-- CI templates;
-- packaging and release binaries;
-- macOS support.
-
-Exit criteria:
-
-- a capability flows to requirements, verification cases, evidence, and
-  coverage;
-- one semantic contract validates requirements and produces hashed evidence;
-- the read-only query and MCP interfaces return the same graph;
-- the Explorer displays the validated model without editing it;
-- change impact crosses capability, semantic, verification, and contract links.
-
-## Phase 3 — Scale
-
-- monorepo and multi-repo workspaces with branch contexts;
-- cross-repository change impact;
-- versioned migration and model lifecycle;
-- multiple approval roles;
-- policy profiles;
-- richer drift detection;
-- formal tool alternatives (TLA+, Alloy) as evidence adapters;
-- optional mutation of approved content or approval over MCP and Explorer behind
-  a separate decision;
-- evaluation on real projects.
-
-## Architecture intelligence platform — planned
-
-Status: planned, not implemented. Full platform MVP.
-
-The next direction extends the framework from intent and code discovery into
-repository understanding:
-
-- language-neutral analysis IR for files, symbols, calls, entry points, and data access;
-- local SQLite snapshots with generated JSON export;
-- architecture reconstruction with direct conceptual-to-code traceability;
-- static functional flows from entry points to sources, sinks, and outputs;
-- deterministic architectural diagnostics plus clearly separated AI-assisted hypotheses;
-- an evidence-bound AI interpretation layer that never approves or passes a check;
-- a workbench System view with drill-down from components to files and functions;
-- a phased Obsidian-style graph with labels, radial expansion, and large-graph performance.
-
-The detailed execution checklist, phase gates, and acceptance criteria live in
-[Architecture intelligence roadmap](roadmap/architecture-intelligence.md).
+Decision [0015](design-decisions/0015-retire-legacy-roadmap-and-explorer.md)
+retires the old Phase 2/3 roadmap commitments and the read-only Explorer. There
+is no committed plan for capabilities, verification planning, the optional
+semantic layer, MCP, `spec serve`, multi-repository workspaces, or model
+migration. Their design documents are either unscheduled intent-model design or
+deleted. Do not treat them as future work without a new decision record.
 
 ## Self-hosting milestones
 
@@ -192,7 +165,7 @@ human action.
 | Risk                                         | Mitigation                                                                      |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
 | Tool provisioning friction                   | `spec doctor --fix`, pinned runners, exact fallbacks                            |
-| StrictDoc embedding of LikeC4/Quint          | Phase 1 spike; Typst/Pandoc fallback                                            |
+| StrictDoc embedding of LikeC4/Quint          | initial spike; Typst/Pandoc fallback                                            |
 | Full-stack CI cost                           | cache, parallelize, structural preflight                                        |
 | LLM formal quality                           | mandatory checker loop; human review                                            |
 | Compiler preflight mistaken for conformance  | explicit scope; separate evidence from formal and contract checks               |
@@ -202,18 +175,16 @@ human action.
 | Internal IDs leak into normal interaction    | experience projection, opaque refs, default-output leak tests                   |
 | Chat invents certainty or decisions          | every accepted decision recorded; explicit open questions; no unverified claims |
 | Plugin API drift                             | one compatibility adapter; target the installed opencode API first              |
-| Multi-repo pin drift                         | explicit composition, pins, admission, and recorded baseline                    |
 | Non-Rust conformance                         | generic trace adapter; explicit waivers until supported                         |
 | Self-hosting exposes gaps                    | intentional; fix before external adoption                                       |
 
-## Non-goals for Phase 1
+## Non-goals
 
 - Code-level proofs.
 - Every language and protocol.
 - Hosted service.
-- A hosted or multi-user workbench. The Phase 1.5 workbench is local and
-  proposal-only.
+- A hosted or multi-user workbench. The workbench is local and proposal-only.
 - Mutation of approved content or approval over any interactive surface.
-- Multi-repository workspaces before Phase 3.
 - Replacing existing build systems.
 - Automatic requirement extraction from code.
+- AI approval or AI pass/fail verdicts.

@@ -164,9 +164,9 @@ pending.
 
 The baseline is explicit: a PR merge-base, a named approved baseline, or `HEAD`
 for pending local work. Without an explicit baseline, the impact report is
-incomplete. Multi-repository impact analysis uses the recorded composition and
-pins; it never fetches repositories during analysis. See
-[workspace and branches](../architecture/workspace-and-branches.md).
+incomplete. Impact is scoped to the current repository. Multi-repository
+composition is retired by decision
+[0015](../design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
 
 ## Approval invalidation
 

@@ -59,18 +59,19 @@ Every adapter implements the same interface:
 ```ts
 interface LanguageAdapter {
   id: string
-  detect(target: string): Promise<boolean>
-  discover(target: string, files: ScannedFile[]): Promise<AdapterResult>
-  parse(file: ScannedFile): Promise<ParseResult>
-  extractSymbols(tree: ParseResult): Promise<SymbolRecord[]>
-  extractImports(tree: ParseResult): Promise<ImportRecord[]>
-  extractCalls(tree: ParseResult): Promise<CallRecord[]>
-  extractInheritance(tree: ParseResult): Promise<InheritanceRecord[]>
-  extractInterfaces(tree: ParseResult): Promise<InterfaceRecord[]>
+  detect(target: string): Promise<Result<boolean, string>>
+  discover(target: string, files: ScannedFile[]): Promise<Result<AdapterResult, string>>
+  parse(file: ScannedFile): Promise<Result<ParseResult, string>>
+  extractSymbols(tree: ParseResult): Promise<Result<SymbolRecord[], string>>
+  extractImports(tree: ParseResult): Promise<Result<ImportRecord[], string>>
+  extractCalls(tree: ParseResult): Promise<Result<CallRecord[], string>>
+  extractInheritance(tree: ParseResult): Promise<Result<InheritanceRecord[], string>>
+  extractInterfaces(tree: ParseResult): Promise<Result<InterfaceRecord[], string>>
 }
 ```
 
-Adapters return IR only. Language-specific syntax never leaks into the
+Adapters use the repository `Result` type from `src/core/result.ts` for expected
+failures. Adapters return IR only. Language-specific syntax never leaks into the
 architecture model.
 
 ### Syntax versus semantics

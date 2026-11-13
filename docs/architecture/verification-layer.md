@@ -1,6 +1,8 @@
 # Verification layer
 
-> Status: Phase 2 design. Verification planning tooling is not implemented.
+> Status: unscheduled intent-model design. Verification planning tooling is not
+> implemented and is not part of the current architecture intelligence
+> direction. See decision [0015](../design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
 
 ## Purpose
 

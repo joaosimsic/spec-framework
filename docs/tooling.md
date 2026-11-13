@@ -5,16 +5,17 @@
 | Component                | Choice                                  | Notes                                          |
 | ------------------------ | --------------------------------------- | ---------------------------------------------- |
 | CLI                      | TypeScript + Bun                        | Compiled to a single binary for release        |
-| Architecture             | LikeC4                                  | Model API, validation, views, MCP              |
+| Architecture             | LikeC4                                  | Model API, validation, views                   |
 | Capabilities             | LikeC4 custom kind plus capability lint | Hierarchy, requirement derivation, coverage    |
 | Requirements             | StrictDoc                               | SDoc validation, traceability, HTML/PDF        |
 | Semantic                 | RDF/OWL/SKOS/SHACL adapter              | Optional; pinned external vocabularies; SPARQL |
 | Verification plan        | Structured verification sources         | Objectives, methods, cases, coverage           |
 | Formal                   | Quint                                   | Typecheck, simulator, model checking           |
-| Query and MCP            | Read-only graph query and MCP server    | Stable JSON, resources, tools, prompts         |
-| Explorer                 | Local read-only UI                      | Review aid, not source of truth                |
+| Query                    | Read-only graph query                   | Stable JSON and presentation projection        |
+| Analysis                 | TypeScript compiler and `bun:sqlite`    | Files, symbols, calls, entry points, snapshots |
+| System workspace         | React/Vite workbench                    | Primary human surface; read-only over intent   |
 | Model checker            | Apalache (or TLC)                       | Invoked by Quint                               |
-| Implementation preflight | project compiler or build tool          | Configured commands; no shell; planned         |
+| Implementation preflight | project compiler or build tool          | Configured commands; no shell                  |
 | Contracts                | adapters                                | JSON Schema, CLI, Rust public API in Phase 1   |
 | PDF                      | StrictDoc HTML2PDF                      | Fallback: Typst/Pandoc assembly                |
 | Provisioning             | `spec doctor --fix`                     | Project-local Bun and uv runners               |
@@ -52,9 +53,6 @@ spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
 spec approve [--scope <name>]... [ids...] [--technical]
 spec query --json
 spec semantic validate|graph|query|export
-spec serve
-spec mcp
-spec workspace status|add|remove|sync|freeze
 spec migrate [--fix]
 spec lint [--fix]
 spec enable <adapter>
@@ -80,7 +78,7 @@ CI also verifies:
 - no expired waivers or blocking unknowns;
 - semantic sources are pinned when the layer is active;
 - capability and verification coverage gates pass;
-- query, MCP, and Explorer remain read-only.
+- query, analysis, and the System workspace remain read-only.
 
 ## Local development
 
@@ -89,7 +87,8 @@ CI also verifies:
 - `spec doctor` explains missing capabilities known to the framework; arbitrary compiler commands fail at check time.
 - `spec bundle` writes `spec/audit/audit-<short-commit>` by default; use `--output` for another destination and `--force` to replace an existing bundle directory.
 - `spec bundle --allow-dirty` is for local preview only and marks the manifest as a preview.
-- `spec serve` and `spec mcp` are read-only review aids.
+- The System workspace is a read-only review aid over intent and generated
+  implementation evidence.
 - `bun run mvp` runs the self-host pilot slice in a temporary worktree. See
   [self-host MVP](mvp.md).
 - Full approval requires a clean tree and full checks.
@@ -112,7 +111,7 @@ spec/
   unknowns/
   waivers/
   proposals/
-  workspace.toml     optional multi-repo composition
+  generated/         generated analysis and architecture output
   toolchain.lock.json
   spec.lock
 .opencode/         project-local agent config
@@ -121,7 +120,7 @@ AGENTS.md
 
 ## Supported platforms
 
-Phase 1 targets Linux. macOS support follows once provisioning is stable. Windows is not a Phase 1 target.
+The current baseline targets Linux. macOS and Windows are not scheduled targets.
 
 ## Failure policy
 

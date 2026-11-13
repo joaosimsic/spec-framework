@@ -10,18 +10,19 @@
 > [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
 > interaction model and the write boundary.
 >
-> Planned extension: the workbench gains a default System view that joins
-> curated intent with observed implementation, flows, diagnostics, and coverage.
-> See [System workspace](system-workspace.md) and
+> The workbench System view is the primary human surface. It joins curated
+> intent with observed implementation, flows, diagnostics, and coverage. See
+> [System workspace](system-workspace.md) and the
 > [Architecture intelligence roadmap](../roadmap/architecture-intelligence.md).
 
 ## Purpose
 
-The workbench is the local interactive surface for planning, mapping, and
-refactoring a specification. It is where a human navigates the graph, resolves
-uncertainty, simulates a change, and reviews a proposal.
+The workbench is the local interactive surface for understanding a repository,
+planning, mapping, and refactoring a specification. It is where a human
+navigates the System graph, resolves uncertainty, simulates a change, and
+reviews a proposal.
 
-It is not the Explorer. The Explorer is read-only over a validated model. The
+The System view is read-only over approved intent and generated evidence. The
 workbench may edit a proposal, but never approved content and never
 `spec/spec.lock`.
 
@@ -64,7 +65,15 @@ files. A proposal records its base commit, baseline, and author.
 
 ## Views
 
-### Architecture
+### System
+
+The default workspace. It joins approved intent with the generated
+implementation graph, mapping coverage, flows, and findings. Drill-down goes
+from system to subsystem or component to file to function or class. The
+inspector shows role, implementation, provenance, confidence, and findings. See
+[System workspace](system-workspace.md).
+
+### Architecture (transitional)
 
 The read-only system map. It uses a force-directed graph with expansion:
 collapsing everything leaves only the root system, expanding a node reveals its
@@ -79,7 +88,7 @@ owners, technology, relations, code paths, source files, and symbols. It never
 edits or approves anything and does not require a proposal. The canvas takes most
 of the viewport; identity and hashes stay behind technical details.
 
-### Code map
+### Code map (transitional)
 
 The read-only repository graph. It uses the same force-directed expansion as
 Architecture: collapsing everything leaves the root system, expanding reveals

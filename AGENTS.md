@@ -23,6 +23,21 @@ design, not a compatibility contract.
 - Run `bun run format`, `bun run lint`, `bun run typecheck`, and `bun test`
   after refactoring.
 
+## Direction
+
+Decision record [0012](docs/design-decisions/0012-architecture-intelligence.md)
+is the product direction. Decision record
+[0015](docs/design-decisions/0015-retire-legacy-roadmap-and-explorer.md) retires
+the Explorer and the old Phase 2/3 roadmap commitments.
+
+- Documentation leads with architecture intelligence, not the old intent-only
+  roadmap.
+- The workbench System view is the primary human surface.
+- Intent, implementation, and mapping stay distinct. Implementation evidence is
+  generated, never approved intent.
+- AI is evidence-bound and never approves or passes a check.
+- Do not reintroduce a retired surface or phase without a new decision record.
+
 ## Formatting rule
 
 Run the formatter over all files before finishing a task or committing:

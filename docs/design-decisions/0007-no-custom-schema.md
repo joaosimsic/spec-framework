@@ -1,7 +1,12 @@
 # 0007 — No custom specification schema
 
-**Status:** accepted
+**Status:** accepted; extended by 0012
 **Date:** 2026-11-10
+
+> Decision 0012 adds versioned analysis JSON contracts for the generated
+> implementation graph. These are evidence schemas, not a replacement
+> specification language. The native LikeC4, StrictDoc, Quint, and contract
+> formats remain authoritative for intent.
 
 ## Context
 

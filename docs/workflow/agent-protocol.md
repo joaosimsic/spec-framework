@@ -27,21 +27,18 @@ Read-only. It runs validators, inspects diffs, and files defects and unknowns. I
 
 ## Commands
 
-| Command               | Agent          | Effect                                            |
-| --------------------- | -------------- | ------------------------------------------------- |
-| `spec init`           | human or agent | Scaffold full profile                             |
-| `spec doctor --fix`   | human or agent | Provision pinned tools                            |
-| `spec check`          | agent          | Run all checks; report blocked scope              |
-| `spec change`         | spec-architect | Create proposal and change report                 |
-| `spec next`           | agent          | Show the next decisions, blockers, and checks     |
-| `spec review`         | spec-critic    | Read-only critique and defect filing              |
-| `spec bundle`         | agent          | Generate audit bundle                             |
-| `spec approve`        | human only     | Hash-lock approved elements                       |
-| `spec query --json`   | agent          | Query graph, IDs, status, links, impact, coverage |
-| `spec semantic query` | agent          | Read-only SPARQL or semantic graph query          |
-| `spec serve`          | human or agent | Start read-only local Explorer                    |
-| `spec mcp`            | human or agent | Start read-only MCP interface                     |
-| `spec map`            | agent          | Draft architecture from code                      |
+| Command             | Agent          | Effect                                        |
+| ------------------- | -------------- | --------------------------------------------- |
+| `spec init`         | human or agent | Scaffold full profile                         |
+| `spec doctor --fix` | human or agent | Provision pinned tools                        |
+| `spec check`        | agent          | Run all checks; report blocked scope          |
+| `spec change`       | spec-architect | Create proposal and change report             |
+| `spec next`         | agent          | Show the next decisions, blockers, and checks |
+| `spec review`       | spec-critic    | Read-only critique and defect filing          |
+| `spec bundle`       | agent          | Generate audit bundle                         |
+| `spec approve`      | human only     | Hash-lock approved elements                   |
+| `spec query --json` | agent          | Query graph, IDs, status, and links           |
+| `spec map`          | agent          | Draft architecture from code                  |
 
 ## Conversational surface
 
@@ -69,19 +66,18 @@ and audit identity. They are not the default human interface.
 
 See [presentation and internal identity](../ux/presentation.md).
 
-## Query and MCP access
+## Query access
 
-The agent may query the spec graph through the CLI, the read-only MCP server, or
-the Explorer's data API. All three expose the same model and the same read-only
-rules.
+The agent may query the spec graph through `spec query` and the opencode plugin.
+Both expose the same model and the same read-only rules.
 
 - Query results are scoped to the selected baseline or branch context.
 - The agent must cite element IDs and evidence hashes in change reports.
 - The agent may summarize query output but not present it as approval.
 - The default interface cannot edit sources, evidence, statuses, or
   `spec.lock`.
-- Mutation over MCP or Explorer is disabled until a separate decision enables
-  it, with branch isolation, validation, and human approval.
+- Mutation goes through typed proposal operations with branch isolation,
+  validation, and human approval.
 - Skills package query and authoring workflows; installing a skill does not
   grant approval or mutation rights.
 
@@ -112,8 +108,7 @@ rules.
 - Editing `spec.lock`.
 - Running `spec approve`.
 - Marking an element `approved`.
-- Using an MCP, Explorer, workbench, or plugin mutation path to edit approved
-  content.
+- Using a workbench or plugin mutation path to edit approved content.
 - Treating a query result, workbench view, or chat summary as an approval
   verdict.
 - Printing internal IDs or diagnostic codes in default conversation.

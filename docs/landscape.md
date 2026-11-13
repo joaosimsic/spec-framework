@@ -65,7 +65,7 @@ flowchart LR
     C --> B
     E --> B
     B --> V[Human review and approval]
-    B --> Q[Read-only query, MCP, and Explorer]
+    B --> Q[Read-only query and System workspace]
 ```
 
 - LikeC4 is the architecture source and the visual review surface.
@@ -76,7 +76,7 @@ flowchart LR
 - Quint is the formal behavior source.
 - Contract adapters cover language APIs, data formats, CLIs, and wire protocols.
 - A small CLI checks cross-layer integrity, coverage, approvals, and renders the bundle.
-- Query, MCP, and Explorer are read-only surfaces over the validated graph.
+- Query and the System workspace are read-only surfaces over the validated intent graph and generated implementation evidence.
 
 ## What changed in 2025–2026
 
@@ -91,7 +91,6 @@ flowchart LR
 - Whether SysML v2 becomes ergonomic enough for software-only projects.
 - Whether StrictDoc's experimental source-code traceability is sufficient or OpenFastTrace should be the default code tracer.
 - Whether conformance-trace replay can be generalized beyond Rust without excessive per-language work.
-- What a read-only unified MCP surface should expose first. Phase 2 starts with query, impact, coverage, and evidence summaries.
+- Which implementation projection is most useful first: files, symbols, calls, or entry-point flows.
 - Which RDF/SHACL toolchain gives the best deterministic behavior for an optional semantic layer.
-- How much of Reqvire's multi-repository workspace model is worth adopting without losing single-repo simplicity.
 - Whether capability granularity should follow product features, operational abilities, or system boundaries.

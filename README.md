@@ -2,11 +2,9 @@
 
 [![ci](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml)
 
-**Status: Phase 1 skeleton plus the first Phase 1.5 slices.** The design docs are complete. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, `spec map --review`, `spec start`, a read-only `spec query`, a same-worktree `spec change` proposal engine, the local `spec workbench`, human approval with a hash lock and named-scope selection, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. `spec bundle` writes a deterministic audit directory with HTML, PDF, manifest, graph, sources, evidence, change report, and the approval lock.
+**Status: architecture intelligence platform, in progress.** The implemented baseline captures intent. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, `spec map --review`, `spec start`, a read-only `spec query`, a same-worktree `spec change` proposal engine, the local `spec workbench`, human approval with a hash lock and named-scope selection, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. `spec bundle` writes a deterministic audit directory with HTML, PDF, manifest, graph, sources, evidence, change report, and the approval lock.
 
-Phase 2 and Phase 3 capabilities — capabilities, verification planning, the optional semantic layer, MCP, the read-only Explorer, workspaces, and model migration — are documented design specs, not implemented features. See the [roadmap](docs/roadmap.md).
-
-**Planned direction: architecture intelligence.** The next platform phase adds a local analysis engine for TypeScript repositories, an implementation graph of files, symbols, calls, entry points, and data access, local SQLite snapshots, architecture reconstruction with direct conceptual-to-code traceability, static functional flows, deterministic and AI-assisted diagnostics, and a workbench System view with drill-down from components to functions. AI is evidence-bound and never approves or passes a check. None of this is implemented yet. See the [architecture intelligence roadmap](docs/roadmap/architecture-intelligence.md).
+**Next direction: architecture intelligence.** The next platform phase adds a local analysis engine for TypeScript repositories, an implementation graph of files, symbols, calls, entry points, and data access, local SQLite snapshots, architecture reconstruction with direct conceptual-to-code traceability, static functional flows, deterministic and AI-assisted diagnostics, and a workbench System view with drill-down from components to functions. AI is evidence-bound and never approves or passes a check. None of the architecture intelligence phases is implemented yet. See the [architecture intelligence roadmap](docs/roadmap/architecture-intelligence.md) and decision records [0012](docs/design-decisions/0012-architecture-intelligence.md) and [0015](docs/design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
 
 The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc records, architecture elements, formal modules and properties, contract sidecars, and stored evidence, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed operations (`rename`, `deprecate`, `replace`, `split`, `merge`, `extract`, `move`, `change-contract`, `record-decision`, `record-open-question`, `add-record`). New records may omit an internal ID; the engine derives a stable ID from the visible name and resolves collisions deterministically. Its change report includes deterministic impact analysis across requirements, architecture, formal sources, contracts, evidence, and approvals. `spec start` opens a scratch-mode proposal from a goal without writing approved content or `spec/spec.lock`. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions without writing approved sources or `spec/spec.lock`. `spec map --promote` writes accepted areas into proposed LikeC4 elements, `spec approve` hash-locks annotated architecture elements, and `spec map --check` reports drift against the approved subset. `spec refactor` is a thin alias that defaults to refactor mode and warns when no approved baseline exists. `spec approve --scope "<name>"` resolves a visible requirement or architecture name to its identity and includes acceptance criteria for requirements; positional IDs remain for automation and `--technical` reveals them. Change reports can include a deterministic before/after graph simulation from a baseline snapshot captured when the proposal opens; `spec refactor` enables it by default and `spec change` accepts `--simulate`. The React/Vite workbench serves a read-only repository graph with subsystem and file dependencies, mapping curation, Compose draft editing, refactor simulation with all typed proposal operations, proposal review, and technical details; approval and `spec/spec.lock` writes remain CLI-only. The opencode plugin is implemented as a standalone package plus a local self-hosting loader; it exposes status, context, query, impact, proposal, validation, decision, next, diff, and workbench tools with no approval path. `spec next` shows the next decisions and checks, and `spec start`, `spec map --review`, `spec change`, and `spec refactor` open guided terminal sessions when stdin and stdout are TTYs; `--no-interactive` restores one-shot output, and `--json`, `--action`, and `--op` never prompt. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
 
@@ -26,7 +24,7 @@ bundle, proves approval invalidation and re-approval, and generates a draft repo
 graph at subsystem and file level. It leaves this repository untouched. See
 [self-host MVP](docs/mvp.md).
 
-`spec-framework` is a spec-driven development framework for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked.
+`spec-framework` is a spec-driven development framework and architecture intelligence platform for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked. It also reconstructs how an existing repository is implemented, maps conceptual elements to code, and makes architectural problems visible.
 
 The framework does not ask an LLM to write a better prose document. It changes the representation:
 
@@ -39,7 +37,8 @@ The framework does not ask an LLM to write a better prose document. It changes t
 - contracts are typed interfaces, not examples in prose;
 - approval is a human action backed by content hashes, not an LLM claim;
 - the audit artifact is generated deterministically, not written by the agent;
-- the graph is queryable read-only by agents and the Explorer, not editable by default.
+- the graph is queryable read-only by agents and the System workspace, not editable by default;
+- implementation evidence is generated separately from approved intent and never silently merged into it.
 
 ## Why
 
@@ -59,17 +58,18 @@ Prompting harder does not fix this. The fix is to make gaps visible and block th
 
 Compose existing, validated tools. Build only the glue.
 
-| Layer                  | Tool                                              | Responsibility                                                               |
-| ---------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Architecture           | [LikeC4](https://likec4.dev/)                     | systems, components, typed relations, views, validation, MCP                 |
-| Capabilities           | capability model                                  | ability hierarchy, requirement derivation, verification coverage             |
-| Requirements and audit | [StrictDoc](https://strictdoc-project.github.io/) | EARS records, traceability, coverage, HTML/PDF audit output                  |
-| Semantic constraints   | optional RDF/OWL/SKOS/SHACL adapter               | shared vocabulary, concept schemes, SHACL contracts, SPARQL                  |
-| Verification planning  | verification model                                | objectives, methods, cases, evidence, coverage                               |
-| Formal behavior        | [Quint](https://quint.sh/)                        | executable state models, invariants, model checking, traces                  |
-| Contracts              | adapters                                          | language APIs, data formats, CLIs, wire protocols, hardware interfaces       |
-| Glue                   | small CLI                                         | cross-layer IDs, coverage gates, approval lock, audit bundle, change reports |
-| Review and query       | read-only CLI, MCP, Explorer                      | graph queries, impact, coverage, traceability, local review                  |
+| Layer                   | Tool                                              | Responsibility                                                               |
+| ----------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Architecture            | [LikeC4](https://likec4.dev/)                     | systems, components, typed relations, views, validation                      |
+| Capabilities            | capability model                                  | ability hierarchy, requirement derivation, verification coverage             |
+| Requirements and audit  | [StrictDoc](https://strictdoc-project.github.io/) | EARS records, traceability, coverage, HTML/PDF audit output                  |
+| Semantic constraints    | optional RDF/OWL/SKOS/SHACL adapter               | shared vocabulary, concept schemes, SHACL contracts, SPARQL                  |
+| Verification planning   | verification model                                | objectives, methods, cases, evidence, coverage                               |
+| Formal behavior         | [Quint](https://quint.sh/)                        | executable state models, invariants, model checking, traces                  |
+| Contracts               | adapters                                          | language APIs, data formats, CLIs, wire protocols, hardware interfaces       |
+| Implementation analysis | TypeScript compiler and `bun:sqlite`              | files, symbols, calls, entry points, data access, local snapshots            |
+| Glue                    | small CLI                                         | cross-layer IDs, coverage gates, approval lock, audit bundle, change reports |
+| Review and query        | read-only CLI, System workspace, opencode plugin  | graph queries, impact, coverage, traceability, local system review           |
 
 The framework assumes most projects are not web applications. OpenAPI and HTTP endpoint descriptions are optional adapters, not defaults.
 
@@ -79,8 +79,9 @@ The framework assumes most projects are not web applications. OpenAPI and HTTP e
 - **Deterministic verification.** LikeC4 validation, capability and verification coverage, StrictDoc traceability, semantic/SHACL checks, Quint model checking, and contract checks decide whether the spec is acceptable. LLM self-report is never accepted.
 - **Provenance and unknowns.** Every element records where it came from. Missing information becomes an explicit unknown, not an invented answer.
 - **Human approval.** Approved content is hash-locked. Any change invalidates approval until a human reviews and re-approves.
-- **Agent-safe workflow.** The default agent cannot edit approved specs. It proposes changes; a human approves them. Query, MCP, and Explorer are read-only.
+- **Agent-safe workflow.** The default agent cannot edit approved specs. It proposes changes; a human approves them. Query, the System workspace, and the opencode plugin are read-only over approved intent.
 - **Optional semantics, not a new language.** Ontologies, concepts, and SHACL contracts use standard RDF formats.
+- **Evidence-bound architecture intelligence.** Implementation graphs, flows, and diagnostics are generated evidence. AI may interpret evidence but never approves or passes a check.
 - **Non-web first.** Contract adapters cover libraries, CLIs, file formats, IPC, and device protocols.
 
 ## Intended workflow
@@ -100,7 +101,7 @@ spec approve REQ-AUTH-001 AC-AUTH-001
 
 `spec init` writes the full-stack profile. `spec doctor --fix` installs pinned project-local tools where a safe package-manager recipe exists and prints exact instructions for the rest. `spec check` runs structural checks first, then native validators, formal verification, and contract checks. Approval is human-only and hash-locked.
 
-Current skeleton:
+Current baseline:
 
 - `spec next [--technical] [--json]` shows the next decisions, blockers, open questions, and checks for the active mode. It is read-only and never writes sources or `spec/spec.lock`.
 - `spec init [--existing] [--force]` creates the scaffold.
@@ -151,21 +152,22 @@ Start here:
 - [Adoption](docs/adoption.md)
 - [Brownfield mapping](docs/brownfield.md)
 - [Architecture overview](docs/architecture/overview.md)
+- [Architecture intelligence roadmap](docs/roadmap/architecture-intelligence.md)
+- [Analysis engine](docs/architecture/analysis-engine.md)
+- [Architecture graph](docs/architecture/architecture-graph.md)
+- [System workspace](docs/workflow/system-workspace.md)
 - [Spec model](docs/architecture/spec-model.md)
 - [Capability layer](docs/architecture/capability-layer.md)
 - [Requirements layer](docs/architecture/requirements-layer.md)
 - [Semantic layer](docs/architecture/semantic-layer.md)
 - [Verification layer](docs/architecture/verification-layer.md)
 - [Query and agent interface](docs/architecture/query-and-agent-interface.md)
-- [Workspace and branches](docs/architecture/workspace-and-branches.md)
 - [Use-case modes](docs/workflow/use-cases.md)
 - [Workflow](docs/workflow/authoring.md)
 - [Self-host MVP](docs/mvp.md)
 - [Workbench](docs/workflow/workbench.md)
 - [opencode plugin](docs/workflow/opencode-plugin.md)
-- [Explorer](docs/workflow/explorer.md)
 - [Presentation and identity](docs/ux/presentation.md)
-- [Model lifecycle](docs/workflow/model-lifecycle.md)
 - [Audit bundle](docs/architecture/audit-bundle.md)
 - [Roadmap](docs/roadmap.md)
 
@@ -197,15 +199,14 @@ spec/        self-hosted specification scaffold
 Next:
 
 ```
-src/change/     cross-source operation previews and simulation refinements
-src/bundle/     native view embedding and richer report sections
-src/evidence/   evidence regeneration from a clean environment
-src/semantic/   optional RDF/OWL/SKOS/SHACL adapter
-src/query/      MCP interface and coverage queries
-src/explorer/   read-only local review surface
-src/workbench/  React/Vite proposal workbench and local API
-src/workspace/  multi-repo composition and branch contexts
-templates/      repo bootstrap, agent config, CI, pinned toolchain
+src/analysis/      scanner, language registry, common IR, TypeScript adapter
+src/persistence/   SQLite migrations, snapshots, analysis repositories
+src/implementation/ generated architecture, conceptual-to-code mapping
+src/flows/         entry-point tracing, sources and sinks
+src/diagnostics/   deterministic rules and AI-assisted hypotheses
+src/ai/            evidence-bound interpretation providers
+src/workbench/     System view, flows, findings, and local API
+templates/         repo bootstrap, agent config, CI, pinned toolchain
 ```
 
 ## License

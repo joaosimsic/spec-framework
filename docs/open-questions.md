@@ -48,14 +48,13 @@
 - How should coverage roll up across capability, requirement, and verification layers without hiding gaps?
 - When is inspection or demonstration sufficient evidence instead of a waiver?
 
-## Query, MCP, Explorer, and workbench
+## Query, System workspace, and analysis
 
 - What is the stable JSON schema for the unified graph query?
-- Should MCP expose prompts, tools, or both for each workflow?
-- Which authentication model is appropriate for local-only MCP and Explorer access?
-- What must a separate decision require before mutation of approved content over MCP or Explorer is allowed?
-- How should the workbench represent large graphs without a direct-manipulation library?
-- Which second interactive operation needs a full before/after graph simulation?
+- How should the System workspace represent large graphs without losing the force-directed feel?
+- Which analysis snapshot comparison is required first: elements, relationships, flows, or findings?
+- How should mapping confidence be presented without implying approval?
+- When should an analysis run be cancelled, resumed, or restarted after a file change?
 
 ## Presentation and identity
 
@@ -65,13 +64,6 @@
 - How should named approval scopes resolve when two items share a title?
 - What context-pack size keeps chat useful without dumping source prose?
 - How should the workbench present confidence without implying approval?
-
-## Workspace and lifecycle
-
-- Should multi-repo support use a native manifest, Git submodules, or both?
-- How should branch contexts be named and selected when several models are loaded?
-- What is the minimum migration fixture set for a stable model version?
-- How should approval hashes survive a pin update with unchanged component content?
 
 ## Implementation preflight
 
@@ -84,10 +76,9 @@
 
 ## Agent workflow
 
-- How should the read-only unified MCP server relate to the native LikeC4, StrictDoc, and Quint tools?
 - How should the agent query evidence without reading large logs?
 - What is the minimum permission model that remains portable across agent tools?
-- Which spec operations belong in the plugin tool surface instead of MCP?
+- Which analysis questions belong in the plugin tool surface instead of the System workspace?
 - How should the plugin stay compatible with the installed opencode API across versions?
 - How should same-worktree proposals handle two concurrent planning sessions?
 - How should the plugin detect and record a decision that was only stated in chat?

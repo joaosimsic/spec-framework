@@ -1,6 +1,6 @@
 # Architectural diagnostics
 
-Status: planned.
+Status: implemented.
 
 ## Purpose
 
@@ -72,12 +72,12 @@ Human decisions are persisted as annotations and never erased by re-analysis.
 
 ## Configuration
 
-Rules are configurable per project:
+Rules are configured in `spec-framework.json`:
 
 ```json
 {
   "version": 1,
-  "rules": {
+  "diagnostics": {
     "ARC-002": { "threshold": 12 },
     "ARC-003": { "threshold": 12 },
     "ARC-004": { "max_symbols": 40, "max_lines": 800 },

@@ -1,6 +1,6 @@
 # AI interpretation layer
 
-Status: planned.
+Status: implemented.
 
 ## Purpose
 
@@ -56,8 +56,8 @@ Do not send the entire repository.
 
 Context assembly:
 
-1. select the target component or flow;
-2. include its intent node, if present;
+1. select the target conceptual component or flow;
+2. include its behavior summary and anchors;
 3. include implementation neighbors within a bounded radius;
 4. include source excerpts for mapped symbols;
 5. include relevant findings and human annotations;
@@ -69,12 +69,12 @@ This is graph retrieval plus code retrieval.
 
 ## Tasks
 
-| Task                       | Input                                               | Output schema                                               |
-| -------------------------- | --------------------------------------------------- | ----------------------------------------------------------- |
-| Component interpretation   | Symbols, signatures, calls, dependencies, intent    | Responsibility, observed responsibilities, issues, evidence |
-| Functional flow hypothesis | Entry point, call steps, data access                | Proposed flow, evidence, unknowns, confidence               |
-| Architecture diagnosis     | Components, responsibilities, dependencies, metrics | Findings with rule candidate, evidence, confidence          |
-| Question answering         | Bounded graph and code context                      | Explanation, elements, files, confidence                    |
+| Task                       | Input                                                               | Output schema                                                          |
+| -------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Component interpretation   | Entry points, public surface, calls, data access, generated summary | Responsibility hypothesis, observed responsibilities, issues, evidence |
+| Functional flow hypothesis | Entry point, call steps, data access                                | Proposed flow, evidence, unknowns, confidence                          |
+| Architecture diagnosis     | Components, responsibilities, dependencies, metrics                 | Findings with rule candidate, evidence, confidence                     |
+| Question answering         | Bounded graph and code context                                      | Explanation, elements, files, confidence                               |
 
 ## Output validation
 
@@ -88,6 +88,10 @@ Every structured response is validated:
 - evidence is non-empty for findings;
 - confidence is within bounds;
 - no forbidden keys or arbitrary executable content.
+
+AI responsibility text is stored as a hypothesis beside the deterministic
+summary. It never replaces the summary, renames the component, or changes
+conceptual identity.
 
 Invalid output is rejected. It is never partially accepted.
 

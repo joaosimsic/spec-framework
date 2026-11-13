@@ -1,8 +1,0 @@
-{
-  "id": "CON-EXAMPLE-001",
-  "owner": "spec-framework",
-  "consumers": ["spec-cli"],
-  "compatibility": "backward",
-  "schema": "example.schema.json",
-  "versioning": "semver"
-}

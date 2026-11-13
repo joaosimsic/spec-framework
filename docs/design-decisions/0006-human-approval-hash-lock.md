@@ -1,5 +1,6 @@
 # 0006 — Human approval with hash lock
 
+Status: superseded by [0016](0016-generated-spec-product.md). Hash-locked approval is retired.
 **Status:** accepted
 **Date:** 2026-11-10
 

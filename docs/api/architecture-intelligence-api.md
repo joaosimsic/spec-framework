@@ -1,12 +1,12 @@
 # Architecture intelligence API
 
-Status: planned.
+Status: implemented.
 
 Base path: `/api/v1`.
 
-The API is local-only by default. It follows the existing localhost binding,
-origin, and CSRF rules for mutation endpoints. Analysis and query endpoints are
-read-only.
+The API is local-only by default. It follows the localhost, origin, and CSRF
+rules for mutation endpoints. Analysis and query endpoints are read-only over
+generated output.
 
 ## Projects
 
@@ -14,12 +14,13 @@ read-only.
 | ------ | ------------------------ | --------------------------- |
 | POST   | `/projects`              | Register a local repository |
 | GET    | `/projects`              | List registered projects    |
+| GET    | `/projects/current`      | Current workbench project   |
 | GET    | `/projects/:id`          | Project details             |
 | DELETE | `/projects/:id`          | Remove a project            |
 | POST   | `/projects/:id/analyze`  | Start analysis              |
 | GET    | `/projects/:id/analysis` | Analysis history            |
 
-Registration request:
+Registration:
 
 ```json
 {
@@ -35,10 +36,9 @@ Registration request:
 
 Rules:
 
-- `repository_path` must be absolute or resolvable relative to the registered
-  root policy.
-- The path must not escape allowed roots.
-- Registration does not grant write access.
+- `repository_path` must resolve inside a registered analysis root.
+- Registration does not grant write access to source files.
+- Analysis writes only snapshots and generated artifacts.
 
 ## Jobs
 
@@ -48,20 +48,19 @@ Rules:
 | GET    | `/jobs/:id/events` | SSE progress |
 | POST   | `/jobs/:id/cancel` | Cancel a job |
 
-SSE events are described in
-[Analysis jobs and snapshots](../workflow/analysis-jobs-and-snapshots.md).
+## Generated spec
 
-## Architecture
-
-| Method | Endpoint                       | Purpose                  |
-| ------ | ------------------------------ | ------------------------ |
-| GET    | `/projects/:id/architecture`   | Architecture overview    |
-| GET    | `/projects/:id/elements`       | List elements            |
-| GET    | `/elements/:id`                | Element details          |
-| GET    | `/elements/:id/children`       | Expand hierarchy         |
-| GET    | `/elements/:id/relationships`  | Incoming and outgoing    |
-| GET    | `/elements/:id/implementation` | Linked code artifacts    |
-| GET    | `/projects/:id/graph`          | Graph visualization data |
+| Method | Endpoint                               | Purpose                         |
+| ------ | -------------------------------------- | ------------------------------- |
+| GET    | `/projects/:id/spec`                   | Generated spec summary          |
+| GET    | `/projects/:id/spec/sections/:section` | Generated section               |
+| GET    | `/projects/:id/architecture`           | Generated architecture summary  |
+| GET    | `/projects/:id/elements`               | List generated elements         |
+| GET    | `/elements/:id`                        | Element details                 |
+| GET    | `/elements/:id/children`               | Expand hierarchy                |
+| GET    | `/elements/:id/relationships`          | Incoming and outgoing relations |
+| GET    | `/elements/:id/implementation`         | Linked source artifacts         |
+| GET    | `/projects/:id/graph`                  | Graph visualization data        |
 
 Graph query:
 
@@ -69,38 +68,13 @@ Graph query:
 GET /projects/:id/graph?view=functional&depth=2&include_relationships=true
 ```
 
-Response:
-
-```json
-{
-  "data": {
-    "nodes": [
-      {
-        "id": "subsystem.orders",
-        "type": "subsystem",
-        "label": "Orders",
-        "metadata": { "component_count": 8 }
-      }
-    ],
-    "edges": [
-      {
-        "id": "rel-001",
-        "source": "subsystem.orders",
-        "target": "subsystem.inventory",
-        "type": "depends_on"
-      }
-    ]
-  },
-  "meta": { "depth": 2, "truncated": false }
-}
-```
-
 Rules:
 
 - depth is bounded;
 - pagination is required for large result sets;
 - truncation is explicit;
-- absolute paths are never returned.
+- absolute paths are never returned;
+- generated output is read-only.
 
 ## Flows
 
@@ -112,40 +86,47 @@ Rules:
 
 ## Findings
 
-| Method | Endpoint                 | Purpose                      |
-| ------ | ------------------------ | ---------------------------- |
-| GET    | `/projects/:id/findings` | List findings                |
-| GET    | `/findings/:id`          | Finding detail and evidence  |
-| PATCH  | `/findings/:id`          | Confirm, reject, or annotate |
+| Method | Endpoint                 | Purpose                     |
+| ------ | ------------------------ | --------------------------- |
+| GET    | `/projects/:id/findings` | List findings               |
+| GET    | `/findings/:id`          | Finding detail and evidence |
+| PATCH  | `/findings/:id`          | Local status and annotation |
 
 Patch request:
 
 ```json
 {
-  "status": "confirmed",
-  "annotation": "This cycle is introduced by the adapter boundary."
+  "status": "needs_investigation",
+  "annotation": "Static dispatch obscures the call target."
 }
 ```
 
+Patch writes local review metadata only. It never edits generated artifacts.
+
+## Snapshots
+
+| Method | Endpoint                          | Purpose               |
+| ------ | --------------------------------- | --------------------- |
+| GET    | `/projects/:id/snapshots`         | Snapshot history      |
+| GET    | `/projects/:id/compare?from=&to=` | Compare two snapshots |
+| GET    | `/snapshots/:id/compare/:other`   | Compare two snapshots |
+
 ## AI
 
-| Method | Endpoint                                 | Purpose                   |
-| ------ | ---------------------------------------- | ------------------------- |
-| POST   | `/projects/:id/ask`                      | Ask about the repository  |
-| POST   | `/projects/:id/analyze/responsibilities` | Responsibility hypotheses |
-| POST   | `/projects/:id/analyze/architecture`     | Architecture hypotheses   |
+| Method | Endpoint                                 | Purpose                      |
+| ------ | ---------------------------------------- | ---------------------------- |
+| POST   | `/projects/:id/ask`                      | Ask about generated evidence |
+| POST   | `/projects/:id/analyze/responsibilities` | Responsibility hypotheses    |
+| POST   | `/projects/:id/analyze/architecture`     | Architecture hypotheses      |
 
-AI responses must include:
+AI responses include explanation, element IDs, file references, evidence class,
+confidence, and validation status. Invalid references fail the request.
 
-- explanation;
-- element IDs;
-- file references;
-- evidence class;
-- confidence;
-- validation status.
+## Retired endpoints
 
-Invalid references fail the request or mark the output rejected. They are never
-silently dropped.
+The legacy `/api/graph`, `/api/context`, `/api/change`, `/api/impact`,
+`/api/diff`, `/api/mapping`, `/api/architecture-graph`, `/api/repo-graph`,
+`/api/check`, and proposal operation routes are retired.
 
 ## Errors
 

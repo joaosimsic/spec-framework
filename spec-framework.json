@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "project": {
+    "name": "spec-framework"
+  },
+  "analysis": {
+    "roots": ["."],
+    "exclude": [],
+    "flow_analysis": true
+  },
+  "diagnostics": {
+    "ARC-002": { "threshold": 12 },
+    "ARC-003": { "threshold": 12 },
+    "ARC-004": { "max_symbols": 40, "max_lines": 800 }
+  },
+  "checks": [
+    {
+      "id": "typecheck",
+      "kind": "typecheck",
+      "command": ["bun", "run", "typecheck"],
+      "workingDirectory": ".",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "tests",
+      "kind": "test",
+      "command": ["bun", "test"],
+      "workingDirectory": ".",
+      "timeoutMs": 300000
+    }
+  ]
+}

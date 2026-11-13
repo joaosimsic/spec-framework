@@ -1,6 +1,6 @@
 # Analysis engine
 
-Status: planned.
+Status: implemented.
 
 ## Purpose
 
@@ -154,8 +154,9 @@ The engine must make incompleteness visible.
 ## Storage
 
 - SQLite: `.spec/analysis.sqlite`.
-- Portable output: `spec/generated/analysis.gen.json`.
-- Snapshot key: Git commit plus analyzer version.
+- Canonical generated spec: `spec/generated/spec.gen.json`.
+- Detailed analysis output: `spec/generated/analysis.gen.json`.
+- Snapshot key: Git commit plus analyzer, schema, rule, prompt, and model versions.
 - Migrations: versioned under `src/persistence/migrations/`.
 
 Deleting the database is safe. Re-analysis rebuilds it.

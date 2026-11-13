@@ -1,206 +1,162 @@
 # Architecture graph and traceability
 
-Status: planned.
+Status: version 1 directory reconstruction implemented; behavior-derived
+architecture planned.
 
-## Purpose
+The architecture graph is generated from one analysis snapshot. It separates the
+conceptual system from its implementation.
 
-The architecture graph joins what the system is intended to be with what the
-code actually contains.
+## Conceptual graph
 
-Two graphs remain distinct:
+| Node kind         | Meaning                                                |
+| ----------------- | ------------------------------------------------------ |
+| `system`          | Generated project boundary                             |
+| `subsystem`       | Behavior family                                        |
+| `component`       | Behavior unit                                          |
+| `interface`       | CLI, HTTP, library, event, or configured entry surface |
+| `data_store`      | Observed data boundary                                 |
+| `external_system` | External package or service                            |
 
-| Graph                | Source                                                  | Authority          |
-| -------------------- | ------------------------------------------------------- | ------------------ |
-| Intent graph         | LikeC4, requirements, capabilities, contracts, approval | Human-approved     |
-| Implementation graph | Scanner and analyzers                                   | Generated evidence |
+Conceptual edges:
 
-A third mapping layer links them:
+| Edge               | Meaning                              |
+| ------------------ | ------------------------------------ |
+| `depends_on`       | Component or subsystem dependency    |
+| `calls`            | Cross-component call                 |
+| `exposes`          | Component exposes an interface       |
+| `reads` / `writes` | Data access                          |
+| `uses_external`    | External system dependency           |
+| `realizes`         | Component realizes observed behavior |
 
-| Mapping            | Source                                       | Authority           |
-| ------------------ | -------------------------------------------- | ------------------- |
-| Conceptual to code | Sidecar selectors plus generated suggestions | Curated or inferred |
-
-The workbench reads one projection over all three. It never merges them into one
-unqualified truth.
-
-## Intent graph
-
-Reuse the existing model:
-
-- systems, subsystems, components, interfaces, data stores;
-- external actors and external systems;
-- typed relationships;
-- stable IDs and provenance;
-- approved status and hash lock.
-
-Intent elements keep their current identity and approval lifecycle.
+Every edge carries `confidence`, `provenance`, and `resolution`.
 
 ## Implementation graph
 
-Node kinds:
+Implementation nodes:
 
-| Kind               | Meaning                                                   |
-| ------------------ | --------------------------------------------------------- |
-| `package`          | Manifest-defined package or workspace member              |
-| `directory`        | Source directory                                          |
-| `file`             | Source file                                               |
-| `function`         | Free function or exported function                        |
-| `method`           | Method or accessor                                        |
-| `class`            | Class                                                     |
-| `interface`        | Interface or protocol                                     |
-| `type`             | Type alias or structural type                             |
-| `constant`         | Top-level constant                                        |
-| `entry_point`      | CLI command, HTTP route, library API, job, event consumer |
-| `data_entity`      | Named data type, table, file format, or payload           |
-| `data_store`       | Database, file store, queue, cache                        |
-| `external_package` | Dependency outside the repository                         |
+- file;
+- module;
+- class;
+- interface;
+- function;
+- method;
+- property;
+- constant;
+- type alias;
+- enum.
 
-Edge kinds:
+Implementation edges:
 
-| Edge                  | Meaning                                           |
-| --------------------- | ------------------------------------------------- |
-| `contains`            | Hierarchy                                         |
-| `imports`             | Module import                                     |
-| `exports`             | Public surface                                    |
-| `calls`               | Resolved, ambiguous, unresolved, or external call |
-| `references`          | Symbol reference                                  |
-| `inherits`            | Class inheritance                                 |
-| `implements`          | Interface implementation                          |
-| `reads` / `writes`    | Data access                                       |
-| `accepts` / `returns` | Input and output types                            |
-| `external_calls`      | Call outside the repository                       |
-| `maps_to`             | Conceptual element to implementation node         |
+- contains;
+- imports;
+- exports;
+- calls;
+- references;
+- inherits;
+- implements;
+- reads / writes.
 
-Every edge carries `confidence`, `provenance`, and `resolvedBy`.
+Implementation nodes never appear as conceptual architecture children.
+
+## Mapping
+
+Conceptual elements map to implementation:
+
+```text
+CMP-Configuration-API
+  -> FILE-src/config.ts
+  -> SYM-src/config.ts#loadConfig
+  -> SYM-src/config.ts#saveConfig
+```
+
+Mapping evidence includes:
+
+- entry point reachability;
+- public surface reachability;
+- direct calls;
+- import proximity;
+- data access;
+- test references;
+- package metadata.
+
+Directory similarity is supporting evidence only.
 
 ## Identity
 
+- System: `SYS-<project>`.
+- Subsystem: behavior-family identity.
+- Component: sorted behavior anchors.
+- Interface: entry kind and stable key.
+- Data store: channel and stable target.
+- External system: package or service.
 - File: `FILE-<relative-path>`.
 - Symbol: `SYM-<relative-path>#<qualified-name>`.
-- Entry point: `ENTRY-<kind>-<stable-key>`.
-- Data entity: `DATA-<qualified-name>`.
-- Mapping: `MAP-<conceptual-id>-<selector>`.
+- Mapping: `MAP-<conceptual>-<implementation>`.
 
-IDs must not depend on line numbers. A symbol rename creates a new identity and
-a drift finding.
+Directory renames do not change conceptual identity.
 
-## Architecture reconstruction
+## Reconstruction
 
-The architecture builder translates implementation structure into draft
-conceptual elements.
+The behavior graph starts from:
 
-Inputs:
-
-- package and directory structure;
-- manifest dependencies;
 - entry points;
-- import graph;
-- call graph;
-- data access;
-- existing curated intent.
+- exported package surfaces;
+- application mains;
+- CLI commands;
+- HTTP route groups;
+- events and jobs;
+- configured entry points.
 
-Outputs:
+Reached implementation is grouped by behavior. Components with no behavior
+anchor are not generated.
 
-- draft subsystems and components;
-- responsibilities derived from entry points and public surface;
-- dependencies;
-- external integrations;
-- data stores;
-- confidence and provenance.
-
-Rules:
-
-- never approve generated elements;
-- never overwrite curated intent;
-- never invent ownership or normative responsibility;
-- mark ambiguous boundaries;
-- preserve both observed and specified versions when they disagree.
-
-## Mapping sidecar
-
-`spec/implementation/mapping.json` is the curated mapping source.
-
-Example:
-
-```json
-{
-  "version": 1,
-  "mappings": [
-    {
-      "element": "CMP-SPEC-CHANGE",
-      "selectors": ["src/change/", "src/change/operations.ts#applyOperation"],
-      "confidence": "observed",
-      "provenance": "human:maintainer@2026-11-13"
-    }
-  ]
-}
-```
-
-Selector grammar:
-
-| Selector                         | Meaning           |
-| -------------------------------- | ----------------- |
-| `src/change/`                    | Directory subtree |
-| `src/change/change.ts`           | Single file       |
-| `src/change/change.ts#runChange` | Symbol in file    |
-| `glob:src/**/adapter*.ts`        | Glob pattern      |
-
-Generated suggestions come from:
-
-- existing `code=` annotations;
-- directory-name matches;
-- entry-point ownership;
-- import aggregation.
-
-Suggestions are draft-only. They never become approved mappings automatically.
+Code not reached by any anchor remains unassigned implementation.
 
 ## Coverage
 
-The projection reports:
+Generated coverage reports:
 
-- mapped conceptual elements;
-- partially mapped elements;
-- unmapped conceptual elements;
-- unassigned code;
-- stale selectors;
-- entry points without reachable sinks;
-- findings that reference missing code.
+- conceptual components;
+- mapped implementation;
+- unassigned implementation;
+- ambiguous mappings;
+- entry points without observed sinks;
+- behavior with no implementation;
+- unknown boundaries.
 
-Coverage is evidence for review, not a verdict.
+Coverage is evidence, not a verdict.
 
 ## Snapshots
 
-Each analysis snapshot records:
+Each snapshot records:
 
 - Git commit;
-- analyzer version;
-- schema version;
-- rule version;
-- generated element and edge counts;
+- analyzer, schema, rule, prompt, and model versions;
+- conceptual and implementation counts;
 - findings;
-- mapping and coverage results.
+- coverage and unknown counts.
 
-Snapshots support comparison across commits. Deleting or renaming a mapped
-symbol becomes a drift finding, not an automatic architecture change.
+Comparison across commits uses stable conceptual and implementation identities.
 
 ## Workbench projection
 
-The System projection joins:
+The System projection reads:
 
-- intent nodes from curated architecture;
-- implementation nodes from analysis;
-- mapping edges;
+- conceptual architecture;
+- behavior summaries;
+- implementation mappings;
 - flows;
 - findings;
 - coverage.
 
-The projection preserves provenance so the UI can show `specified`, `observed`,
-`inferred`, or `unknown` without hiding disagreement.
+The primary graph contains conceptual nodes only. Implementation is exposed
+through the inspector, overlay, and source drill-down.
 
 ## Invariants
 
-- Implementation nodes never enter `spec.lock` as approved intent.
-- Mapping changes never silently modify approved architecture.
-- Generated suggestions are visibly separate from human decisions.
-- Every downstream view reads the same graph projection.
-- Uncertainty is visible at the element and edge level.
+- No conceptual component whose only evidence is a directory.
+- No directory name as a conceptual label when behavior evidence exists.
+- No file or symbol nodes in the conceptual hierarchy.
+- No hidden unassigned implementation.
+- No AI hypothesis presented as deterministic architecture.
+- No generated output presented as approved intent.

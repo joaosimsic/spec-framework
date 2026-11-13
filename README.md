@@ -2,213 +2,174 @@
 
 [![ci](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/joaosimsic/spec-framework/actions/workflows/ci.yml)
 
-**Status: architecture intelligence platform, in progress.** The implemented baseline captures intent. The core CLI, `spec init`, `spec doctor`, `spec check --structural`, `spec map --draft`, `spec map --review`, `spec start`, a read-only `spec query`, a same-worktree `spec change` proposal engine, the local `spec workbench`, human approval with a hash lock and named-scope selection, the LikeC4 architecture adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate from detected sources or explicit config. Native adapters emit deterministic evidence, `spec approve` hashes it into `spec.lock`, and artifacts live under `spec/evidence`. `spec bundle` writes a deterministic audit directory with HTML, PDF, manifest, graph, sources, evidence, change report, and the approval lock.
+**Status: generated spec product.** The product analyzes a local
+TypeScript/JavaScript repository and generates an evidence-bound spec:
+architecture, observed behavior records, contracts, verification records,
+functional flows, findings, snapshots, and an audit bundle. The workbench reads
+generated output only.
 
-**Next direction: architecture intelligence.** The next platform phase adds a local analysis engine for TypeScript repositories, an implementation graph of files, symbols, calls, entry points, and data access, local SQLite snapshots, architecture reconstruction with direct conceptual-to-code traceability, static functional flows, deterministic and AI-assisted diagnostics, and a workbench System view with drill-down from components to functions. AI is evidence-bound and never approves or passes a check. None of the architecture intelligence phases is implemented yet. See the [architecture intelligence roadmap](docs/roadmap/architecture-intelligence.md) and decision records [0012](docs/design-decisions/0012-architecture-intelligence.md) and [0015](docs/design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
+Decision records [0016](docs/design-decisions/0016-generated-spec-product.md) and
+[0017](docs/design-decisions/0017-behavior-derived-architecture.md) define the
+product boundary. Curated LikeC4, StrictDoc, Quint, contract
+sidecars, proposals, mapping curation, and `spec.lock` approval are retired.
+Generated output never claims human-approved intent or complete runtime
+behavior.
 
-The first interactive slices are implemented: `spec query` emits the deterministic identity graph for SDoc records, architecture elements, formal modules and properties, contract sidecars, and stored evidence, and the presentation projection exposes names, plain-language state, blockers, open questions, opaque refs, contextual name resolution, and technical details. `spec change` creates same-worktree proposal branches and applies typed operations (`rename`, `deprecate`, `replace`, `split`, `merge`, `extract`, `move`, `change-contract`, `record-decision`, `record-open-question`, `add-record`). New records may omit an internal ID; the engine derives a stable ID from the visible name and resolves collisions deterministically. Its change report includes deterministic impact analysis across requirements, architecture, formal sources, contracts, evidence, and approvals. `spec start` opens a scratch-mode proposal from a goal without writing approved content or `spec/spec.lock`. `spec map --review` opens or resumes a mapping proposal, prints the area and relation confidence queues, and applies typed area and relation curation actions without writing approved sources or `spec/spec.lock`. `spec map --promote` writes accepted areas into proposed LikeC4 elements, `spec approve` hash-locks annotated architecture elements, and `spec map --check` reports drift against the approved subset. `spec refactor` is a thin alias that defaults to refactor mode and warns when no approved baseline exists. `spec approve --scope "<name>"` resolves a visible requirement or architecture name to its identity and includes acceptance criteria for requirements; positional IDs remain for automation and `--technical` reveals them. Change reports can include a deterministic before/after graph simulation from a baseline snapshot captured when the proposal opens; `spec refactor` enables it by default and `spec change` accepts `--simulate`. The React/Vite workbench serves a read-only repository graph with subsystem and file dependencies, mapping curation, Compose draft editing, refactor simulation with all typed proposal operations, proposal review, and technical details; approval and `spec/spec.lock` writes remain CLI-only. The opencode plugin is implemented as a standalone package plus a local self-hosting loader; it exposes status, context, query, impact, proposal, validation, decision, next, diff, and workbench tools with no approval path. `spec next` shows the next decisions and checks, and `spec start`, `spec map --review`, `spec change`, and `spec refactor` open guided terminal sessions when stdin and stdout are TTYs; `--no-interactive` restores one-shot output, and `--json`, `--action`, and `--op` never prompt. See [use-case modes](docs/workflow/use-cases.md), [presentation and identity](docs/ux/presentation.md), [workbench](docs/workflow/workbench.md), and the [opencode plugin](docs/workflow/opencode-plugin.md).
+## What it does
 
-`spec doctor --fix` installs pinned LikeC4, Quint, and StrictDoc into `.spec/tools` with Bun and uv. Apalache and Java remain explicit manual prerequisites. Unpinned tools are never resolved automatically.
+- Scans registered local repository roots without executing code.
+- Builds a language-neutral implementation graph: files, symbols, imports,
+  calls, inheritance, entry points, and data access.
+- Reconstructs a conceptual system from entry points, public surfaces, calls,
+  data access, and external boundaries. Directories and files are implementation
+  evidence.
+- Generates observed behavior and contract records with source evidence.
+- Generates verification records from tests and configured checks.
+- Traces bounded static flows from entry points to sources and sinks.
+- Runs deterministic architectural diagnostics.
+- Separates AI-assisted hypotheses from deterministic findings.
+- Stores analysis snapshots per commit in `.spec/analysis.sqlite`.
+- Exports `spec/generated/spec.gen.json`.
+- Serves the generated System view, flows, findings, and evolution in a local
+  workbench.
+- Produces a generated audit bundle.
 
-Run the self-host MVP after installing Apalache:
-
-```bash
-bun install
-bun run spec doctor --fix
-bun run mvp
-```
-
-`bun run mvp` creates a temporary Git worktree, approves one pilot requirement
-and architecture slice, verifies a Quint property with Apalache, builds the audit
-bundle, proves approval invalidation and re-approval, and generates a draft repo
-graph at subsystem and file level. It leaves this repository untouched. See
-[self-host MVP](docs/mvp.md).
-
-`spec-framework` is a spec-driven development framework and architecture intelligence platform for humans and coding agents. It makes the specification the primary engineering artifact and keeps it readable, auditable, and mechanically checked. It also reconstructs how an existing repository is implemented, maps conceptual elements to code, and makes architectural problems visible.
-
-The framework does not ask an LLM to write a better prose document. It changes the representation:
-
-- architecture is a validated graph, not a diagram pasted into Markdown;
-- capabilities anchor requirements and verification, not a prose feature list;
-- requirements are structured records with stable IDs, not free paragraphs;
-- vocabulary and constraints use optional RDF/OWL/SKOS/SHACL, not an invented schema;
-- verification is planned across formal, test, analysis, inspection, and demonstration methods;
-- behavior is an executable formal model, not a description of behavior;
-- contracts are typed interfaces, not examples in prose;
-- approval is a human action backed by content hashes, not an LLM claim;
-- the audit artifact is generated deterministically, not written by the agent;
-- the graph is queryable read-only by agents and the System workspace, not editable by default;
-- implementation evidence is generated separately from approved intent and never silently merged into it.
-
-## Why
-
-Natural-language specifications fail in predictable ways:
-
-- undefined terms and synonyms drift;
-- components and relations are omitted or implied;
-- edge cases are never enumerated;
-- requirements have no verification link;
-- implementation drifts from the document;
-- an LLM can silently invent certainty;
-- reviewers cannot tell what is normative, assumed, or unknown.
-
-Prompting harder does not fix this. The fix is to make gaps visible and block them mechanically.
-
-## Approach
-
-Compose existing, validated tools. Build only the glue.
-
-| Layer                   | Tool                                              | Responsibility                                                               |
-| ----------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Architecture            | [LikeC4](https://likec4.dev/)                     | systems, components, typed relations, views, validation                      |
-| Capabilities            | capability model                                  | ability hierarchy, requirement derivation, verification coverage             |
-| Requirements and audit  | [StrictDoc](https://strictdoc-project.github.io/) | EARS records, traceability, coverage, HTML/PDF audit output                  |
-| Semantic constraints    | optional RDF/OWL/SKOS/SHACL adapter               | shared vocabulary, concept schemes, SHACL contracts, SPARQL                  |
-| Verification planning   | verification model                                | objectives, methods, cases, evidence, coverage                               |
-| Formal behavior         | [Quint](https://quint.sh/)                        | executable state models, invariants, model checking, traces                  |
-| Contracts               | adapters                                          | language APIs, data formats, CLIs, wire protocols, hardware interfaces       |
-| Implementation analysis | TypeScript compiler and `bun:sqlite`              | files, symbols, calls, entry points, data access, local snapshots            |
-| Glue                    | small CLI                                         | cross-layer IDs, coverage gates, approval lock, audit bundle, change reports |
-| Review and query        | read-only CLI, System workspace, opencode plugin  | graph queries, impact, coverage, traceability, local system review           |
-
-The framework assumes most projects are not web applications. OpenAPI and HTTP endpoint descriptions are optional adapters, not defaults.
+It does not approve specifications, infer normative intent, prove formal
+correctness, or reconstruct complete runtime behavior.
 
 ## What makes it different
 
-- **Typed sources, readable output.** Every normative fact lives in a structured source. The readable PDF/HTML audit bundle is generated from those sources.
-- **Deterministic verification.** LikeC4 validation, capability and verification coverage, StrictDoc traceability, semantic/SHACL checks, Quint model checking, and contract checks decide whether the spec is acceptable. LLM self-report is never accepted.
-- **Provenance and unknowns.** Every element records where it came from. Missing information becomes an explicit unknown, not an invented answer.
-- **Human approval.** Approved content is hash-locked. Any change invalidates approval until a human reviews and re-approves.
-- **Agent-safe workflow.** The default agent cannot edit approved specs. It proposes changes; a human approves them. Query, the System workspace, and the opencode plugin are read-only over approved intent.
-- **Optional semantics, not a new language.** Ontologies, concepts, and SHACL contracts use standard RDF formats.
-- **Evidence-bound architecture intelligence.** Implementation graphs, flows, and diagnostics are generated evidence. AI may interpret evidence but never approves or passes a check.
-- **Non-web first.** Contract adapters cover libraries, CLIs, file formats, IPC, and device protocols.
+- **Generated, not hand-maintained.** The workbench never reads a curated
+  architecture file. Generated analysis is the source.
+- **Evidence-bound.** Every node, edge, flow, contract, and finding carries
+  provenance and confidence.
+- **Uncertainty is visible.** Unresolved calls, missing tests, ambiguous edges,
+  and limits are explicit.
+- **Read-only analysis.** Analysis does not execute repository code.
+- **Local-first.** SQLite and generated portable artifacts; no hosted service.
+- **AI without authority.** AI may explain or hypothesize over evidence. It
+  never approves, rejects, passes, or fails a check.
+- **Non-web first.** CLI, library, file, queue, and network surfaces are
+  first-class observations.
 
-## Intended workflow
-
-```bash
-spec init
-spec doctor --fix
-spec check
-spec map --draft
-spec architecture generate
-spec query --json
-spec change "add session expiry handling"
-spec bundle
-spec approve --scope "Session expiry"
-spec approve REQ-AUTH-001 AC-AUTH-001
-```
-
-`spec init` writes the full-stack profile. `spec doctor --fix` installs pinned project-local tools where a safe package-manager recipe exists and prints exact instructions for the rest. `spec check` runs structural checks first, then native validators, formal verification, and contract checks. Approval is human-only and hash-locked.
-
-Current baseline:
-
-- `spec next [--technical] [--json]` shows the next decisions, blockers, open questions, and checks for the active mode. It is read-only and never writes sources or `spec/spec.lock`.
-- `spec init [--existing] [--force]` creates the scaffold.
-- `spec doctor [--json]` reports required and optional tools.
-- `spec doctor --fix` installs pinned LikeC4, Quint, and StrictDoc under `.spec/tools` using Bun and uv. It never installs globally, runs a shell, or resolves floating versions. Apalache and Java remain manual and are reported with exact instructions.
-- `spec check --structural` validates IDs, required fields, EARS shape, links, and status.
-- `spec check` runs every active architecture, requirements, formal, contract, and implementation compiler adapter. An architecture, requirements, formal, or contract adapter activates when its sources or language are detected, or when it is listed explicitly in `spec/config.json`. The compiler adapter activates when `spec/implementation/compile.json` exists or `adapters.implementation` is set. Active adapters fail on missing native tools.
-- `spec map --draft` discovers generic package and Rust workspace boundaries, writes `spec/generated/draft.gen.c4`, and reports missing owners, low-confidence elements, external dependencies, and unresolved requirement links. It never modifies `spec/architecture/model.c4`.
-- `spec architecture generate [--check]` writes `spec/generated/architecture.gen.c4` from deterministic code facts. It never modifies the curated `spec/architecture/model.c4`. Labels come from package names and source group names; data stores, external dependencies, and `code` metadata are included. `--check` fails when the generated draft is stale.
-- `spec map --review [--interactive|--no-interactive] [--action <json|file>]... [--technical] [--json]` requires a clean tree to open a same-worktree mapping proposal, then resumes it for curation. `--action` applies `accept`, `reject`, `accept-relation`, `reject-relation`, `rename`, `merge`, `split`, `set-owner`, `set-responsibility`, `set-boundary`, and `open-question` decisions by visible name or technical ID. Inferred, ambiguous, and unknown relations appear in a relation queue; `accept-relation` records human provenance and `reject-relation` removes the relation. It stores the review snapshot in `spec/proposals/<slug>.mapping.json`, regenerates `spec/generated/draft.gen.c4`, and never writes `spec/architecture/model.c4`, `spec/spec.lock`, or approval state. On a TTY it opens a guided curation session unless `--no-interactive` is passed. Default output uses names, not internal IDs; `--technical` reveals identity and provenance; JSON is the identity contract.
-- `spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]` opens a scratch-mode proposal on a clean greenfield repository. It requires `spec init`, refuses an approved baseline or an existing-project scaffold, records the proposal baseline, and prints the first interview prompts. On a TTY it continues into the guided draft session. It never writes `spec/spec.lock`, approves anything, or invents requirements.
-- `spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]` emits the read-only unified graph over SDoc records, annotated LikeC4 elements, annotated Quint modules and properties, contract sidecars, and stored evidence artifacts. JSON is the identity contract; `--view experience --json` is the display model with opaque refs; default output uses titles and plain-language state; `--technical` reveals identity, provenance, links, and diagnostics. It refuses a dirty tree unless `--allow-dirty` is passed and never writes sources or `spec/spec.lock`.
-- `spec change "<direction>" [--mode <scratch|mapping|refactor>] [--interactive|--no-interactive] [--op <json|file>]... [--technical] [--json]` requires a clean tree, creates a same-worktree branch `spec/<slug>`, records the base commit, baseline lock hash, author, and typed operations, and reports the change. `rename`, `deprecate`, `replace`, `split`, and `merge` edit SDoc records; `extract` and `move` edit requirements and LikeC4 containment; `change-contract` edits contract sidecars; `record-decision` and `record-open-question` append linked decision records under `spec/requirements/decisions.sdoc`; `add-record` appends a draft requirement or acceptance criterion, optionally linking it to a requirement when the ID is omitted. The report traces changed links in both directions, lists affected elements, invalidated evidence, approvals to renew, and open questions. `spec change --op <json|file>` adds operations to the active proposal. `spec change --status [--json]` inspects it. On a TTY it opens the mode-aware guided session unless `--no-interactive` is passed. It never writes `spec/spec.lock` or approves anything.
-- `spec refactor "<direction>" [--interactive|--no-interactive] [--op <json|file>]... [--technical] [--json]` is a thin alias for `spec change --mode refactor`. It warns when no approved baseline exists and never writes `spec/spec.lock` or approves anything.
-- `spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]` runs the full check, refuses a dirty tree unless `--allow-dirty` is passed, and writes `manifest.json`, `graph.json`, `index.html`, `spec.pdf`, `change-report.md`, the approval lock when present, copied sources, and regenerated evidence. The default destination is `spec/audit/audit-<short-commit>`; `--force` replaces only an existing bundle directory. It never writes `spec/spec.lock` or approves anything.
-- `spec approve [--scope <name>]... [ids...] [--technical]` runs checks, requires interactive human confirmation and a clean tree (or `--allow-dirty`), hashes proposed SDoc requirement and acceptance records and native evidence into `spec/spec.lock`, writes evidence artifacts under `spec/evidence/`, and sets their status to `Approved`. Named scopes resolve titles case-insensitively, reject ambiguous names with contextual choices, and expand a requirement to its acceptance criteria. Default output uses names; `--technical` shows IDs.
-- `spec check` also rejects a stale content or evidence lock, an approved status without a lock entry, a missing locked element, and an approved requirement whose acceptance criteria are unlocked. Structural-only checks skip evidence regeneration.
-
-Run locally:
+## Quick start
 
 ```bash
 bun install
-bun run bin/spec.ts check --structural
-bun run lint
-bun run format:check
-bun test
-bun run typecheck
+bun run build:workbench
+bun run bin/spec.ts analyze
+bun run bin/spec.ts workbench
 ```
 
-## What this is not
+Open the printed local URL. The workbench opens on the generated System view.
 
-- Not a new specification language.
-- Not a Markdown template collection.
-- Not a promise that formal methods verify all code.
-- Not a replacement for human design judgment.
-- Not an LLM autonomous coding system.
+## CLI
 
-Formal verification covers models plus conformance tests. Code-level proofs are language-specific and out of scope unless added later.
+```text
+spec doctor [--fix] [--json]
+spec analyze [--analysis-root <path>]... [--json]
+spec generate [--json]
+spec generated show <section> [--json]
+spec projects [list|add <path>|remove <id>] [--json]
+spec snapshots [list|show <id>|compare <from> <to>] [--json]
+spec export [--json]
+spec query [--json]
+spec check [--json]
+spec bundle [--output <dir>] [--force] [--json]
+spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]... [--analysis-root <path>]...
+spec version
+spec help
+```
 
-## Documentation
+The retired commands `init`, `map`, `architecture generate`, `start`, `change`,
+`refactor`, `next`, and `approve` are removed.
 
-Start here:
+## Generated outputs
 
-- [Vision](docs/vision.md)
-- [Problem](docs/problem.md)
-- [Principles](docs/principles.md)
-- [Bootstrap](docs/bootstrap.md)
-- [Adoption](docs/adoption.md)
-- [Brownfield mapping](docs/brownfield.md)
+```text
+.spec/analysis.sqlite
+spec/generated/spec.gen.json
+spec/generated/analysis.gen.json
+spec/generated/architecture.gen.c4
+spec/generated/requirements.gen.sdoc
+spec/audit/
+```
+
+Inputs live in `spec-framework.json` at the repository root. `spec/` is
+generated output and is ignored by Git. Do not hand-edit it.
+
+## Configuration
+
+The target root configuration file is `spec-framework.json`:
+
+```json
+{
+  "version": 1,
+  "project": { "name": "my-project" },
+  "analysis": {
+    "roots": ["."],
+    "exclude": ["dist", "coverage"],
+    "flow_analysis": true
+  },
+  "diagnostics": {
+    "ARC-002": { "threshold": 12 },
+    "ARC-003": { "threshold": 12 }
+  },
+  "ai": {
+    "provider": "local"
+  }
+}
+```
+
+AI provider configuration lives outside the repository, normally at
+`$XDG_CONFIG_HOME/spec-framework/ai.json` or `$SPEC_AI_CONFIG`. Remote providers
+require explicit opt-in.
+
+## Architecture
+
+```text
+Repository
+  -> scanner
+  -> TypeScript adapter
+  -> common analysis IR
+  -> generated architecture and observed contracts
+  -> static flows
+  -> deterministic diagnostics
+  -> optional AI hypotheses
+  -> SQLite snapshot
+  -> spec.gen.json
+  -> workbench and audit bundle
+```
+
+See:
+
 - [Architecture overview](docs/architecture/overview.md)
-- [Architecture intelligence roadmap](docs/roadmap/architecture-intelligence.md)
 - [Analysis engine](docs/architecture/analysis-engine.md)
+- [Generated spec model](docs/architecture/spec-model.md)
 - [Architecture graph](docs/architecture/architecture-graph.md)
+- [Functional flows](docs/architecture/functional-flows.md)
+- [Architectural diagnostics](docs/architecture/architectural-diagnostics.md)
 - [System workspace](docs/workflow/system-workspace.md)
-- [Spec model](docs/architecture/spec-model.md)
-- [Capability layer](docs/architecture/capability-layer.md)
-- [Requirements layer](docs/architecture/requirements-layer.md)
-- [Semantic layer](docs/architecture/semantic-layer.md)
-- [Verification layer](docs/architecture/verification-layer.md)
-- [Query and agent interface](docs/architecture/query-and-agent-interface.md)
-- [Use-case modes](docs/workflow/use-cases.md)
-- [Workflow](docs/workflow/authoring.md)
-- [Self-host MVP](docs/mvp.md)
-- [Workbench](docs/workflow/workbench.md)
-- [opencode plugin](docs/workflow/opencode-plugin.md)
-- [Presentation and identity](docs/ux/presentation.md)
-- [Audit bundle](docs/architecture/audit-bundle.md)
-- [Roadmap](docs/roadmap.md)
+- [Architecture intelligence API](docs/api/architecture-intelligence-api.md)
 
-Full index: [docs/index.md](docs/index.md).
+## Verification
 
-## Repository layout
-
-```
-bin/         CLI entry point
-scripts/     self-host MVP harness and verification helpers
-src/core/    config, SDoc parsing, structural lint, doctor, init, check, adapter selection, runner
-src/model/   unified spec graph, deterministic builder, SDoc/architecture/formal/contract collectors, display projection, impact analysis
-src/query/   read-only graph query and git workspace metadata
-src/change/  proposal branches, typed cross-source operations, impact analysis, and change reports
-src/bundle/  deterministic audit HTML, PDF, manifest, sources, and evidence
-src/approval/ spec.lock hashing, human approval, and lock verification
-src/evidence/ deterministic evidence records, hashing, collection, and artifact storage
-src/adapters/ LikeC4, StrictDoc, Quint, JSON Schema, CLI, Rust, and compiler adapters
-src/plugin/  opencode-facing service, display formatting, guards, and workbench registry
-plugin/opencode/ opencode plugin package and local self-hosting loader
-tests/       unit and integration tests
-docs/        design documents, decisions, and open questions
-examples/    illustrative non-web specification examples
-spec/        self-hosted specification scaffold
-             architecture/, capabilities/, requirements/, semantic/,
-             verification/, formal/, contracts/
+```bash
+bun run format
+bun run format:check
+bun run lint
+bun run typecheck
+bun test
+bun run build:workbench
 ```
 
-Next:
+## Security
 
-```
-src/analysis/      scanner, language registry, common IR, TypeScript adapter
-src/persistence/   SQLite migrations, snapshots, analysis repositories
-src/implementation/ generated architecture, conceptual-to-code mapping
-src/flows/         entry-point tracing, sources and sinks
-src/diagnostics/   deterministic rules and AI-assisted hypotheses
-src/ai/            evidence-bound interpretation providers
-src/workbench/     System view, flows, findings, and local API
-templates/         repo bootstrap, agent config, CI, pinned toolchain
-```
+- Localhost-only workbench by default.
+- Explicit analysis roots and canonical path containment.
+- Read-only analysis; repository code is never executed.
+- Secret and environment files are excluded from analysis and AI context.
+- AI output is schema-validated against snapshot elements, files, and lines.
+- No approval endpoint and no `spec.lock` write path.
 
-## License
-
-MIT. See [LICENSE](LICENSE).
+See [Security](docs/security.md).

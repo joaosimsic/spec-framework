@@ -1,6 +1,6 @@
 # 0013 Analysis persistence and snapshots
 
-Status: accepted.
+Status: accepted. Partially superseded by [0016](0016-generated-spec-product.md): approval state is retired and generated JSON is the portable spec product.
 
 ## Context
 
@@ -19,7 +19,7 @@ portable artifacts.
 
 - Database: `.spec/analysis.sqlite`, ignored by Git.
 - Portable artifacts: `spec/generated/*.gen.json`, ignored by Git.
-- Intent and approval sources: unchanged under `spec/`.
+- Generated spec output: `spec/generated/spec.gen.json`.
 - Snapshot identity: Git commit plus analyzer, rule, prompt, and model versions.
 - Migrations: versioned SQL under `src/persistence/migrations/`.
 - JSON export: latest snapshot and selected comparisons.
@@ -48,7 +48,7 @@ Negative:
 ## Rules
 
 - Never store secrets or environment files in the database.
-- Never store approved intent only in the database.
+- Never store the only generated artifact only in the database; export canonical JSON.
 - Record tool versions with every snapshot.
 - Keep analysis output reproducible for the same commit and versions.
 - Make database rebuild explicit and safe.

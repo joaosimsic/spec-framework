@@ -1,249 +1,141 @@
-import type { Proposal, ProposalMode } from "../change"
-import type { CurationAction, MappingCurationState } from "../discovery/curation-types"
-import type { DisplayEntry } from "../model"
-import type { SpecGraph } from "../model/types"
-
-export type WorkbenchMode = "read-only" | ProposalMode
-
-export interface WorkbenchProposalSummary {
-  ref: string
-  label: string
-  mode: ProposalMode
-  state: string
-  author: string
-  baseCommit: string
-}
-
 export interface WorkbenchSession {
   csrf_token: string
-  mode: WorkbenchMode
+  mode: "generated"
+  project_id: string | null
+  snapshot_id: string | null
   commit: string
   dirty: boolean
-  proposal: WorkbenchProposalSummary | null
   views: string[]
   asset_ready: boolean
 }
 
-export interface WorkbenchGraphView {
-  commit: string
-  dirty: boolean
-  entries: DisplayEntry[]
-}
-
-export interface WorkbenchNamedItem {
-  ref: string | null
-  label: string
-  kindLabel: string
-  state?: string
-}
-
-export interface WorkbenchDiffItem extends WorkbenchNamedItem {
-  previousLabel?: string
-  changed: string[]
-}
-
-export interface WorkbenchDiffView {
-  available: boolean
-  reason?: string
-  added: WorkbenchNamedItem[]
-  removed: WorkbenchNamedItem[]
-  modified: WorkbenchDiffItem[]
-}
-
-export interface WorkbenchImpactView {
-  available: boolean
-  reason?: string
-  changed: WorkbenchNamedItem[]
-  affected: WorkbenchNamedItem[]
-  invalidatedEvidence: WorkbenchNamedItem[]
-  approvalsToRenew: WorkbenchNamedItem[]
-  openQuestions: WorkbenchNamedItem[]
-}
-
-export interface WorkbenchChangeView {
-  proposal: WorkbenchProposalSummary
-  operations: WorkbenchNamedItem[]
-  diff: WorkbenchDiffView
-  impact: WorkbenchImpactView
-}
-
-export interface WorkbenchContextView {
-  proposal: WorkbenchProposalSummary | null
-  entries: DisplayEntry[]
-  blockers: string[]
-  openQuestions: WorkbenchNamedItem[]
-  prompts: string[]
-  next: string[]
-}
-
-export interface WorkbenchMappingArea {
-  ref: string
-  label: string
-  kindLabel: string
-  confidenceLabel: string
-  prompt: string
-  state: string
-  owner?: string
-  responsibility?: string
-  boundary?: string
-}
-
-export interface WorkbenchMappingRelation {
-  ref: string
-  sourceRef: string
-  targetRef: string
-  label: string
-  confidenceLabel: string
-  prompt: string
-  type: string
-}
-
-export interface WorkbenchMappingQuestion {
-  label: string
-  blocking: boolean
-}
-
-export interface WorkbenchMappingView {
-  direction: string
-  state: string
-  areas: WorkbenchMappingArea[]
-  relations: WorkbenchMappingRelation[]
-  questions: WorkbenchMappingQuestion[]
-  gaps: {
-    areasWithoutOwner: number
-    areasWithoutResponsibility: number
-    relationsNeedingReview: number
-    unresolvedRequirementLinks: number
-  }
-  next: string[]
-}
-
-export interface WorkbenchArchitectureCodeSymbol {
-  ref: string
+export interface WorkbenchProjectSummary {
+  id: string
   name: string
-  kind: string
-  kindLabel: string
-  exported: boolean
-  line: number
+  repository_path: string
+  created_at: string
 }
 
-export interface WorkbenchArchitectureCodeFile {
-  ref: string
-  label: string
-  path: string
-  dependencies: string[]
-  symbols: WorkbenchArchitectureCodeSymbol[]
-}
-
-export interface WorkbenchArchitectureGraphNode {
-  ref: string
+export interface WorkbenchSystemNode {
+  id: string
   label: string
   kind: string
-  kindLabel: string
-  parentRef: string | null
-  groupRef: string
-  childCount: number
-  confidenceLabel: string
-  stateLabel: string
-  description?: string
-  responsibility?: string
-  boundary?: string
-  owner?: string
-  technology?: string
-  codePaths: string[]
-  codeFiles: WorkbenchArchitectureCodeFile[]
+  kind_label: string
+  parent_id: string | null
+  child_count: number
+  confidence: string
+  provenance: string
+  source: "specified" | "observed" | "inferred" | "unknown"
+  file_path: string | null
+  start_line: number | null
+  end_line: number | null
+  signature: string | null
+  visibility: string | null
+  exported: boolean | null
+  responsibility: string | null
+  boundary: string | null
+  owner: string | null
+  technology: string | null
+  entry_point_kind: string | null
+  mapping_source: string | null
 }
 
-export interface WorkbenchArchitectureGraphEdge {
-  ref: string
-  sourceRef: string
-  targetRef: string
-  label: string
-}
-
-export interface WorkbenchArchitectureGraphView {
-  nodes: WorkbenchArchitectureGraphNode[]
-  edges: WorkbenchArchitectureGraphEdge[]
-  warnings: string[]
-  summary: {
-    nodes: number
-    relations: number
-    groups: number
-    roots: number
-  }
-}
-
-export interface WorkbenchRepoGraphNode {
-  ref: string
-  label: string
-  kindLabel: string
-  level: "system" | "component" | "file" | "other"
-  confidenceLabel: string
-  path?: string
-}
-
-export interface WorkbenchRepoGraphEdge {
-  ref: string
-  sourceRef: string
-  targetRef: string
+export interface WorkbenchSystemEdge {
+  id: string
+  sourceId: string
+  targetId: string
   type: string
   label: string
-  level: "component" | "file" | "other"
+  resolution: string
+  confidence: string
+  provenance: string
 }
 
-export interface WorkbenchRepoGraphView {
-  nodes: WorkbenchRepoGraphNode[]
-  edges: WorkbenchRepoGraphEdge[]
+export interface WorkbenchSystemArchitecture {
+  project_id: string
+  snapshot_id: string
+  commit: string
+  root_id: string
+  coverage: {
+    mapped: string[]
+    partial: string[]
+    unmapped: string[]
+    unassigned: string[]
+    stale: string[]
+    entryPointsWithoutSinks: string[]
+  }
   summary: {
     nodes: number
     edges: number
-    components: number
     files: number
-    externalDependencies: number
+    symbols: number
+    mapped: number
+    unassigned: number
   }
 }
 
-export interface WorkbenchCheckFinding {
-  level: "error" | "warning"
-  message: string
+export interface WorkbenchSystemGraph {
+  nodes: WorkbenchSystemNode[]
+  edges: WorkbenchSystemEdge[]
 }
 
-export interface WorkbenchCheckView {
-  errors: number
-  warnings: number
-  findings: WorkbenchCheckFinding[]
+export interface WorkbenchFlowStep {
+  nodeId: string
+  filePath: string
+  line: number
+  resolution: string
+  confidence: string
+  kind: string
 }
 
-export interface WorkbenchTechnicalView {
-  proposal: Proposal
-  graph: SpecGraph
-  lock: unknown
-  mapping: MappingCurationState | null
-  adapters: unknown
-  toolVersions: Record<string, string>
+export interface WorkbenchFlow {
+  id: string
+  entryPointId: string
+  steps: WorkbenchFlowStep[]
+  sources: Array<{ nodeId: string; channel: string; source: string; line: number }>
+  sinks: Array<{ nodeId: string; channel: string; source: string; line: number }>
+  returns: string[]
+  errors: string[]
+  evidence: string
+  confidence: string
+  unknowns: string[]
+  limitsReached: string[]
 }
 
-export interface WorkbenchErrorView {
-  error: {
-    code: string
-    message: string
-    choices?: Array<{ label: string; context: string }>
-  }
+export interface WorkbenchFinding {
+  id: string
+  ruleId: string
+  family: "deterministic" | "ai_assisted"
+  title: string
+  severity: "error" | "warning"
+  status: string
+  affectedElements: string[]
+  evidence: Array<{ kind: string; reference: string; file: string; line: number }>
+  explanation: string
+  recommendation: string
+  confidence: number
 }
 
-export type WorkbenchCurationRequest =
-  | { kind: "accept"; target: string }
-  | { kind: "reject"; target: string }
-  | { kind: "accept-relation"; source: string; target: string; type?: string }
-  | { kind: "reject-relation"; source: string; target: string; type?: string }
-  | { kind: "rename"; target: string; title: string }
-  | { kind: "merge"; targets: string[]; title: string }
-  | { kind: "split"; target: string; parts: string[] }
-  | { kind: "set-owner"; target: string; owner: string }
-  | { kind: "set-responsibility"; target: string; responsibility: string }
-  | { kind: "set-boundary"; target: string; boundary: string }
-  | { kind: "open-question"; question: string; target?: string; blocking?: boolean }
+export interface WorkbenchSnapshotSummary {
+  id: string
+  project_id: string
+  commit: string
+  analyzer: string
+  analyzer_version: string
+  node_count: number
+  edge_count: number
+  flow_count: number
+  finding_count: number
+  created_at: string
+}
 
-export interface WorkbenchCurationResolution {
-  actions: CurationAction[]
+export interface WorkbenchSnapshotComparison {
+  from: string
+  to: string
+  elements: { added: string[]; removed: string[]; changed: string[] }
+  relationships: { added: string[]; removed: string[] }
+  flows: { added: string[]; removed: string[]; changed: string[] }
+  findings: { added: string[]; removed: string[]; changed: string[] }
+  entryPoints: { added: string[]; removed: string[] }
+  coverage: { newlyMapped: string[]; newlyUnmapped: string[]; newlyStale: string[] }
 }

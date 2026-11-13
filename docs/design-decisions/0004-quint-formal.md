@@ -1,5 +1,6 @@
 # 0004 — Quint for formal behavior
 
+Status: superseded by [0016](0016-generated-spec-product.md). Authored Quint models are retired from the spec product.
 **Status:** accepted
 **Date:** 2026-11-10
 

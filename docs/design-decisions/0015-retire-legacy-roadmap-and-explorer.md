@@ -1,6 +1,6 @@
 # 0015 — Retire the legacy roadmap and Explorer
 
-Status: accepted.
+Status: accepted. Partially superseded by [0016](0016-generated-spec-product.md): Architecture and Code Map are retired, not transitional.
 
 ## Context
 

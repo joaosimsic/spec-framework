@@ -1,10 +1,11 @@
-.spec
 _apalache-out
-node_modules
-dist
-src/workbench/web/dist
+bun.lock
 coverage
+dist
+node_modules
+.spec
+spec
 spec/audit
 spec/evidence
 spec/**/*.gen.*
-bun.lock
+src/workbench/web/dist

@@ -1,6 +1,6 @@
 # 0014 AI interpretation boundary
 
-Status: accepted.
+Status: accepted. Approval language is historical under [0016](0016-generated-spec-product.md); AI remains evidence-bound and non-authoritative.
 
 ## Context
 

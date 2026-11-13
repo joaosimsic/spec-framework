@@ -1,11 +1,13 @@
 # 0001 — Compose existing tools
 
-**Status:** accepted; extended by 0012
+**Status:** accepted; extended by 0012 and superseded in part by 0016
 **Date:** 2026-11-10
 
 > Decision 0012 extends this record with a separate generated implementation
-> graph and analysis engine. That engine composes the TypeScript compiler and
-> `bun:sqlite`; it does not introduce a new specification language.
+> graph and analysis engine. Decision 0016 makes generated evidence the whole
+> spec product and retires curated spec inputs. The composition principle
+> remains: use the TypeScript compiler, `bun:sqlite`, and configured tools
+> instead of inventing a new specification language.
 
 ## Context
 

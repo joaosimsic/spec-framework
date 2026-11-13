@@ -173,20 +173,23 @@ if (err !== null) return fail(err)
 
 ## 7. Repository invariants
 
-- Approved spec sources and `spec/spec.lock` are written only by the human
-  approval workflow. Workbench, plugin, query, and analysis surfaces never
-  approve and never write the lock.
-- Generated artifacts never overwrite sources. `spec/generated`,
-  `spec/evidence`, `spec/audit`, and `src/workbench/web/dist` are outputs.
-- Native adapters produce deterministic evidence. Missing required tools fail
-  closed; no silent skips.
-- Stable IDs are the cross-layer contract. Never reuse or renumber IDs.
-- Intent, implementation, and mapping graphs stay distinct until an explicit
-  projection joins them.
+- The spec product is generated from repository evidence.
+- `spec/` is generated output. Input configuration lives in
+  `spec-framework.json`.
+- The workbench reads generated output and snapshots only.
+- Generated output never claims approval, normative intent, or complete runtime
+  behavior.
+- Conceptual architecture comes from behavior and interfaces. Directories and
+  files are implementation mapping evidence, never conceptual identity.
+- Curated LikeC4, StrictDoc, Quint, contract sidecars, proposals, mapping
+  curation, and `spec.lock` are retired.
+- Generated artifacts never overwrite source files.
 - Analysis is read-only and never executes repository code.
-- AI output is evidence-bound, schema-validated, and never a pass verdict.
-- SQLite is disposable local state; approved intent is never stored only there.
-- Remove stale modules, adapters, and tests instead of keeping a second path.
+- AI output is evidence-bound, schema-validated, and never a verdict.
+- SQLite is disposable local state. Generated JSON and the audit bundle are the
+  portable outputs.
+- Remove retired modules, surfaces, tests, and documentation instead of keeping
+  a second path.
 
 ## 8. Toolchain, imports, tests
 
@@ -241,15 +244,15 @@ if (err !== null) return fail(err)
   **adjacent lines with no blank lines between them**:
 
 ```ts
-const [config, configError] = await new SpecConfigLoader(target).load()
-if (configError !== null) {
-  return failure(configError.message)
+const [database, databaseError] = AnalysisDatabase.open(target)
+if (databaseError !== null) {
+  return failure(databaseError)
 }
-if (config === null) {
-  return failure("config loader returned no configuration")
+if (database === null) {
+  return failure("analysis database unavailable")
 }
 
-return runMap(target, config)
+return runAnalysis(database)
 ```
 
 - Never separate the declaration from its verification with blank lines. A
@@ -266,8 +269,9 @@ return runMap(target, config)
 - A directory that exposes a public surface owns `index.ts`.
 - Consumers outside the directory import through the facade.
 - Siblings inside the directory may import each other relatively.
-- Existing facades: `src/model`, `src/evidence`, `src/bundle`, `src/terminal`,
-  `src/workbench`, `src/query`, `src/change`, `src/plugin`.
+- Existing facades: `src/analysis`, `src/persistence`, `src/jobs`,
+  `src/projects`, `src/diagnostics`, `src/flows`, `src/implementation`,
+  `src/ai`, `src/bundle`, `src/workbench`, `src/query`, `src/plugin`.
 - New modules consumed across boundaries must add a facade.
 - Delete facade exports when their implementation is removed.
 - The repository does not enforce facades with ESLint today. Treat this as a
@@ -300,26 +304,26 @@ hypothesis, not a compatibility promise.
 ### Safety rails
 
 - Search references before deleting: `rg`, the type checker, and the test suite.
-- Preserve approved spec sources, evidence, and `spec/spec.lock`; use the
-  proposal and approval workflow.
-- Never delete user data, evidence, or audit artifacts without explicit
-  instruction.
+- Preserve generated evidence and audit artifacts unless the migration
+  explicitly replaces them.
+- Never delete user data or local annotations without explicit instruction.
 - Run format, lint, typecheck, and tests after refactoring.
 - If a change alters product direction or module boundaries, add or update a
   decision record.
 
 ## Repository conventions and exceptions
 
-- Specification and direction: `README.md`, `AGENTS.md`, `docs/`, and
-  `docs/design-decisions/`. `spec/` is the self-hosted specification.
+- Product direction: `README.md`, `AGENTS.md`, `docs/`, and
+  `docs/design-decisions/`. `spec/` is generated output; inputs live in
+  `spec-framework.json`.
 - Result module: `src/core/result.ts`; default failure type is `string`.
 - Toolchain: Bun. Use `bun run format`, `bun run format:check`,
   `bun run lint`, `bun run typecheck`, `bun test`, `bun run spec`, and
   `bun run build:workbench` for UI changes.
 - Imports: relative and extensionless. No path aliases exist.
 - Tests: `tests/`; no colocated `*.test.ts`.
-- Entrypoints: `bin/spec.ts`, `src/cli.ts`, and `scripts/mvp.ts`.
-- Generated and ignored trees: `.spec/`, `spec/evidence/`, `spec/audit/`,
+- Entrypoints: `bin/spec.ts`, `src/cli.ts`, and generated-spec scripts.
+- Generated and ignored trees: `.spec/`, `spec/`, `spec/audit/`,
   `spec/**/*.gen.*`, `src/workbench/web/dist/`, `node_modules/`, and `dist/`.
 - Sanctioned free functions: `ok`, `fail`, `attempt`, `attemptAsync`, test
   framework globals (`describe`, `it`, `expect`, `beforeEach`, `afterEach`), and
@@ -334,6 +338,6 @@ hypothesis, not a compatibility promise.
   boundaries, and the no-comments rule.
 - Comments: Markdown and CLI usage text may use prose. TypeScript and
   JavaScript code must not contain comments.
-- Approval, analysis, and AI invariants are defined in §7 and in
-  `docs/design-decisions/0012-architecture-intelligence.md`,
+- Generated-spec, analysis, and AI invariants are defined in §7 and in
+  `docs/design-decisions/0016-generated-spec-product.md`,
   `0013-analysis-persistence.md`, and `0014-ai-interpretation-boundary.md`.

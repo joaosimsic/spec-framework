@@ -1,81 +1,29 @@
 import pkg from "../package.json"
-import { runApproval } from "./approval/approve"
-import { TerminalApprovalConfirmation } from "./approval/confirmation"
-import { GitApproverResolver, GitCleanlinessReader } from "./approval/git"
-import { ApprovalScopeLoader } from "./approval/scope"
-import {
-  ProposalOperationParser,
-  runChange,
-  runChangeStatus,
-  runProposalOperations,
-  runStart,
-  type ProposalMode,
-  type ProposalOperation,
-} from "./change/index"
-import { attemptAsync, fail, type Result } from "./core/result"
-import { ArchitectureModelGenerator } from "./core/architecture-generate"
-import { initProject } from "./core/init"
-import { formatStatuses, getToolStatuses, missingRequiredDiagnostics } from "./core/doctor"
-import { ToolProvisioner, type ProvisionOutcome } from "./core/provision"
-import { BunProcessRunner } from "./core/runner"
-import { runCheck } from "./core/check"
-import { runMap } from "./core/map"
-import { runMapCheck } from "./core/map-check"
-import { runMapPromote } from "./core/map-promote"
-import { runMapReview } from "./core/map-review"
-import { CurationParser } from "./discovery/curation-parser"
-import type { CurationAction } from "./discovery/curation-types"
-import { runBundle } from "./bundle/index"
-import { runQuery, type QueryView } from "./query/index"
-import { WorkbenchServer, WorkbenchService } from "./workbench/index"
-import {
-  ReadlineTerminalIO,
-  TerminalCurationSession,
-  TerminalMode,
-  TerminalNextReporter,
-  TerminalPrompt,
-  TerminalProposalSession,
-  TerminalRenderer,
-} from "./terminal/index"
-import { join } from "node:path"
+import { GeneratedBundleWriter } from "./bundle"
+import { GeneratedCheck } from "./checks"
+import { GeneratedQuery } from "./query"
+import { GeneratedSpecWriter, type GeneratedSpec } from "./spec"
+import { AnalysisRuntime } from "./workbench/analysis-runtime"
+import { WorkbenchServer } from "./workbench/index"
 
 const HELP = `spec-framework CLI
 
 Usage:
-  spec init [--existing] [--force]
-  spec doctor [--fix] [--json]
-  spec check [--structural] [--json]
-  spec next [--technical] [--json]
-  spec map [--draft] [--review [--interactive|--no-interactive] [--action <json|file>]...] [--promote [--scope <name>]...] [--check] [--technical] [--json]
-  spec architecture generate [--check]
-  spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]
-  spec query [--id <id>] [--kind <kind>] [--status <status>] [--view <identity|experience>] [--technical] [--json] [--allow-dirty]
-  spec change "<direction>" [--mode <scratch|mapping|refactor>] [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
-  spec change [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
-  spec change --status [--technical] [--json]
-  spec refactor "<direction>" [--interactive|--no-interactive] [--op <json|file>]... [--simulate] [--technical] [--json]
-  spec bundle [--allow-dirty] [--output <dir>] [--force] [--json]
-  spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]...
-  spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]
+  spec doctor [--json]
+  spec analyze [--analysis-root <path>]... [--json]
+  spec generate [--json]
+  spec generated show <section> [--json]
+  spec projects [list|add <path>|remove <id>] [--json]
+  spec snapshots [list|show <id>|compare <from> <to>] [--json]
+  spec export [--json]
+  spec query [--name <text>] [--kind <kind>] [--section <name>] [--json]
+  spec check [--json]
+  spec bundle [--output <dir>] [--force] [--json]
+  spec workbench [--host <host>] [--port <port>] [--allowed-origin <origin>]... [--analysis-root <path>]...
   spec version
   spec help
 
-Commands:
-  init      Create the full-stack spec scaffold
-  doctor    Report or provision required and optional tools
-  check     Run structural checks, then native checks
-  next      Show the next decisions and checks in the active mode
-  map       Discover draft architecture, review it, promote it, or check drift
-  architecture Generate a code-derived architecture draft without touching curated sources
-  start     Open a scratch-mode proposal from a goal
-  query     Read the unified spec graph
-  change    Create or inspect a same-worktree proposal
-  refactor  Alias for spec change in refactor mode
-  bundle    Generate the readable audit bundle
-  workbench Start the local proposal workbench
-  approve   Hash-lock proposed elements after human confirmation
-  version   Print the CLI version
-  help      Show this help
+Retired: init, map, architecture, start, change, refactor, next, approve.
 `
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -83,914 +31,397 @@ function hasFlag(args: string[], flag: string): boolean {
 }
 
 function withoutFlags(args: string[]): string[] {
-  return args.filter((arg) => !arg.startsWith("-"))
+  return args.filter((argument) => !argument.startsWith("-"))
 }
 
-async function commandInit(args: string[]): Promise<number> {
-  const target = process.cwd()
-  const existing = hasFlag(args, "--existing")
-  const force = hasFlag(args, "--force")
-
-  try {
-    const created = await initProject(target, { existing, force })
-    console.log(`initialized ${target}`)
-    console.log(`profile: full${existing ? " (existing project)" : ""}`)
-    for (const path of created) console.log(`created ${path}`)
-    console.log("next: spec check --structural")
-    return 0
-  } catch (error) {
-    console.error(`init failed: ${(error as Error).message}`)
-    return 1
+function analysisRoots(args: string[]): string[] {
+  const roots: string[] = []
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] !== "--analysis-root") continue
+    const value = args[index + 1]
+    if (value !== undefined && !value.startsWith("-")) roots.push(value)
   }
+
+  return roots
+}
+
+function option(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name)
+  if (index === -1) return undefined
+  const value = args[index + 1]
+
+  return value === undefined || value.startsWith("-") ? undefined : value
 }
 
 async function commandDoctor(args: string[]): Promise<number> {
-  const target = process.cwd()
-  const json = hasFlag(args, "--json")
-  const fix = hasFlag(args, "--fix")
-  let statuses = getToolStatuses(target)
-  let provision: ProvisionOutcome | null = null
-  let provisionFailure: string | null = null
-
-  if (fix) {
-    const [outcome, error] = await new ToolProvisioner(target, new BunProcessRunner()).provision()
-    if (error !== null) {
-      provisionFailure = `${error.code}: ${error.message}`
-    } else if (outcome !== null) {
-      provision = outcome
-      statuses = outcome.statuses
-    }
-  }
-
-  const missing = missingRequiredDiagnostics(statuses)
-
-  if (json) {
-    const payload: Record<string, unknown> = { tools: statuses, missing: missing.length }
-    if (provision !== null) {
-      payload.provision = {
-        status: provision.lockStatus,
-        provisioned: provision.provisioned,
-        skipped: provision.skipped,
-        failed: provision.failed,
-      }
-    }
-    if (provisionFailure !== null) payload.error = provisionFailure
-    console.log(JSON.stringify(payload, null, 2))
+  const git = Bun.which("git")
+  const bun = Bun.which("bun")
+  const checks = [
+    { name: "bun", available: bun !== null, path: bun },
+    { name: "git", available: git !== null, path: git },
+    {
+      name: "spec-framework.json",
+      available: await Bun.file("spec-framework.json").exists(),
+      path: "spec-framework.json",
+    },
+  ]
+  if (hasFlag(args, "--json")) {
+    console.log(JSON.stringify({ checks }, null, 2))
   } else {
-    printProvisioning(provision, provisionFailure)
-    console.log(formatStatuses(statuses))
-    console.log("")
-    console.log(`${missing.length} required tool(s) missing`)
+    for (const check of checks) console.log(`${check.available ? "ok" : "missing"}  ${check.name}`)
   }
 
-  if (provisionFailure !== null) return 1
-  if (missing.length === 0) return 0
-
-  return fix ? 2 : 1
+  return checks.every((check) => check.available) ? 0 : 1
 }
 
-function printProvisioning(
-  provision: ProvisionOutcome | null,
-  provisionFailure: string | null,
-): void {
-  if (provisionFailure !== null) {
-    console.error(`doctor: ${provisionFailure}`)
-    console.error("")
-    return
-  }
-  if (provision === null) return
-
-  for (const tool of provision.provisioned) {
-    console.log(`provisioned ${tool.name} ${tool.version}`)
-  }
-  for (const item of provision.skipped) {
-    console.log(`skipped ${item.name}: ${item.message} [${item.code}]`)
-  }
-  for (const item of provision.failed) {
-    console.error(`failed ${item.name}: ${item.message} [${item.code}]`)
-  }
-  if (provision.provisioned.length > 0 || provision.skipped.length > 0) {
-    console.log("")
-  }
-}
-
-async function commandCheck(args: string[]): Promise<number> {
-  const run = await runCheck(process.cwd(), {
-    structural: hasFlag(args, "--structural"),
-    json: hasFlag(args, "--json"),
+async function commandAnalyze(args: string[]): Promise<number> {
+  const json = hasFlag(args, "--json")
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
   })
-  console.log(run.output)
-  return run.code
-}
-
-interface NextArguments {
-  technical: boolean
-  json: boolean
-  error?: string
-}
-
-function parseNextArguments(args: string[]): NextArguments {
-  let technical = false
-  let json = false
-  let index = args[0] === "next" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    if (argument === "--technical") {
-      technical = true
-      index += 1
-      continue
-    }
-    if (argument === "--json") {
-      json = true
-      index += 1
-      continue
-    }
-
-    return { technical, json, error: `unknown next option: ${argument}` }
-  }
-
-  return { technical, json }
-}
-
-async function commandNext(args: string[]): Promise<number> {
-  const parsed = parseNextArguments(args)
-  if (parsed.error !== undefined) {
-    console.error(parsed.error)
-    return 2
-  }
-
-  const service = new WorkbenchService(process.cwd())
-  const [view, error] = await new TerminalNextReporter(service).read()
-  if (error !== null || view === null) {
-    console.error(`next failed: ${error ?? "no view"}`)
+  if (runtimeError !== null || runtime === null) {
+    console.error(`analyze: ${runtimeError ?? "analysis runtime unavailable"}`)
     return 1
   }
-
-  if (parsed.json) {
-    console.log(JSON.stringify(view, null, 2))
-    return 0
+  const project = runtime.currentProject()
+  if (project === null) {
+    runtime.close()
+    console.error("analyze: project unavailable")
+    return 1
   }
+  const [job, jobError] = runtime.jobs.start(project)
+  if (jobError !== null || job === null) {
+    runtime.close()
+    console.error(`analyze: ${jobError ?? "analysis did not start"}`)
+    return 1
+  }
+  let phase = ""
+  let current = job
+  for (let attempt = 0; attempt < 6000; attempt++) {
+    const next = runtime.jobs.get(job.id)
+    if (next !== null) current = next
+    if (!json && current.phase !== phase) {
+      console.log(`${current.phase}: ${current.message}`)
+      phase = current.phase
+    }
+    if (["succeeded", "failed", "cancelled"].includes(current.state)) break
+    await Bun.sleep(50)
+  }
+  const spec = current.snapshotId === null ? null : runtime.generatedSpecs.find(current.snapshotId)
+  if (json)
+    console.log(
+      JSON.stringify(
+        { job: current, snapshot: current.snapshotId, spec: spec?.snapshot ?? null },
+        null,
+        2,
+      ),
+    )
+  else if (current.state === "succeeded") {
+    console.log(`analysis complete: ${current.snapshotId ?? "no snapshot"}`)
+    if (spec !== null) {
+      console.log(
+        `${spec.architecture.elements.length} architecture elements, ${spec.requirements.length} behavior records, ${spec.findings.length} findings`,
+      )
+    }
+  } else console.error(`analysis ${current.state}: ${current.error ?? current.message}`)
+  runtime.close()
 
-  const io = new ReadlineTerminalIO()
-  new TerminalRenderer(io, parsed.technical).next(view.context)
-  io.close()
+  return current.state === "succeeded" ? 0 : 1
+}
+
+async function commandGenerate(args: string[]): Promise<number> {
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
+  })
+  if (runtimeError !== null || runtime === null) {
+    console.error(`generate: ${runtimeError ?? "analysis runtime unavailable"}`)
+    return 1
+  }
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  if (project === null || spec === null) {
+    runtime.close()
+    console.error("generate: no generated snapshot is available")
+    return 1
+  }
+  const [path, writeError] = await new GeneratedSpecWriter(project.repositoryPath).write(spec)
+  runtime.close()
+  if (writeError !== null || path === null) {
+    console.error(`generate: ${writeError ?? "write failed"}`)
+    return 1
+  }
+  if (hasFlag(args, "--json")) console.log(JSON.stringify({ path }, null, 2))
+  else console.log(`generated ${path}`)
+
   return 0
 }
 
-interface MapArguments {
-  review: boolean
-  draft: boolean
-  promote: boolean
-  check: boolean
-  actions: CurationAction[]
-  scopes: string[]
-  technical: boolean
-  json: boolean
-  interactive?: boolean
-  error?: string
+async function commandGenerated(args: string[]): Promise<number> {
+  const positional = withoutFlags(args).slice(1)
+  if (positional[0] !== "show" || positional[1] === undefined) {
+    console.error("generated show requires a section")
+    return 2
+  }
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
+  })
+  if (runtimeError !== null || runtime === null) {
+    console.error(`generated: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
+  }
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  runtime.close()
+  if (spec === null) {
+    console.error("generated: no generated spec is available")
+    return 1
+  }
+  const value = section(spec, positional[1])
+  if (value === null) {
+    console.error(`generated: unknown section ${positional[1]}`)
+    return 1
+  }
+  console.log(JSON.stringify(value, null, 2))
+
+  return 0
 }
 
-async function readActionSource(value: string): Promise<Result<CurationAction[] | null, string>> {
-  const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
-  if (existsError === null && exists === true) {
-    const [text, readError] = await attemptAsync(() => Bun.file(value).text())
-    if (readError !== null || text === null) {
-      return fail(readError === null ? `cannot read ${value}` : readError)
-    }
-
-    return CurationParser.parseJson(text)
+function section(spec: GeneratedSpec, name: string): unknown {
+  const values: Record<string, unknown> = {
+    project: spec.project,
+    snapshot: spec.snapshot,
+    architecture: spec.architecture,
+    requirements: spec.requirements,
+    contracts: spec.contracts,
+    verification: spec.verification,
+    flows: spec.flows,
+    findings: spec.findings,
+    evidence: spec.evidence,
+    unknowns: spec.unknowns,
   }
 
-  return CurationParser.parseJson(value)
+  return values[name] ?? null
 }
 
-async function parseMapArguments(args: string[]): Promise<MapArguments> {
-  let review = false
-  let draft = false
-  let promote = false
-  let check = false
-  const actions: CurationAction[] = []
-  const scopes: string[] = []
-  let technical = false
-  let json = false
-  let interactive: boolean | undefined
-  let index = args[0] === "map" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    switch (argument) {
-      case "--interactive":
-        interactive = true
-        index += 1
-        break
-      case "--no-interactive":
-        interactive = false
-        index += 1
-        break
-      case "--review":
-        review = true
-        index += 1
-        break
-      case "--draft":
-        draft = true
-        index += 1
-        break
-      case "--promote":
-        promote = true
-        index += 1
-        break
-      case "--check":
-        check = true
-        index += 1
-        break
-      case "--scope": {
-        const value = args[index + 1]
-        if (value === undefined || value.startsWith("-")) {
-          return {
-            review,
-            draft,
-            promote,
-            check,
-            actions,
-            scopes,
-            technical,
-            json,
-            error: "--scope requires a name",
-          }
-        }
-        scopes.push(value)
-        index += 2
-        break
-      }
-      case "--technical":
-        technical = true
-        index += 1
-        break
-      case "--json":
-        json = true
-        index += 1
-        break
-      case "--action": {
-        const value = args[index + 1]
-        if (value === undefined || value.startsWith("-")) {
-          return {
-            review,
-            draft,
-            promote,
-            check,
-            actions,
-            scopes,
-            technical,
-            json,
-            error: "--action requires JSON or a file path",
-          }
-        }
-        const [parsed, parseError] = await readActionSource(value)
-        if (parseError !== null || parsed === null) {
-          return {
-            review,
-            draft,
-            promote,
-            check,
-            actions,
-            scopes,
-            technical,
-            json,
-            error: parseError ?? "cannot parse actions",
-          }
-        }
-        actions.push(...parsed)
-        index += 2
-        break
-      }
-      default:
-        if (argument.startsWith("-")) {
-          return {
-            review,
-            draft,
-            promote,
-            check,
-            actions,
-            scopes,
-            technical,
-            json,
-            error: `unknown map option: ${argument}`,
-          }
-        }
-        index += 1
-    }
+async function commandProjects(args: string[]): Promise<number> {
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
+  })
+  if (runtimeError !== null || runtime === null) {
+    console.error(`projects: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
   }
-
-  return { review, draft, promote, check, actions, scopes, technical, json, interactive }
-}
-
-async function commandMap(args: string[]): Promise<number> {
-  const parsed = await parseMapArguments(args)
-  if (parsed.error !== undefined) {
-    console.error(parsed.error)
-    return 2
-  }
-
-  if (parsed.actions.length > 0 && !parsed.review) {
-    console.error("map: --action requires --review")
-    return 2
-  }
-
-  if (parsed.interactive === true && parsed.json) {
-    console.error("map: --interactive cannot be combined with --json")
-    return 2
-  }
-
-  if (parsed.interactive === true && parsed.actions.length > 0) {
-    console.error("map: --interactive cannot be combined with --action")
-    return 2
-  }
-
-  if (parsed.review && (parsed.promote || parsed.check || parsed.draft)) {
-    console.error("map: --review cannot be combined with --promote, --check, or --draft")
-    return 2
-  }
-
-  if (parsed.promote && (parsed.check || parsed.draft)) {
-    console.error("map: --promote cannot be combined with --check or --draft")
-    return 2
-  }
-
-  if (parsed.check && parsed.draft) {
-    console.error("map: --check cannot be combined with --draft")
-    return 2
-  }
-
-  if (parsed.scopes.length > 0 && !parsed.promote) {
-    console.error("map: --scope requires --promote")
-    return 2
-  }
-
-  if (parsed.check) {
-    const run = await runMapCheck(process.cwd(), {
-      json: parsed.json,
-      technical: parsed.technical,
-    })
-    console.log(run.output)
-    return run.code
-  }
-
-  if (parsed.promote) {
-    const run = await runMapPromote(process.cwd(), {
-      scopes: parsed.scopes,
-      json: parsed.json,
-      technical: parsed.technical,
-    })
-    console.log(run.output)
-    return run.code
-  }
-
-  if (parsed.review) {
-    if (parsed.draft) {
-      console.error("map: --review cannot be combined with --draft")
+  const positional = withoutFlags(args).slice(1)
+  const action = positional[0] ?? "list"
+  if (action === "add") {
+    const path = positional[1]
+    if (path === undefined) {
+      runtime.close()
+      console.error("projects add requires a path")
       return 2
     }
-
-    const run = await runMapReview(process.cwd(), {
-      actions: parsed.actions,
-      json: parsed.json,
-      technical: parsed.technical,
-    })
-    printWarnings(run.warnings)
-    console.log(run.output)
-    if (run.code !== 0) return run.code
-
-    const interactive = TerminalMode.resolve({
-      interactive: parsed.interactive,
-      json: parsed.json,
-      scripted: parsed.actions.length > 0,
-    })
-    if (interactive) return runCurationSession(process.cwd(), parsed.technical)
-
-    return run.code
+    const [project, error] = await runtime.projects.register({ repositoryPath: path })
+    runtime.close()
+    if (error !== null || project === null) {
+      console.error(`projects: ${error ?? "registration failed"}`)
+      return 1
+    }
+    console.log(`registered ${project.name} (${project.id})`)
+    return 0
   }
+  if (action === "remove") {
+    const id = positional[1]
+    if (id === undefined) {
+      runtime.close()
+      console.error("projects remove requires an id")
+      return 2
+    }
+    const [, error] = runtime.projects.remove(id)
+    runtime.close()
+    if (error !== null) {
+      console.error(`projects: ${error}`)
+      return 1
+    }
+    console.log(`removed ${id}`)
+    return 0
+  }
+  const projects = runtime.projects.list()
+  runtime.close()
+  if (hasFlag(args, "--json")) console.log(JSON.stringify(projects, null, 2))
+  else
+    for (const project of projects)
+      console.log(`${project.id}  ${project.name}  ${project.repositoryPath}`)
 
-  const run = await runMap(process.cwd(), {
-    draft: parsed.draft,
-    json: parsed.json,
+  return 0
+}
+
+async function commandSnapshots(args: string[]): Promise<number> {
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
   })
-  console.log(run.output)
-  return run.code
+  if (runtimeError !== null || runtime === null) {
+    console.error(`snapshots: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
+  }
+  const project = runtime.currentProject()
+  if (project === null) {
+    runtime.close()
+    console.error("snapshots: project unavailable")
+    return 1
+  }
+  const positional = withoutFlags(args).slice(1)
+  const action = positional[0] ?? "list"
+  if (action === "compare") {
+    const fromId = positional[1]
+    const toId = positional[2]
+    if (fromId === undefined || toId === undefined) {
+      runtime.close()
+      console.error("snapshots compare requires two snapshot ids")
+      return 2
+    }
+    const comparison = runtime.compare(fromId, toId)
+    runtime.close()
+    if (comparison === null) {
+      console.error("snapshots: comparison unavailable")
+      return 1
+    }
+    console.log(JSON.stringify(comparison, null, 2))
+    return 0
+  }
+  if (action === "show") {
+    const id = positional[1]
+    const snapshot = id === undefined ? null : runtime.snapshots.find(id)
+    runtime.close()
+    if (snapshot === null) {
+      console.error("snapshots: snapshot not found")
+      return 1
+    }
+    console.log(JSON.stringify(snapshot, null, 2))
+    return 0
+  }
+  const snapshots = runtime.snapshots.list(project.id)
+  runtime.close()
+  if (hasFlag(args, "--json")) console.log(JSON.stringify(snapshots, null, 2))
+  else
+    for (const snapshot of snapshots)
+      console.log(`${snapshot.id}  ${snapshot.commit.slice(0, 8)}  ${snapshot.nodeCount} nodes`)
+
+  return 0
 }
 
-interface StartArguments {
-  goal?: string
-  technical: boolean
-  json: boolean
-  interactive?: boolean
-  error?: string
-}
-
-function parseStartArguments(args: string[]): StartArguments {
-  let goal: string | undefined
-  let technical = false
-  let json = false
-  let interactive: boolean | undefined
-  let index = args[0] === "start" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    if (argument === "--json") {
-      json = true
-      index += 1
-      continue
-    }
-    if (argument === "--technical") {
-      technical = true
-      index += 1
-      continue
-    }
-    if (argument === "--interactive") {
-      interactive = true
-      index += 1
-      continue
-    }
-    if (argument === "--no-interactive") {
-      interactive = false
-      index += 1
-      continue
-    }
-    if (argument.startsWith("-")) {
-      return { technical, json, interactive, error: `unknown start option: ${argument}` }
-    }
-    if (goal !== undefined) {
-      return { goal, technical, json, interactive, error: "start accepts one goal" }
-    }
-    goal = argument
-    index += 1
-  }
-
-  return { goal, technical, json, interactive }
-}
-
-async function commandStart(args: string[]): Promise<number> {
-  const parsed = parseStartArguments(args)
-  if (parsed.error !== undefined) {
-    console.error(parsed.error)
-    return 2
-  }
-  if (parsed.goal === undefined) {
-    console.error(
-      'usage: spec start "<goal>" [--interactive|--no-interactive] [--json] [--technical]',
-    )
-    return 2
-  }
-  if (parsed.interactive === true && parsed.json) {
-    console.error("start: --interactive cannot be combined with --json")
-    return 2
-  }
-
-  const run = await runStart(process.cwd(), parsed.goal, {
-    technical: parsed.technical,
-    json: parsed.json,
+async function commandExport(args: string[]): Promise<number> {
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
   })
-  printWarnings(run.warnings)
-  console.log(run.output)
-  if (run.code !== 0) return run.code
-
-  const interactive = TerminalMode.resolve({
-    interactive: parsed.interactive,
-    json: parsed.json,
-    scripted: false,
-  })
-  if (interactive) return runProposalSession(process.cwd(), true, parsed.technical)
-
-  return run.code
-}
-
-interface QueryArguments {
-  id?: string
-  kind?: string
-  status?: string
-  view: QueryView
-  technical: boolean
-  json: boolean
-  allowDirty: boolean
-  error?: string
-}
-
-function parseQueryArguments(args: string[]): QueryArguments {
-  let id: string | undefined
-  let kind: string | undefined
-  let status: string | undefined
-  let view: QueryView = "identity"
-  let technical = false
-  let json = false
-  let allowDirty = false
-  let index = args[0] === "query" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    switch (argument) {
-      case "--json":
-        json = true
-        index += 1
-        break
-      case "--technical":
-        technical = true
-        index += 1
-        break
-      case "--allow-dirty":
-        allowDirty = true
-        index += 1
-        break
-      case "--view": {
-        const value = args[index + 1]
-        if (value !== "identity" && value !== "experience") {
-          return {
-            id,
-            kind,
-            status,
-            view,
-            technical,
-            json,
-            allowDirty,
-            error: "--view requires identity or experience",
-          }
-        }
-        view = value
-        index += 2
-        break
-      }
-      case "--id":
-      case "--kind":
-      case "--status": {
-        const value = args[index + 1]
-        if (value === undefined || value.startsWith("-")) {
-          return {
-            id,
-            kind,
-            status,
-            view,
-            technical,
-            json,
-            allowDirty,
-            error: `${argument} requires a value`,
-          }
-        }
-        if (argument === "--id") id = value
-        if (argument === "--kind") kind = value
-        if (argument === "--status") status = value
-        index += 2
-        break
-      }
-      default:
-        if (argument.startsWith("-")) {
-          return {
-            id,
-            kind,
-            status,
-            view,
-            technical,
-            json,
-            allowDirty,
-            error: `unknown query option: ${argument}`,
-          }
-        }
-        index += 1
-    }
+  if (runtimeError !== null || runtime === null) {
+    console.error(`export: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
   }
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  if (project === null || spec === null) {
+    runtime.close()
+    console.error("export: no generated spec is available")
+    return 1
+  }
+  const [path, error] = await new GeneratedSpecWriter(project.repositoryPath).write(spec)
+  runtime.close()
+  if (error !== null || path === null) {
+    console.error(`export: ${error ?? "export failed"}`)
+    return 1
+  }
+  if (hasFlag(args, "--json"))
+    console.log(JSON.stringify({ path, snapshot_id: spec.snapshot.id }, null, 2))
+  else console.log(`exported ${path}`)
 
-  return { id, kind, status, view, technical, json, allowDirty }
+  return 0
 }
 
 async function commandQuery(args: string[]): Promise<number> {
-  const parsed = parseQueryArguments(args)
-  if (parsed.error) {
-    console.error(parsed.error)
-    return 2
-  }
-
-  const run = await runQuery(process.cwd(), {
-    id: parsed.id,
-    kind: parsed.kind,
-    status: parsed.status,
-    view: parsed.view,
-    technical: parsed.technical,
-    json: parsed.json,
-    allowDirty: parsed.allowDirty,
+  const [run, error] = await new GeneratedQuery(process.cwd()).run({
+    json: hasFlag(args, "--json"),
+    name: option(args, "--name"),
+    kind: option(args, "--kind"),
+    section: option(args, "--section"),
   })
+  if (error !== null || run === null) {
+    console.error(`query: ${error ?? "query failed"}`)
+    return 1
+  }
   console.log(run.output)
   return run.code
 }
 
-interface ChangeArguments {
-  direction?: string
-  status: boolean
-  mode?: ProposalMode
-  operations: ProposalOperation[]
-  simulate: boolean
-  technical: boolean
-  json: boolean
-  interactive?: boolean
-  error?: string
-}
-
-async function readOperationSource(
-  value: string,
-): Promise<Result<ProposalOperation[] | null, string>> {
-  const [exists, existsError] = await attemptAsync(() => Bun.file(value).exists())
-  if (existsError === null && exists === true) {
-    const [text, readError] = await attemptAsync(() => Bun.file(value).text())
-    if (readError !== null || text === null) {
-      return fail(readError === null ? `cannot read ${value}` : readError)
-    }
-
-    return ProposalOperationParser.parseJson(text)
-  }
-
-  return ProposalOperationParser.parseJson(value)
-}
-
-async function parseChangeArguments(args: string[]): Promise<ChangeArguments> {
-  let direction: string | undefined
-  let status = false
-  let mode: ProposalMode | undefined
-  const operations: ProposalOperation[] = []
-  let simulate = false
-  let technical = false
-  let json = false
-  let interactive: boolean | undefined
-  let index = args[0] === "change" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    if (argument === "--json") {
-      json = true
-      index += 1
-      continue
-    }
-    if (argument === "--interactive") {
-      interactive = true
-      index += 1
-      continue
-    }
-    if (argument === "--no-interactive") {
-      interactive = false
-      index += 1
-      continue
-    }
-    if (argument === "--status") {
-      status = true
-      index += 1
-      continue
-    }
-    if (argument === "--technical") {
-      technical = true
-      index += 1
-      continue
-    }
-    if (argument === "--simulate") {
-      simulate = true
-      index += 1
-      continue
-    }
-    if (argument === "--mode") {
-      const value = args[index + 1]
-      if (value !== "scratch" && value !== "mapping" && value !== "refactor") {
-        return {
-          status,
-          operations,
-          simulate,
-          technical,
-          json,
-          error: "--mode requires scratch, mapping, or refactor",
-        }
-      }
-      mode = value
-      index += 2
-      continue
-    }
-    if (argument === "--op") {
-      const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return {
-          status,
-          operations,
-          simulate,
-          technical,
-          json,
-          error: "--op requires JSON or a file path",
-        }
-      }
-      const [parsed, parseError] = await readOperationSource(value)
-      if (parseError !== null || parsed === null) {
-        return {
-          status,
-          operations,
-          simulate,
-          technical,
-          json,
-          error: parseError ?? "cannot parse operations",
-        }
-      }
-      operations.push(...parsed)
-      index += 2
-      continue
-    }
-    if (argument.startsWith("-")) {
-      return {
-        status,
-        operations,
-        simulate,
-        technical,
-        json,
-        error: `unknown change option: ${argument}`,
-      }
-    }
-    if (direction !== undefined) {
-      return {
-        status,
-        operations,
-        simulate,
-        technical,
-        json,
-        error: "change accepts one direction",
-      }
-    }
-    direction = argument
-    index += 1
-  }
-
-  if (status && direction !== undefined) {
-    return {
-      status,
-      operations,
-      simulate,
-      technical,
-      json,
-      error: "--status does not accept a direction",
-    }
-  }
-
-  return { direction, status, mode, operations, simulate, technical, json, interactive }
-}
-
-async function commandChange(args: string[]): Promise<number> {
-  const parsed = await parseChangeArguments(args)
-  if (parsed.error !== undefined) {
-    console.error(parsed.error)
-    return 2
-  }
-
-  if (parsed.interactive === true && parsed.json) {
-    console.error("change: --interactive cannot be combined with --json")
-    return 2
-  }
-
-  if (parsed.interactive === true && parsed.operations.length > 0) {
-    console.error("change: --interactive cannot be combined with --op")
-    return 2
-  }
-
-  const interactive = TerminalMode.resolve({
-    interactive: parsed.interactive,
-    json: parsed.json,
-    scripted: parsed.operations.length > 0 || parsed.status,
+async function commandCheck(args: string[]): Promise<number> {
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
   })
-
-  if (parsed.status) {
-    if (parsed.interactive === true) {
-      console.error("change: --interactive cannot be combined with --status")
-      return 2
-    }
-
-    const run = await runChangeStatus(process.cwd(), {
-      technical: parsed.technical,
-      json: parsed.json,
-    })
-    console.log(run.output)
-    return run.code
+  if (runtimeError !== null || runtime === null) {
+    console.error(`check: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
   }
-
-  if (parsed.direction === undefined && parsed.operations.length > 0) {
-    const run = await runProposalOperations(process.cwd(), parsed.operations, {
-      simulate: parsed.simulate,
-      technical: parsed.technical,
-      json: parsed.json,
-    })
-    printWarnings(run.warnings)
-    console.log(run.output)
-    return run.code
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  if (project === null || spec === null) {
+    runtime.close()
+    console.error("check: no generated spec is available")
+    return 1
   }
-
-  if (parsed.direction === undefined) {
-    if (interactive) return runProposalSession(process.cwd(), true, parsed.technical)
-
-    console.error('usage: spec change "<direction>" [--interactive] [--op <json|file>]...')
-    console.error("       spec change [--interactive] [--op <json|file>]...")
-    console.error("       spec change --status [--json]")
-    return 2
+  const [result, checkError] = await new GeneratedCheck().run(project.repositoryPath, spec)
+  runtime.close()
+  if (checkError !== null || result === null) {
+    console.error(`check: ${checkError ?? "check failed"}`)
+    return 1
   }
+  if (hasFlag(args, "--json")) console.log(JSON.stringify(result, null, 2))
+  else
+    console.log(
+      [
+        `errors: ${result.errors}`,
+        `warnings: ${result.warnings}`,
+        ...result.findings,
+        ...result.output,
+      ].join("\n"),
+    )
 
-  const run = await runChange(process.cwd(), parsed.direction, {
-    mode: parsed.mode,
-    operations: parsed.operations,
-    simulate: parsed.simulate,
-    technical: parsed.technical,
-    json: parsed.json,
-  })
-  printWarnings(run.warnings)
-  console.log(run.output)
-  if (run.code !== 0) return run.code
-
-  if (interactive) {
-    return runProposalSession(process.cwd(), true, parsed.technical)
-  }
-
-  return run.code
-}
-
-async function commandRefactor(args: string[]): Promise<number> {
-  const rest = args[0] === "refactor" ? args.slice(1) : args
-  if (rest.includes("--mode")) {
-    console.error("refactor does not accept --mode")
-    return 2
-  }
-
-  return commandChange([
-    "change",
-    "--mode",
-    "refactor",
-    ...(rest.includes("--simulate") ? rest : ["--simulate", ...rest]),
-  ])
-}
-
-interface BundleArguments {
-  allowDirty: boolean
-  output?: string
-  force: boolean
-  json: boolean
-  error?: string
-}
-
-function parseBundleArguments(args: string[]): BundleArguments {
-  let allowDirty = false
-  let output: string | undefined
-  let force = false
-  let json = false
-  let index = args[0] === "bundle" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    if (argument === "--allow-dirty") {
-      allowDirty = true
-      index += 1
-      continue
-    }
-    if (argument === "--force") {
-      force = true
-      index += 1
-      continue
-    }
-    if (argument === "--json") {
-      json = true
-      index += 1
-      continue
-    }
-    if (argument === "--output") {
-      const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return { allowDirty, force, json, error: "--output requires a directory" }
-      }
-      output = value
-      index += 2
-      continue
-    }
-
-    return { allowDirty, force, json, error: `unknown bundle option: ${argument}` }
-  }
-
-  return { allowDirty, force, json, output }
+  return result.errors === 0 ? 0 : 1
 }
 
 async function commandBundle(args: string[]): Promise<number> {
-  const parsed = parseBundleArguments(args)
-  if (parsed.error !== undefined) {
-    console.error(parsed.error)
-    return 2
-  }
-
-  const run = await runBundle(process.cwd(), {
-    allowDirty: parsed.allowDirty,
-    output: parsed.output,
-    force: parsed.force,
-    json: parsed.json,
+  const [runtime, runtimeError] = await AnalysisRuntime.create(process.cwd(), {
+    analysisRoots: analysisRoots(args),
   })
-  console.log(run.output)
-  return run.code
+  if (runtimeError !== null || runtime === null) {
+    console.error(`bundle: ${runtimeError ?? "runtime unavailable"}`)
+    return 1
+  }
+  const project = runtime.currentProject()
+  const spec = project === null ? null : runtime.spec(project)
+  if (project === null || spec === null) {
+    runtime.close()
+    console.error("bundle: no generated spec is available")
+    return 1
+  }
+  const [result, error] = await new GeneratedBundleWriter().write(project.repositoryPath, spec, {
+    output: option(args, "--output"),
+    force: hasFlag(args, "--force"),
+  })
+  runtime.close()
+  if (error !== null || result === null) {
+    console.error(`bundle: ${error ?? "bundle failed"}`)
+    return 1
+  }
+  if (hasFlag(args, "--json")) console.log(JSON.stringify(result, null, 2))
+  else console.log(`bundle ${result.path}`)
+
+  return 0
 }
 
 interface WorkbenchArguments {
   host: string
   port: number
   allowedOrigins: string[]
+  analysisRoots: string[]
   error?: string
 }
 
@@ -998,43 +429,49 @@ function parseWorkbenchArguments(args: string[]): WorkbenchArguments {
   let host = "127.0.0.1"
   let port = 4173
   const allowedOrigins: string[] = []
+  const roots: string[] = []
   let index = args[0] === "workbench" ? 1 : 0
-
   while (index < args.length) {
     const argument = args[index]
     if (argument === "--host") {
-      const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return { host, port, allowedOrigins, error: "--host requires a value" }
-      }
-      host = value
+      host = args[index + 1] ?? host
       index += 2
       continue
     }
     if (argument === "--port") {
-      const value = args[index + 1]
-      const parsed = value === undefined ? Number.NaN : Number(value)
-      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
-        return { host, port, allowedOrigins, error: "--port requires a valid port" }
-      }
+      const parsed = Number(args[index + 1])
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535)
+        return { host, port, allowedOrigins, analysisRoots: roots, error: "invalid port" }
       port = parsed
       index += 2
       continue
     }
     if (argument === "--allowed-origin") {
       const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return { host, port, allowedOrigins, error: "--allowed-origin requires a value" }
-      }
+      if (value === undefined)
+        return { host, port, allowedOrigins, analysisRoots: roots, error: "missing origin" }
       allowedOrigins.push(value)
       index += 2
       continue
     }
-
-    return { host, port, allowedOrigins, error: `unknown workbench option: ${argument}` }
+    if (argument === "--analysis-root") {
+      const value = args[index + 1]
+      if (value === undefined)
+        return { host, port, allowedOrigins, analysisRoots: roots, error: "missing analysis root" }
+      roots.push(value)
+      index += 2
+      continue
+    }
+    return {
+      host,
+      port,
+      allowedOrigins,
+      analysisRoots: roots,
+      error: `unknown workbench option: ${argument}`,
+    }
   }
 
-  return { host, port, allowedOrigins }
+  return { host, port, allowedOrigins, analysisRoots: roots }
 }
 
 async function commandWorkbench(args: string[]): Promise<number> {
@@ -1043,29 +480,18 @@ async function commandWorkbench(args: string[]): Promise<number> {
     console.error(parsed.error)
     return 2
   }
-
-  const assets = join(import.meta.dir, "workbench", "web", "dist", "index.html")
-  const [assetReady, assetError] = await attemptAsync(() => Bun.file(assets).exists())
-  if (assetError !== null) {
-    console.error(`workbench: cannot read assets: ${assetError}`)
-    return 1
-  }
-  if (assetReady !== true) {
-    console.error("workbench: assets are not built; run bun run build:workbench")
-  }
-
   const server = new WorkbenchServer({
     target: process.cwd(),
     host: parsed.host,
     port: parsed.port,
     allowedOrigins: parsed.allowedOrigins,
+    analysisRoots: parsed.analysisRoots,
   })
-  const [handle, startError] = await server.start()
-  if (startError !== null || handle === null) {
-    console.error(`workbench: ${startError ?? "server did not start"}`)
+  const [handle, error] = await server.start()
+  if (error !== null || handle === null) {
+    console.error(`workbench: ${error ?? "server did not start"}`)
     return 1
   }
-
   console.log(`workbench: ${handle.url}`)
   console.log("workbench: press Ctrl-C to stop")
 
@@ -1074,228 +500,51 @@ async function commandWorkbench(args: string[]): Promise<number> {
       handle.close()
       resolve(0)
     }
-
     process.once("SIGINT", stop)
     process.once("SIGTERM", stop)
   })
 }
 
-function printWarnings(warnings: string[]): void {
-  for (const warning of warnings) console.error(`warning: ${warning}`)
-}
-
-async function runCurationSession(target: string, technical: boolean): Promise<number> {
-  const io = new ReadlineTerminalIO()
-  const prompt = new TerminalPrompt(io)
-  const renderer = new TerminalRenderer(io, technical)
-  const session = new TerminalCurationSession(new WorkbenchService(target), prompt, renderer, io)
-  const [view, error] = await session.run()
-  io.close()
-  if (error !== null) {
-    console.error(`interactive curation failed: ${error}`)
-    return 1
-  }
-  if (view === null) {
-    console.error("interactive curation failed")
-    return 1
-  }
-
-  return 0
-}
-
-async function runProposalSession(
-  target: string,
-  simulate: boolean,
-  technical: boolean,
-): Promise<number> {
-  const io = new ReadlineTerminalIO()
-  const prompt = new TerminalPrompt(io)
-  const renderer = new TerminalRenderer(io, technical)
-  const session = new TerminalProposalSession(
-    new WorkbenchService(target),
-    prompt,
-    renderer,
-    io,
-    simulate,
-  )
-  const [view, error] = await session.run()
-  io.close()
-  if (error !== null) {
-    console.error(`interactive proposal failed: ${error}`)
-    return 1
-  }
-  if (view === null) {
-    console.error("interactive proposal failed")
-    return 1
-  }
-
-  return 0
-}
-
-interface ApproveArguments {
-  ids: string[]
-  scopes: string[]
-  approver?: string
-  technical: boolean
-  allowDirty: boolean
-  error?: string
-}
-
-function parseApproveArguments(args: string[]): ApproveArguments {
-  const ids: string[] = []
-  const scopes: string[] = []
-  let approver: string | undefined
-  let technical = false
-  let allowDirty = false
-  let index = args[0] === "approve" ? 1 : 0
-
-  while (index < args.length) {
-    const argument = args[index]
-    if (argument === "--approver") {
-      const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return { ids, scopes, technical, allowDirty, error: "--approver requires a name" }
-      }
-      approver = value
-      index += 2
-      continue
-    }
-    if (argument === "--scope") {
-      const value = args[index + 1]
-      if (value === undefined || value.startsWith("-")) {
-        return { ids, scopes, technical, allowDirty, error: "--scope requires a name" }
-      }
-      scopes.push(value)
-      index += 2
-      continue
-    }
-    if (argument === "--technical") {
-      technical = true
-      index += 1
-      continue
-    }
-    if (argument === "--allow-dirty") {
-      allowDirty = true
-      index += 1
-      continue
-    }
-    if (argument.startsWith("-")) {
-      index += 1
-      continue
-    }
-
-    ids.push(argument)
-    index += 1
-  }
-
-  return { ids, scopes, approver, technical, allowDirty }
-}
-
-async function commandApprove(args: string[]): Promise<number> {
-  const parsed = parseApproveArguments(args)
-  if (parsed.error) {
-    console.error(parsed.error)
-    return 2
-  }
-  if (parsed.ids.length === 0 && parsed.scopes.length === 0) {
-    console.error(
-      "usage: spec approve [--scope <name>]... <ids...> [--approver <name>] [--technical] [--allow-dirty]",
-    )
-    return 2
-  }
-
-  const target = process.cwd()
-  const check = await runCheck(target, { verifyApprovals: false })
-  if (check.result.errors > 0) {
-    console.log(check.output)
-    return 1
-  }
-
-  const [scope, scopeError] =
-    parsed.scopes.length === 0
-      ? [{ ids: [], labels: {} }, null]
-      : await new ApprovalScopeLoader(target).resolve(parsed.scopes)
-  if (scopeError !== null || scope === null) {
-    console.error(scopeError ?? "approval scope resolution failed")
-    return 1
-  }
-
-  const resolvedIds = scope.ids.filter((id) => !parsed.ids.includes(id))
-  const requestedIds = [...parsed.ids, ...resolvedIds]
-
-  const [approver, identityError] = await new GitApproverResolver().resolve(parsed.approver)
-  if (identityError !== null || approver === null) {
-    console.error(identityError ?? "approver identity unavailable")
-    return 1
-  }
-
-  const run = await runApproval(target, requestedIds, {
-    approver,
-    allowDirty: parsed.allowDirty,
-    confirmation: new TerminalApprovalConfirmation(),
-    gitStatus: new GitCleanlinessReader(),
-    evidence: check.evidence,
-    labels: scope.labels,
-    technical: parsed.technical,
-  })
-  console.log(run.output)
-  return run.code
-}
-
-async function commandArchitecture(args: string[]): Promise<number> {
-  const target = process.cwd()
-  const check = hasFlag(args, "--check") || args.includes("check")
-  const generator = new ArchitectureModelGenerator(target)
-
-  if (check) {
-    const [run, error] = await generator.check()
-    if (error !== null || run === null) {
-      console.error(error ?? "architecture check failed")
-      return 1
-    }
-    console.log(run.output)
-    return run.code
-  }
-
-  const [run, error] = await generator.write()
-  if (error !== null || run === null) {
-    console.error(error ?? "architecture generation failed")
-    return 1
-  }
-  console.log(run.output)
-  return run.code
-}
+const RETIRED = new Set([
+  "init",
+  "map",
+  "architecture",
+  "start",
+  "change",
+  "refactor",
+  "next",
+  "approve",
+])
 
 export async function main(args: string[]): Promise<number> {
   const [command = "help"] = withoutFlags(args)
-
+  if (RETIRED.has(command)) {
+    console.error(`retired command: ${command}. Use spec analyze and generated output.`)
+    return 2
+  }
   switch (command) {
-    case "init":
-      return commandInit(args)
     case "doctor":
       return commandDoctor(args)
-    case "check":
-      return commandCheck(args)
-    case "next":
-      return commandNext(args)
-    case "map":
-      return commandMap(args)
-    case "architecture":
-      return commandArchitecture(args)
-    case "start":
-      return commandStart(args)
+    case "analyze":
+      return commandAnalyze(args)
+    case "generate":
+      return commandGenerate(args)
+    case "generated":
+      return commandGenerated(args)
+    case "projects":
+      return commandProjects(args)
+    case "snapshots":
+      return commandSnapshots(args)
+    case "export":
+      return commandExport(args)
     case "query":
       return commandQuery(args)
-    case "change":
-      return commandChange(args)
-    case "refactor":
-      return commandRefactor(args)
+    case "check":
+      return commandCheck(args)
     case "bundle":
       return commandBundle(args)
     case "workbench":
       return commandWorkbench(args)
-    case "approve":
-      return commandApprove(args)
     case "version":
       console.log(pkg.version)
       return 0

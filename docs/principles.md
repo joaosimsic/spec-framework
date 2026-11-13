@@ -1,73 +1,86 @@
 # Principles
 
-## 1. The specification is data, not prose
+## 1. Generated output, not hand-authored specs
 
-Normative facts live in structured sources. Prose is allowed for context, rationale, and narrative, but it cannot carry normative force. If a statement can be violated, it belongs in a typed field.
+The spec product is generated from repository evidence. `spec/` is output.
+Input configuration lives outside it. Hand-editing generated output is a defect.
 
-## 2. Readable output is generated, not authored
+## 2. Architecture describes behavior
 
-The audit bundle is assembled mechanically from LikeC4, StrictDoc, Quint, contract adapters, and evidence. Agents do not write the final document. A reviewer can regenerate it and get the same result.
+Conceptual architecture is reconstructed from entry points, public surfaces,
+calls, data access, and external boundaries. Directories, files, and symbols
+are implementation evidence. They never define conceptual identity.
 
-## 3. Every claim has provenance
+## 3. One generated model
 
-An element records whether it came from a human decision, a source file, a document, an inference, or an assumption. An unsourced normative claim is a defect.
+Architecture, requirements-as-observed-behavior, contracts, verification,
+flows, findings, and evidence come from one analysis snapshot. The workbench
+reads one projection.
 
-## 4. Missing information is an explicit unknown
+## 4. Evidence over prose
 
-The agent must not fill gaps with plausible text. It files an unknown with a question, an owner, and a blocking status. The audit bundle lists unknowns prominently.
+Every generated element, edge, flow, contract, and finding cites source
+locations or a configured check. Prose explains evidence; it does not replace it.
 
-## 5. Relations are typed and checked
+## 5. Confidence is mandatory
 
-Components, interfaces, data, capabilities, requirements, semantic constraints, and verification are connected by named relations. The linter checks that endpoints exist, cardinalities are legal, and required relations are present.
+Generated records are `observed`, `inferred`, `ambiguous`, or `unknown`.
+Incomplete analysis never claims completeness.
 
-## 6. Completeness is relative to a question matrix
+## 6. Unknowns stay visible
 
-There is no absolute proof that a spec is complete. Completeness means every mandatory question for each element kind has an answer, an unknown, or a waiver. The matrix is explicit and versioned.
+Dynamic dispatch, unresolved calls, missing tests, unreadable files, and
+unavailable tools become explicit unknowns or findings. They are not hidden.
 
-## 7. Deterministic tools decide mechanical correctness
+## 7. The workbench is generated-only
 
-LikeC4 validation, capability and verification coverage checks, StrictDoc traceability, semantic validation and SHACL checks, Quint model checking, and contract checks are the authority. An LLM's statement that something is correct has no evidentiary value.
+The workbench does not read curated LikeC4, StrictDoc, Quint, contract sidecars,
+proposals, or `spec.lock`. It reads generated snapshots and artifacts.
 
-## 8. Human approval is hash-locked
+## 8. Read-only analysis
 
-Approved content and evidence are hashed. Any change invalidates approval until a human reviews and re-approves. Agents cannot approve.
+Analysis never executes repository code. It respects registered roots,
+`.gitignore`, exclusions, symlink containment, and secret-file exclusion.
 
-## 9. The default agent is read-only on approved specs
+## 9. Deterministic tools decide mechanical facts
 
-Agents propose changes through a dedicated workflow. The default build agent cannot silently edit architecture, requirements, formal models, or contracts. This is a permission boundary, not a prompt request.
+The scanner, TypeScript compiler, graph builder, flow analyzer, diagnostics,
+schema validation, and configured checks are reproducible. AI is not a verdict.
 
-## 10. Non-web is the default assumption
+## 10. AI is evidence-bound
 
-Contracts are language APIs, data formats, CLIs, wire protocols, and hardware interfaces before they are HTTP endpoints. HTTP adapters are optional.
+AI may explain, summarize, and hypothesize over structured evidence. It never
+approves, rejects, passes, or fails a check. Every reference is validated.
 
-## 11. Compose; do not reinvent
+## 11. Non-web is the default assumption
 
-Use mature tools for architecture, requirements, formal methods, contracts, and code analysis. Build only the cross-layer glue, approval model, audit bundle, and analysis IR. The analysis engine composes the TypeScript compiler and `bun:sqlite`; it does not introduce a new specification language.
+Contracts include language APIs, data formats, CLIs, wire protocols, and
+hardware interfaces. HTTP routes are one observed entry-point kind, not the
+product center.
 
-## 12. Every gate must be reproducible
+## 12. Compose; do not reinvent
 
-A reviewer must be able to rerun the checks from a clean checkout and obtain the same verdict. Hidden state, network dependencies in verification, and manual steps are defects.
+Use the TypeScript compiler, `bun:sqlite`, package metadata, and configured
+build/test tools. Build the analysis IR, generated spec contract, flow model,
+diagnostics, and workbench projection.
 
-## 13. Waivers are first-class, expiring, and visible
+## 13. Reproducibility
 
-Some risks are accepted. A waiver records the owner, reason, scope, and expiry. Expired waivers fail the build. Waivers appear in the audit bundle, never in a private comment.
+The same commit, analyzer version, rules, prompt version, and model version
+produce the same generated output. Timestamps are metadata only.
 
-## 14. The framework must survive removing the LLM
+## 14. Local-first
 
-If the agent disappears, the sources remain readable, the validators still run, and the audit bundle still renders. The LLM accelerates authoring; it is not part of the correctness argument.
+The database is disposable local state. Generated artifacts are portable JSON
+and optional exports. No hosted service is required.
 
-## 15. Full-stack by default, one-command setup
+## 15. Security boundaries are explicit
 
-The default profile includes capabilities, architecture, requirements, verification planning, formal behavior, and contracts. The semantic layer is optional but must be provisioned when active. Setup is automated through `spec doctor --fix`, not a manual checklist. A missing tool blocks the affected check; it does not silently reduce verification.
+Localhost binding, registered roots, path containment, secret redaction, and
+read-only analysis are product requirements.
 
-## 16. Time to first value is a requirement
+## 16. Delete superseded surfaces
 
-`spec init` and the structural preflight must produce a useful gap report immediately, before every native tool is installed. Provisioning must not be a prerequisite for understanding the project's specification gaps.
-
-## 17. Intent, implementation, and mapping stay distinct
-
-The intent graph is human-approved truth. The implementation graph is generated evidence. The mapping layer is curated or inferred. They are joined only by an explicit projection, never silently merged into one unqualified model.
-
-## 18. AI is evidence-bound and never a verdict
-
-AI may explain and hypothesize over structured evidence. It never approves, never writes `spec/spec.lock`, and never passes or fails a check. Deterministic rules and human decisions remain the only sources of verdicts.
+Curated intent, proposal branches, mapping curation, approval locks, and the
+legacy Architecture and Code Map views are retired. Do not maintain two
+architectures.

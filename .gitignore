@@ -9,3 +9,6 @@ src/workbench/web/dist/
 spec/evidence/
 spec/audit/
 spec/**/*.gen.*
+
+# Generated spec output
+spec/

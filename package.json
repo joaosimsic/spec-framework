@@ -1,7 +1,7 @@
 {
   "name": "@spec-framework/cli",
   "version": "0.1.0",
-  "description": "Auditable, agent-driven spec framework CLI",
+  "description": "Generated spec product for TypeScript repositories",
   "type": "module",
   "private": true,
   "bin": {
@@ -10,12 +10,12 @@
   "scripts": {
     "spec": "bun run bin/spec.ts",
     "build:workbench": "vite build src/workbench/web --config src/workbench/web/vite.config.ts",
-    "mvp": "bun run scripts/mvp.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "validate:generated": "bun run scripts/validate-generated.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -24,10 +24,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
-    "ajv": "8.17.1",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
-    "likec4": "1.60.0",
     "prettier": "^3.10.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -45,6 +43,7 @@
   },
   "dependencies": {
     "d3-force": "^3.0.1",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "ajv": "8.17.1"
   }
 }

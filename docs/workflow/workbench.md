@@ -1,227 +1,97 @@
 # Workbench
 
-> Status: implemented. The local React/Vite workbench serves the display graph,
-> mapping curation, Compose draft editing, refactor simulation, proposal review,
-> and technical details. The rework view applies every typed proposal operation.
-> The Compose view adds draft requirements and acceptance criteria, revises or
-> retires drafts, and records decisions and open questions; new IDs are derived
-> from visible names and never typed by a human. Approval and `spec/spec.lock`
-> writes remain CLI-only. Decision record
-> [0011](../design-decisions/0011-interactive-use-case-modes.md) fixes the
-> interaction model and the write boundary.
->
-> The workbench System view is the primary human surface. It joins curated
-> intent with observed implementation, flows, diagnostics, and coverage. See
-> [System workspace](system-workspace.md) and the
-> [Architecture intelligence roadmap](../roadmap/architecture-intelligence.md).
+Status: version 1 implemented; behavior-derived conceptual architecture planned.
 
 ## Purpose
 
-The workbench is the local interactive surface for understanding a repository,
-planning, mapping, and refactoring a specification. It is where a human
-navigates the System graph, resolves uncertainty, simulates a change, and
-reviews a proposal.
+The workbench is a local read-only surface over generated analysis. It is not a
+spec authoring or approval tool.
 
-The System view is read-only over approved intent and generated evidence. The
-workbench may edit a proposal, but never approved content and never
-`spec/spec.lock`.
+It reads:
+
+- `.spec/analysis.sqlite`;
+- `spec/generated/spec.gen.json`;
+- `spec/generated/analysis.gen.json`;
+- Git metadata for staleness.
+
+It does not read:
+
+- `spec/architecture/model.c4`;
+- `spec/requirements/`;
+- `spec/formal/`;
+- `spec/contracts/`;
+- `spec/spec.lock`;
+- proposal branches.
 
 ## Interaction model
 
 - React, Vite, and TypeScript in `src/workbench/web/`.
-- A Bun server in `src/workbench/server.ts` serves the built application and the
-  API.
-- `bun run build:workbench` produces static assets. Generated assets are ignored
-  and never hand-edited.
-- Localhost binding by default. Non-local access requires explicit
-  configuration.
-- Terminal equivalents exist for environments without a browser. `spec next`
-  shows the current guidance; `spec start`, `spec map --review`,
-  `spec change`, and `spec refactor` open guided sessions when stdin and
-  stdout are TTYs. `--no-interactive` restores one-shot output, and `--json`,
-  `--action`, and `--op` never prompt.
+- A Bun server in `src/workbench/server.ts` serves built assets and the API.
+- `bun run build:workbench` produces static assets.
+- Localhost binding by default.
+- Non-local access requires an explicit allowed origin.
+- No mutating proposal or approval route.
 
 ## Write boundary
 
-| Context           | Allowed                                         |
-| ----------------- | ----------------------------------------------- |
-| Approved baseline | Read-only                                       |
-| Proposal branch   | Read and write draft sources through operations |
-| `spec/spec.lock`  | Never written by the workbench                  |
-| Approval          | Never; human-only CLI action                    |
-| Evidence          | Read-only; regeneration is a CLI action         |
-
-Every write is a typed proposal operation. The workbench does not edit arbitrary
-files. A proposal records its base commit, baseline, and author.
-
-## Terminal session behavior
-
-- Queues and menus use visible names. Opaque refs and technical identity appear
-  only with `--technical`.
-- EOF and Ctrl-C exit the session and leave the proposal open.
-- Ambiguous names show contextual choices and re-prompt.
-- Every write uses the same typed proposal operations as the workbench.
-- The session never writes `spec/spec.lock` and has no approval step.
+| Context               | Allowed                        |
+| --------------------- | ------------------------------ |
+| Generated spec        | Read-only                      |
+| Generated analysis    | Read-only                      |
+| Snapshot database     | Analysis job writes only       |
+| Finding annotation    | Local `.spec/` review metadata |
+| `spec-framework.json` | Read-only                      |
+| `spec/generated/`     | Never written by the workbench |
 
 ## Views
 
 ### System
 
-The default workspace. It joins approved intent with the generated
-implementation graph, mapping coverage, flows, and findings. Drill-down goes
-from system to subsystem or component to file to function or class. The
-inspector shows role, implementation, provenance, confidence, and findings. See
-[System workspace](system-workspace.md).
+Default. Behavior-derived conceptual architecture with drill-down from system
+to subsystem/component to interfaces, data stores, external systems, and
+implementation mappings. The inspector shows the deterministic role summary,
+evidence, implementation, relations, data access, tests, flows, findings, and
+confidence.
 
-### Architecture (transitional)
+### Flows
 
-The read-only system map. It uses a force-directed graph with expansion:
-collapsing everything leaves only the root system, expanding a node reveals its
-children and direct relation neighbors, and physics spreads nearby nodes to make
-room. Click selects and opens the inspector; double-click expands or collapses.
-The view supports search, expand all, collapse all, wheel zoom, drag panning, a
-collapsible inspector, and a collapsible text node list. Element kinds and
-relation labels come from the curated project model. Expanding components reveals files;
-expanding files reveals exported symbols, with a toggle for internal top-level
-declarations. The inspector shows descriptions, responsibilities, boundaries,
-owners, technology, relations, code paths, source files, and symbols. It never
-edits or approves anything and does not require a proposal. The canvas takes most
-of the viewport; identity and hashes stay behind technical details.
+Entry points, ordered steps, branches where visible, sources, sinks, unknowns,
+and limits.
 
-### Code map (transitional)
+### Findings
 
-The read-only repository graph. It uses the same force-directed expansion as
-Architecture: collapsing everything leaves the root system, expanding reveals
-subsystems, files, and direct dependency neighbors. Local import dependencies are
-aggregated into subsystem dependencies. Labels are path-based unless a package
-name is available; root package components, `bin`, and `scripts` are excluded.
-The view supports search, expand all, collapse all, wheel zoom, drag panning,
-node details, and a collapsible text node list. It is code-derived evidence, not
-the curated architecture, and does not require a proposal.
+Deterministic diagnostics separated from AI-assisted hypotheses. Humans can
+locally confirm, reject, or mark findings as needing investigation.
 
-### Overview
+### Evolution
 
-Systems, capabilities, requirements, checks, blockers, approved scope, and open
-questions, grouped by human name.
+Comparison of two generated snapshots by commit.
 
-### Map
+### Generated documents
 
-Code-derived areas, dependencies, entry points, data stores, external
-dependencies, and tests. Confidence appears as plain-language labels:
+Rendered generated spec sections and technical metadata. No editing.
 
-- “Clear from code”
-- “Inferred — confirm or correct”
-- “Uncertain boundary — choose”
-- “Needs human input”
+## API
 
-The curation queue supports accept, reject, rename, merge, split, owner,
-responsibility, boundary, and open-question actions.
+The workbench uses `/api/v1`. Legacy proposal, mapping, curated architecture,
+and repository graph endpoints are retired.
 
-### Compose
+## Terminal equivalents
 
-The scratch-mode view. Shows the proposed feature slice, missing decisions,
-requirements, acceptance criteria, verification path, contracts, and expected
-evidence. The editor adds requirement and acceptance-criterion drafts, links an
-acceptance criterion to its requirement, revises or retires a draft, and records
-decisions and open questions. New identifiers are generated from the visible
-name. Other layer links are selected by visible name when matching items exist.
+Terminal interaction for proposals and curation is retired. CLI commands run
+analysis, query generated output, compare snapshots, and produce bundles.
 
-### Rework
+## Failure states
 
-The refactor-mode view. Shows before and after states, typed operations,
-affected named requirements, contracts, checks, evidence, and approvals. The
-editor applies `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
-`move`, `change-contract`, `record-decision`, and `record-open-question`.
-New record and component IDs are generated from visible names; the server
-resolves names and refs to identity.
+- No snapshot: show “Run spec analyze”.
+- Stale snapshot: show commit mismatch.
+- Incompatible schema: refuse to render.
+- Analysis failure: show the job error and last successful snapshot.
 
-### Review
+## Acceptance
 
-The proposal review surface. Human summary first, diff second, technical
-identity in the details drawer. Lists invalidated approvals and blocking open
-questions.
-
-### Technical details
-
-Reveals IDs, status values, confidence, provenance, hashes, diagnostic codes,
-source paths, proposal identifiers, and adapter names. Available on every view
-and never enabled by default.
-
-## API contract
-
-The API mirrors the CLI JSON contract:
-
-| Endpoint                       | Method | Purpose                              |
-| ------------------------------ | ------ | ------------------------------------ |
-| `/api/graph`                   | GET    | Display graph, filtered by focus     |
-| `/api/architecture-graph`      | GET    | Read-only curated architecture graph |
-| `/api/repo-graph`              | GET    | Read-only repository discovery graph |
-| `/api/context`                 | GET    | Scoped context pack                  |
-| `/api/impact`                  | GET    | Impact and invalidated evidence      |
-| `/api/diff`                    | GET    | Proposal versus baseline             |
-| `/api/check`                   | POST   | Run validation and return findings   |
-| `/api/proposals/:id/ops`       | POST   | Apply typed proposal operations      |
-| `/api/proposals/:id/technical` | GET    | Full identity and hashes             |
-
-The API does not expose approval, `spec.lock` writes, or arbitrary filesystem
-access. Requests are same-origin and carry a CSRF token.
-
-## Mode behavior
-
-| Mode      | Workbench focus                                            |
-| --------- | ---------------------------------------------------------- |
-| Read-only | Architecture view, code map, overview, blockers            |
-| Scratch   | Compose view, decision queue, feature-slice coverage       |
-| Mapping   | Map view, confidence queue, approved-scope selection       |
-| Refac     | Rework view, before/after simulation, impact and approvals |
-
-Switching mode changes the default view and guardrails. It does not create a
-second graph or proposal.
-
-## Security
-
-- Bind to localhost by default.
-- Require explicit host and origin configuration for non-local access.
-- Same-origin and CSRF checks on every mutating request.
-- Workspace-relative path resolution only.
-- No secrets, approval tokens, or private keys in responses.
-- No mutation of approved sources or `spec/spec.lock`.
-- Log the model commit, dirty state, tool versions, and proposal ID for every
-  response.
-
-## Accessibility
-
-- Every control is keyboard reachable.
-- Focus moves predictably when opening a panel, diff, or simulation.
-- Status is not conveyed by colour alone.
-- Graph summaries have text equivalents.
-- Names, not IDs, are the accessible labels.
-
-## Failure behavior
-
-- Invalid model: show findings, not a blank success page.
-- Dirty tree: mark the view as local preview and block approval.
-- Stale proposal: show the base commit and the mismatch.
-- Missing tool: show the affected layer as blocked.
-- No proposal: enter read-only mode and offer to create one.
-- Approval attempted: reject and point to the CLI.
-
-## Non-goals
-
-- Approving or rejecting elements.
-- Editing approved content in place.
-- A hosted or multi-user service.
-- Replacing the terminal for scripted work.
-- Replacing the audit bundle.
-- Hiding gaps behind visual polish.
-- A second source of truth.
-
-## Acceptance criteria
-
-- A human can complete mapping curation without seeing an internal ID.
-- A refactor preview shows named impact and invalidated approvals before any
-  code changes.
-- Mutating requests fail when they target the approved baseline or `spec.lock`.
-- The same proposal is visible from the terminal and the chat workflow.
-- “Technical details” reveals the complete identity record.
-- Accessibility checks pass for keyboard flow, labels, focus, and status text.
+- No curated spec reader is reachable from the workbench.
+- No approval or proposal route exists.
+- System, Flows, Findings, Evolution, and generated documents work from one
+  snapshot.
+- Generated output cannot be edited through the API.

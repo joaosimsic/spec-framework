@@ -4,7 +4,7 @@ import { attempt, attemptAsync, type Result, ok, fail } from "../core/result"
 import { errorResponse, WorkbenchRouter } from "./router"
 import { WorkbenchFailureFactory } from "./failure"
 import { WorkbenchSecurity } from "./security"
-import { WorkbenchService, type WorkbenchServiceOptions } from "./service"
+import { AnalysisRuntime } from "./analysis-runtime"
 import { WorkbenchStaticAssets } from "./static-assets"
 
 export interface WorkbenchLogger {
@@ -18,8 +18,7 @@ export interface WorkbenchServerOptions {
   allowedOrigins?: string[]
   assetDirectory?: string
   token?: string
-  service?: WorkbenchService
-  serviceOptions?: WorkbenchServiceOptions
+  analysisRoots?: string[]
   logger?: WorkbenchLogger
 }
 
@@ -39,16 +38,14 @@ export class WorkbenchServer {
   private readonly port: number
   private readonly token: string
   private readonly logger: WorkbenchLogger
-  private readonly service: WorkbenchService
   private readonly assetDirectory: string
+  private analysis: AnalysisRuntime | null = null
 
   constructor(private readonly options: WorkbenchServerOptions) {
     this.host = options.host ?? "127.0.0.1"
     this.port = options.port ?? 4173
     this.token = options.token ?? crypto.randomUUID()
     this.logger = options.logger ?? console
-    this.service =
-      options.service ?? new WorkbenchService(options.target, options.serviceOptions ?? {})
     this.assetDirectory = options.assetDirectory ?? join(import.meta.dir, "web", "dist")
   }
 
@@ -59,6 +56,14 @@ export class WorkbenchServer {
 
     this.assets = new WorkbenchStaticAssets(this.assetDirectory)
     this.assetReady = await this.assets.ready()
+
+    const [analysis, analysisError] = await AnalysisRuntime.create(this.options.target, {
+      analysisRoots: this.options.analysisRoots,
+    })
+    if (analysisError !== null || analysis === null) {
+      return fail(analysisError ?? "analysis runtime unavailable")
+    }
+    this.analysis = analysis
 
     const [server, serverError] = attempt(() =>
       Bun.serve({
@@ -80,9 +85,9 @@ export class WorkbenchServer {
       token: this.token,
     })
     this.router = new WorkbenchRouter({
-      service: this.service,
       security: this.security,
       assetReady: this.assetReady,
+      analysis,
     })
 
     return ok({
@@ -95,6 +100,8 @@ export class WorkbenchServer {
   close(): void {
     this.server?.stop(true)
     this.server = null
+    this.analysis?.close()
+    this.analysis = null
   }
 
   private async handle(request: Request): Promise<Response> {

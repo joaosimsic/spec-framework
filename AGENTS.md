@@ -17,26 +17,29 @@ design, not a compatibility contract.
 - Complete migrations. Do not leave two architectures or half-finished paths.
 - Replace obsolete tests, fixtures, and documentation in the same change.
 - Search references before deleting. Use `rg`, the type checker, and the tests.
-- Never delete approved spec content, evidence, or `spec/spec.lock` outside the
-  proposal and approval workflow.
 - Record product or module-boundary changes as a decision record.
 - Run `bun run format`, `bun run lint`, `bun run typecheck`, and `bun test`
   after refactoring.
 
 ## Direction
 
-Decision record [0012](docs/design-decisions/0012-architecture-intelligence.md)
-is the product direction. Decision record
-[0015](docs/design-decisions/0015-retire-legacy-roadmap-and-explorer.md) retires
-the Explorer and the old Phase 2/3 roadmap commitments.
+Decision records [0016](docs/design-decisions/0016-generated-spec-product.md) and
+[0017](docs/design-decisions/0017-behavior-derived-architecture.md) are the
+product direction. They supersede the curated-spec and approval model.
 
-- Documentation leads with architecture intelligence, not the old intent-only
-  roadmap.
-- The workbench System view is the primary human surface.
-- Intent, implementation, and mapping stay distinct. Implementation evidence is
-  generated, never approved intent.
-- AI is evidence-bound and never approves or passes a check.
-- Do not reintroduce a retired surface or phase without a new decision record.
+- The spec product is generated from repository evidence.
+- `spec/` is generated output. Input configuration lives in
+  `spec-framework.json` at the repository root.
+- The workbench reads generated output only. It never reads curated LikeC4,
+  StrictDoc, Quint, contract sidecars, proposals, or `spec.lock`.
+- Generated records are evidence, never human-approved intent.
+- Conceptual architecture is derived from behavior, interfaces, and data flow.
+  Directories and file names are implementation evidence only.
+- The System view is the primary human surface.
+- AI is evidence-bound and never approves, rejects, passes, or fails a check.
+- Curated intent, proposals, mapping curation, and hash-locked approval are
+  retired. Do not reintroduce them without a new decision record.
+- Do not hand-edit `spec/generated/`.
 
 ## Formatting rule
 
@@ -49,8 +52,8 @@ bun run format:check
 
 - Use Prettier, do not hand-format.
 - `bun run format` runs `prettier --write .`.
-- Generated architecture output is ignored by `.prettierignore`; regenerate it
-  with `bun run spec architecture generate` when needed.
+- Generated spec output is ignored by `.prettierignore`; regenerate it with
+  `bun run bin/spec.ts analyze` when needed.
 - Workbench asset changes require `bun run build:workbench` before verifying the
   served UI.
 - Fix formatting with `bun run format`, then re-run `bun run lint`,

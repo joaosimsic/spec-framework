@@ -1,0 +1,10 @@
+{
+  "name": "typescript-basic",
+  "private": true,
+  "bin": {
+    "basic": "./bin/cli.ts"
+  },
+  "exports": {
+    ".": "./src/service.ts"
+  }
+}

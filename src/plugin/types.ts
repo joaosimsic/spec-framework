@@ -1,15 +1,4 @@
-import type { DisplayEntry } from "../model"
-import type { ProposalOperation } from "../change"
-import type {
-  WorkbenchChangeView,
-  WorkbenchCheckView,
-  WorkbenchContextView,
-  WorkbenchDiffView,
-  WorkbenchImpactView,
-  WorkbenchNamedItem,
-  WorkbenchProposalSummary,
-  WorkbenchTechnicalView,
-} from "../workbench/types"
+import type { GeneratedElement, GeneratedSpec } from "../spec"
 
 export const PLUGIN_CONTRACT_VERSION = 1
 
@@ -26,53 +15,40 @@ export interface PluginFailure {
 
 export interface PluginStatusView {
   contract: number
-  mode: string
+  project_id: string | null
+  snapshot_id: string | null
   commit: string
   dirty: boolean
-  proposal: WorkbenchProposalSummary | null
-  approved: WorkbenchNamedItem[]
-  blockers: string[]
-  openQuestions: WorkbenchNamedItem[]
-  prompts: string[]
-  next: string[]
+  architecture: number
+  flows: number
+  findings: number
+  unknowns: number
 }
 
 export interface PluginQueryView {
+  snapshot_id: string
   commit: string
-  dirty: boolean
-  entries: DisplayEntry[]
+  elements: GeneratedElement[]
 }
 
-export interface PluginNextView {
-  prompts: string[]
-  next: string[]
-  blockers: string[]
-  openQuestions: WorkbenchNamedItem[]
+export interface PluginContextView {
+  status: PluginStatusView
+  spec: GeneratedSpec | null
 }
 
-export interface PluginDecisionRequest {
-  kind: "decision" | "open-question"
-  text: string
-  target?: string
-  owner?: string
-  technical?: boolean
+export interface PluginCheckView {
+  errors: number
+  warnings: number
+  findings: string[]
 }
 
-export type PluginContextView = WorkbenchContextView
-export type PluginChangeView = WorkbenchChangeView
-export type PluginCheckView = WorkbenchCheckView
-export type PluginDiffView = WorkbenchDiffView
-export type PluginImpactView = WorkbenchImpactView
-export type PluginTechnicalView = WorkbenchTechnicalView
-
-export interface PluginProposalRequest {
-  operations: ProposalOperation[]
-  simulate?: boolean
+export interface PluginAnalyzeView {
+  job_id: string
+  state: string
+  project_id: string
 }
 
 export interface PluginWorkbenchView {
   url: string
   view: string
 }
-
-export type { WorkbenchNamedItem, ProposalOperation }

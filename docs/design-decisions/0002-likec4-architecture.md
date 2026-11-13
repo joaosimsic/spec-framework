@@ -1,5 +1,6 @@
 # 0002 — LikeC4 for architecture
 
+Status: superseded by [0016](0016-generated-spec-product.md). LikeC4 is an optional export.
 **Status:** accepted
 **Date:** 2026-11-10
 

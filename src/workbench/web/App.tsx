@@ -1,35 +1,28 @@
 import { useEffect, useRef, useState } from "react"
-import { describeFailure, getGraph, getSession, setCsrfToken } from "./api"
-import { TechnicalDetails } from "./components/TechnicalDetails"
+import { describeFailure, getSession, setCsrfToken } from "./api"
 import { WorkbenchErrorBoundary } from "./components/WorkbenchErrorBoundary"
-import { ArchitectureView } from "./views/ArchitectureView"
-import { CodeMapView } from "./views/CodeMapView"
-import { ComposeView } from "./views/ComposeView"
-import { MapView } from "./views/MapView"
-import { OverviewView } from "./views/OverviewView"
-import { ReviewView } from "./views/ReviewView"
-import { ReworkView } from "./views/ReworkView"
-import type { WorkbenchGraphView, WorkbenchSession } from "../types"
+import { EvolutionView } from "./views/EvolutionView"
+import { FindingsView } from "./views/FindingsView"
+import { FlowsView } from "./views/FlowsView"
+import { GeneratedDocumentsView } from "./views/GeneratedDocumentsView"
+import { SystemView } from "./views/SystemView"
+import type { WorkbenchSession } from "../types"
 
-type ViewName = "overview" | "architecture" | "code" | "map" | "compose" | "rework" | "review"
+type ViewName = "system" | "flows" | "findings" | "evolution" | "documents"
 
 const VIEW_LABELS: Record<ViewName, string> = {
-  overview: "Overview",
-  architecture: "Architecture",
-  code: "Code map",
-  map: "Map",
-  compose: "Compose",
-  rework: "Rework",
-  review: "Review",
+  system: "System",
+  flows: "Flows",
+  findings: "Findings",
+  evolution: "Evolution",
+  documents: "Generated documents",
 }
 
 export function App() {
   const [session, setSession] = useState<WorkbenchSession | null>(null)
-  const [graph, setGraph] = useState<WorkbenchGraphView | null>(null)
-  const [view, setView] = useState<ViewName>("overview")
+  const [view, setView] = useState<ViewName>("system")
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState("")
-  const [technicalOpen, setTechnicalOpen] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -46,36 +39,12 @@ export function App() {
       setError(describeFailure(sessionError))
       return
     }
-
     setCsrfToken(loadedSession.csrf_token)
-    const [loadedGraph, graphError] = await getGraph()
-    if (graphError !== null || loadedGraph === null) {
-      setError(describeFailure(graphError))
-      return
-    }
-
     setSession(loadedSession)
-    setGraph(loadedGraph)
-    setView(initialView(loadedSession))
+    setError(null)
   }
 
-  async function refresh(): Promise<void> {
-    const [loadedGraph, graphError] = await getGraph()
-    if (graphError !== null || loadedGraph === null) {
-      setError(describeFailure(graphError))
-      return
-    }
-
-    setGraph(loadedGraph)
-  }
-
-  const views = session === null ? [] : availableViews(session)
-  const proposalRef = session?.proposal?.ref ?? null
-  const graphView = view === "architecture" || view === "code"
-  const stale =
-    session?.proposal !== null &&
-    session?.proposal !== undefined &&
-    session.proposal.baseCommit !== session.commit
+  const views = session === null ? [] : session.views.filter(isViewName)
 
   return (
     <>
@@ -85,35 +54,24 @@ export function App() {
       <header className="app-header">
         <div>
           <p className="eyebrow">Spec framework</p>
-          <h1>Workbench</h1>
+          <h1>Generated workbench</h1>
         </div>
         {session !== null && (
           <div className="session-summary" aria-label="Session status">
-            <span className="pill">{session.mode}</span>
-            {session.dirty && <span className="pill pill-warn">Local preview</span>}
-            {session.proposal !== null && (
+            <span className="pill">generated</span>
+            {session.snapshot_id !== null && (
               <span className="proposal-line">
-                {session.proposal.label}
-                <small>
-                  {session.proposal.state} - {session.proposal.author}
-                </small>
+                {session.snapshot_id.slice(0, 13)}
+                <small>{session.commit.slice(0, 8)}</small>
               </span>
             )}
+            {session.dirty && <span className="pill pill-warn">Dirty workspace</span>}
           </div>
         )}
-        <div className="header-actions">
-          <button
-            type="button"
-            onClick={() => setTechnicalOpen(true)}
-            disabled={proposalRef === null}
-          >
-            Technical details
-          </button>
-        </div>
       </header>
 
-      {session !== null && graph !== null && (
-        <div className={graphView ? "shell shell-graph" : "shell"}>
+      {session !== null && (
+        <div className="shell shell-graph">
           <nav aria-label="Views" className="side-nav">
             {views.map((item) => (
               <button
@@ -128,12 +86,7 @@ export function App() {
             ))}
           </nav>
 
-          <main
-            id="main"
-            ref={mainRef}
-            tabIndex={-1}
-            className={graphView ? "graph-main" : undefined}
-          >
+          <main id="main" ref={mainRef} tabIndex={-1} className="graph-main">
             <div aria-live="polite" aria-atomic="true" className="sr-only">
               {status}
             </div>
@@ -145,29 +98,24 @@ export function App() {
                 </button>
               </div>
             )}
-            {stale && session.proposal !== null && (
+            {session.snapshot_id === null && (
               <div className="panel notice-warn" role="status">
-                <p>
-                  This proposal started from commit {session.proposal.baseCommit}, but the workspace
-                  is at {session.commit}. Reload or inspect the branch before editing.
-                </p>
+                <p>No generated snapshot is available. Run `spec analyze`.</p>
               </div>
             )}
             <WorkbenchErrorBoundary key={view}>
               <ViewContent
                 view={view}
-                graph={graph}
                 session={session}
                 onStatus={setStatus}
                 onError={(message) => setError(message)}
-                onRefresh={refresh}
               />
             </WorkbenchErrorBoundary>
           </main>
         </div>
       )}
 
-      {session === null && error === null && <main id="main">Loading the spec graph.</main>}
+      {session === null && error === null && <main id="main">Loading generated output.</main>}
       {session === null && error !== null && (
         <main id="main">
           <div role="alert" className="error-panel">
@@ -178,10 +126,6 @@ export function App() {
           </div>
         </main>
       )}
-
-      {technicalOpen && proposalRef !== null && (
-        <TechnicalDetails proposalRef={proposalRef} onClose={() => setTechnicalOpen(false)} />
-      )}
     </>
   )
 }
@@ -191,49 +135,22 @@ function ViewContent({
   ...props
 }: {
   view: ViewName
-  graph: WorkbenchGraphView
   session: WorkbenchSession
   onStatus(message: string): void
   onError(message: string): void
-  onRefresh(): Promise<void>
 }) {
   switch (view) {
-    case "architecture":
-      return <ArchitectureView {...props} />
-    case "code":
-      return <CodeMapView {...props} />
-    case "map":
-      return <MapView {...props} />
-    case "compose":
-      return <ComposeView {...props} />
-    case "rework":
-      return <ReworkView {...props} />
-    case "review":
-      return <ReviewView {...props} />
-    case "overview":
-      return <OverviewView {...props} />
+    case "system":
+      return <SystemView {...props} />
+    case "flows":
+      return <FlowsView {...props} />
+    case "findings":
+      return <FindingsView {...props} />
+    case "evolution":
+      return <EvolutionView {...props} />
+    case "documents":
+      return <GeneratedDocumentsView {...props} />
   }
-}
-
-function availableViews(session: WorkbenchSession): ViewName[] {
-  const views = session.views.filter(isViewName)
-  const fallbacks: ViewName[] =
-    session.proposal === null
-      ? ["architecture", "code", "overview"]
-      : ["architecture", "code", "overview", "review"]
-  for (const fallback of fallbacks) {
-    if (!views.includes(fallback)) views.push(fallback)
-  }
-
-  return [...new Set(views)]
-}
-
-function initialView(session: WorkbenchSession): ViewName {
-  if (session.mode === "mapping") return "map"
-  if (session.mode === "scratch") return "compose"
-  if (session.mode === "refactor") return "rework"
-
-  return "architecture"
 }
 
 function isViewName(value: string): value is ViewName {

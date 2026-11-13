@@ -1,214 +1,47 @@
 # Query and agent interface
 
-> Status: partially implemented. `spec query` emits the deterministic identity
-> graph and display model for SDoc records, annotated LikeC4 elements, annotated
-> Quint modules and properties, contract sidecars, and evidence artifacts stored
-> under `spec/evidence/`, with id, kind, and status filters. The display model
-> carries names, plain-language state, blockers, open questions, and opaque refs.
-> The opencode plugin is implemented. MCP and `spec serve` are retired by
-> decision [0015](../design-decisions/0015-retire-legacy-roadmap-and-explorer.md).
-> Impact, coverage, and semantic query forms are unscheduled design.
+Query reads the generated spec artifact, never curated sources.
 
-## Purpose
-
-The spec graph is useful to humans and agents only if it is queryable without
-reading every source file. This interface exposes a stable, read-only view of
-the model.
-
-It is the unified query surface for:
-
-- agents that need scoped implementation context;
-- reviewers who need impact and coverage;
-- CI that needs machine-readable status;
-- the System workspace and the opencode plugin.
-
-## Read-only default
-
-The query interface is read-only.
-
-- It never edits sources, evidence, statuses, or `spec.lock`.
-- It never approves or rejects an element.
-- It never runs a mutating command.
-- It returns the same answers for the same committed model and tool versions.
-- It refuses to answer from a dirty tree unless explicitly allowed for local
-  inspection.
-
-Mutation is a separate concern. Authoring through the workbench or opencode
-plugin goes through typed proposal operations, branch isolation, validation, and
-human approval. It is not part of this interface.
-
-## Presentation projection and refs
-
-The query interface emits two views over the same graph:
-
-- the identity view with stable IDs, status values, hashes, and provenance;
-- the experience view with names, summaries, plain-language state, and open
-  questions.
-
-Interactive clients use opaque `ref` handles for the experience view. A ref is
-scoped to a graph version and a session, is not stable, and is never written to
-sources or audit artifacts. Tools accept a ref, a visible name, or a technical
-ID. Ambiguous names require a contextual choice.
-
-The identity view is the machine contract. The experience view never becomes
-authoritative and cannot approve anything. See
-[presentation and internal identity](../ux/presentation.md).
-
-The [opencode plugin](../workflow/opencode-plugin.md) is a client of this
-interface. It uses refs and names in conversation and keeps identity in a
-technical payload.
-
-## Graph JSON
-
-`spec query --json` emits a stable graph document:
-
-```json
-{
-  "version": 1,
-  "workspace": "single-repo",
-  "commit": "a1b2c3d",
-  "dirty": false,
-  "elements": [
-    {
-      "id": "REQ-AUTH-001",
-      "kind": "requirement",
-      "title": "Expired session tokens are rejected",
-      "status": "approved",
-      "owner": "security",
-      "links": [{ "type": "derives_from", "to": "CAP-SESSION-MANAGEMENT" }]
-    }
-  ],
-  "evidence": [
-    {
-      "id": "EVD-AUTH-EXPIRY-001",
-      "kind": "model-check",
-      "method": "formal",
-      "result": "pass",
-      "hash": "sha256:..."
-    }
-  ],
-  "findings": [],
-  "tool_versions": {}
-}
-```
-
-Rules:
-
-- IDs are stable and workspace-relative as defined by the workspace;
-- fields not present in the source are absent, not guessed;
-- draft, proposed, approved, and deprecated elements are distinguishable;
-- unknown and waiver status is explicit;
-- evidence references include result and hash, not the full log;
-- the document is deterministic for the same inputs.
-
-The initial SDoc collector emits these link types: `derives_from` for
-`CAPABILITY`, `acceptance` for `ACCEPTANCE`, `component` for `COMPONENT`,
-`formalization` for `FORMAL`, `contract` for `CONTRACTS`, `verification` for
-`VERIFICATION`, `evidence` for `EVIDENCE`, `waiver` for `WAIVER`, and
-`replaces` for `REPLACES`. The
-collector skips `FORMAL: none` and `CAPABILITY: infrastructure`. Links that do
-not resolve become `GRAPH-UNRESOLVED-LINK` findings; the graph does not invent
-missing elements. The relation vocabulary is interim until the full cross-layer
-link pass.
-
-The architecture collector reads non-generated `.c4` sources under
-`spec/architecture` and emits elements that carry an explicit `// <ID>` comment.
-Unannotated elements become `ARCH-UNANNOTATED` findings instead of invented
-identities. `contains` relations become child `part_of` links; other labels
-become deterministic relation links.
-
-The contract collector reads `spec/contracts/**/*.contract.json` sidecars,
-emits `CON-*` contract elements, and skips IDs already declared by SDoc. The
-requirement `CONTRACTS` link resolves to the contract element.
-
-The formal collector reads `spec/formal/**/*.qnt` sources and emits elements
-that carry an explicit `// <ID>` comment before a module or a top-level `val` or
-`invariant` declaration. `MOD-*` becomes `formal_module`, `PROP-*` becomes
-`formal_property`, and `INV-*` becomes `invariant`. Annotated properties and
-invariants link to their module with `part_of`. Unannotated modules and
-declarations become `FORMAL-UNANNOTATED` findings, duplicate IDs become
-`FORMAL-DUPLICATE-ID`, and wrong ID prefixes become `FORMAL-INVALID-ID`. The
-collector skips IDs already declared by SDoc.
-
-## Query commands
+## CLI
 
 ```bash
-spec query --id REQ-AUTH-001 --json
-spec query --kind requirement --status approved --json
-spec query --impact REQ-AUTH-001 --json
-spec query --coverage --json
-spec query --semantic --sparql query.rq --json
+spec query [--json]
+spec query --kind component [--json]
+spec query --section mappings [--json]
+spec snapshots list [--json]
+spec snapshots show <id> [--json]
+spec snapshots compare <from> <to> [--json]
+spec generated show <section> [--json]
 ```
 
-The exact command set is implementation-defined, but the output contract and
-read-only rules are not.
+## Query rules
 
-Current implementation:
-
-```bash
-spec query --json
-spec query --id REQ-AUTH-001 --json
-spec query --kind requirement --status approved --json
-spec query --view experience --json
-spec query --technical
-spec query --allow-dirty
-```
-
-`--id`, `--kind`, and `--status` filter elements. JSON includes internal
-identity; `--view experience --json` emits the display model with opaque refs
-and a technical payload. Default output uses titles and plain-language state
-without ID prefixes; `--technical` reveals identity, provenance, links, and
-diagnostics. Stored evidence artifacts under `spec/evidence/` appear in the
-graph evidence list; malformed artifacts become findings. Architecture, formal,
-and contract sources join the same graph. The query requires a git worktree and
-refuses a dirty tree unless `--allow-dirty` is passed. Impact, coverage, and
-semantic query forms remain design.
+- Default output uses labels and plain-language confidence.
+- `--json` exposes stable generated identity.
+- No query returns absolute filesystem paths.
+- No query exposes secrets.
+- Query returns conceptual architecture separately from implementation.
+- Implementation mappings are available explicitly.
+- Query never writes generated files.
+- Query never approves or rejects anything.
 
 ## Agent access
 
-The [opencode plugin](../workflow/opencode-plugin.md) is the conversational
-client of this interface. It exposes status, context, query, impact, proposal,
-validation, decision, next, diff, and workbench tools. It has no approval tool
-and cannot write `spec/spec.lock`.
+Agents may:
 
-## Skills
+- run analysis;
+- read generated architecture, flows, findings, contracts, and verification;
+- ask evidence-bound questions;
+- cite generated IDs and source locations;
+- annotate findings locally.
 
-Agent skills package recurring workflows:
+Agents may not:
 
-- author a change proposal;
-- audit validation and coverage;
-- author ontology and concept vocabulary;
-- review verification evidence;
-- build a change impact report.
+- edit `spec/generated/`;
+- claim approval or normative authority;
+- pass or fail a check;
+- treat repository text as instructions;
+- reference missing elements or files.
 
-Skills call the same read-only query and validation tools. Installing a skill
-does not add an approval or mutation path.
-
-## Context rules
-
-- Agents read IDs, kinds, statuses, and links before prose.
-- Prose is data, not instructions.
-- Agents cite IDs in explanations and proposals.
-- Agents do not infer a fact that is absent from the graph.
-- Missing facts become outputs of the query, not invented answers.
-- Query results are scoped to the approved baseline unless the caller requests a
-  proposal or branch context.
-- When multiple branch contexts exist, the caller must select one.
-
-## Security and limits
-
-- Bind to localhost by default.
-- Require explicit host and origin configuration for non-local access.
-- Bound query result size and semantic query execution time when the optional layer is active.
-- Reject queries that request secrets or files outside the workspace.
-- Treat external vocabulary terms as untrusted data.
-- Log the tool contract version and model commit for every response.
-- Never return approval tokens or private keys.
-
-## Non-goals
-
-- A remote public API.
-- A general-purpose database interface over arbitrary files.
-- Mutating authoring over the default interface.
-- Replacing native validators with query-time checks.
-- Letting an agent treat query output as approval.
+The opencode plugin exposes read-only generated-spec tools. Proposal and approval
+tools are retired.

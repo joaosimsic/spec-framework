@@ -1,5 +1,6 @@
 # 0003 — StrictDoc for requirements and audit
 
+Status: superseded by [0016](0016-generated-spec-product.md). StrictDoc is an optional export.
 **Status:** accepted
 **Date:** 2026-11-10
 

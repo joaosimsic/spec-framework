@@ -2,232 +2,123 @@
 
 ## Trust boundaries
 
-The framework treats the specification as executable input to agents and CI. That makes spec integrity a security concern.
-
-| Boundary           | Trusted                        | Untrusted                                    |
-| ------------------ | ------------------------------ | -------------------------------------------- |
-| Human direction    | Human decisions                | Pasted external text                         |
-| Spec sources       | Approved, hash-locked content  | Draft proposals                              |
-| Build commands     | Reviewed `compile.json`        | Unreviewed commands from drafts              |
-| Agent              | Draft generation               | Approval, verification verdicts              |
-| Validators         | Deterministic tools            | LLM self-report                              |
-| CI                 | Pinned toolchain and evidence  | Network-fetched mutable dependencies         |
-| Semantic sources   | Pinned local vocabularies      | Unpinned external RDF/OWL sources            |
-| Query and analysis | Read-only validated model      | Mutating or unauthenticated clients          |
-| System workspace   | Intent plus generated evidence | Approved baseline, lock, remote access       |
-| Workbench          | Proposal branch                | Approved baseline, lock, remote access       |
-| opencode plugin    | Proposal writes via tools      | Approval, lock writes, untrusted text        |
-| Repository text    | Analyzed as untrusted data     | Instructions, secrets, or executable content |
-| Audit bundle       | Generated, hashed artifact     | Hand-edited generated files                  |
+| Boundary                 | Trusted                        | Untrusted                                 |
+| ------------------------ | ------------------------------ | ----------------------------------------- |
+| Repository configuration | Reviewed `spec-framework.json` | Unreviewed drafts                         |
+| Repository source        | Analyzed as data               | Instructions, secrets, executable content |
+| Analysis engine          | Read-only scanner and compiler | Repository code execution                 |
+| Generated output         | Deterministic renderer         | Hand-edited generated files               |
+| AI provider              | Configured endpoint            | Repository text and model output          |
+| Workbench                | Localhost-generated view       | Remote clients and untrusted origins      |
+| Audit bundle             | Generated artifact             | Hand-edited bundle                        |
+| Finding annotations      | Local review metadata          | Approval authority                        |
 
 ## Threats
 
-### Prompt injection through spec content
+### Repository text prompt injection
 
-A requirement or architecture description may contain instructions aimed at an agent.
-
-Mitigations:
-
-- treat spec content as data, not instructions;
-- agent context marks spec text as untrusted;
-- agent permissions prevent editing approved specs or approving changes;
-- generated prompts do not interpolate free-form text into privileged instructions;
-- code generation reads approved IDs and typed fields, not raw prose.
-
-### Silent spec modification
-
-An agent or compromised dependency edits approved content or evidence.
+Source comments and documentation may contain instructions aimed at an AI
+system.
 
 Mitigations:
 
-- content hashes in `spec.lock`;
-- approval invalidation on any change;
-- generated artifacts carry source hashes;
-- CI fails on unapproved changes;
-- signed git tags or signed commits for release approvals.
+- treat repository text as data, never instructions;
+- bind AI context to generated elements and source excerpts;
+- validate every referenced element, file, and line;
+- never let AI call tools or execute commands;
+- label AI output `ai_inferred`.
 
-### Evidence tampering
+### Path traversal and root escape
 
-Verification logs are edited or replaced.
-
-Mitigations:
-
-- evidence files are hashed in the manifest;
-- evidence is regenerated from source in a clean environment;
-- the bundle records tool versions, command lines, and input hashes;
-- CI rebuilds evidence rather than trusting checked-in logs.
-
-### Malicious contracts or adapters
-
-An adapter reports success without checking anything.
+Analysis might read files outside a registered root.
 
 Mitigations:
 
-- adapters are small, reviewable, and pinned;
-- each adapter has a conformance test fixture;
-- CI runs adapters against known-good and known-bad fixtures;
-- the framework reports which adapter produced each piece of evidence.
+- canonicalize registered roots;
+- reject paths outside allowed roots;
+- resolve or reject symlinks;
+- exclude `.spec`, dependencies, build output, and generated trees;
+- never write source files during analysis.
 
-### Malicious build commands
+### Secret exposure
 
-`spec/implementation/compile.json` names commands that `spec check` will execute. A malicious or compromised spec source could point them at destructive code.
-
-Mitigations:
-
-- treat `compile.json` as trusted build configuration, like `package.json` scripts;
-- require explicit argument arrays and never invoke a shell;
-- constrain the working directory to the project root;
-- enforce a timeout per command;
-- bound diagnostic output;
-- review changes to `compile.json` with the same scrutiny as build scripts;
-- leave host-level sandboxing to the execution environment.
-
-### Malicious external vocabularies
-
-An ontology imports an unpinned or compromised RDF/OWL source.
+Source files may contain credentials or environment configuration.
 
 Mitigations:
 
-- external sources are local files with recorded hashes;
-- no mutable remote fetch at verification time;
-- only the used external subset appears in exports;
-- external terms are marked as external and cannot replace authored elements;
-- source changes invalidate semantic evidence and approvals.
+- exclude `.env`, credential, and secret files from scanning;
+- redact API keys, tokens, passwords, and private keys before AI requests;
+- never log raw secrets;
+- keep provider secrets in environment variables;
+- store model metadata and hashes, not secrets.
 
-### Query, analysis, and renderer abuse
+### Generated output tampering
 
-Query, analysis, or System graph rendering consumes unbounded resources or
-exposes files outside the workspace.
-
-Mitigations:
-
-- local bind by default;
-- explicit host and origin configuration for non-local access;
-- query and analysis timeouts and result limits;
-- workspace-relative path resolution only;
-- analysis is limited to registered repository roots;
-- no secrets or approval tokens in responses;
-- query, analysis, and rendering are read-only.
-
-### Mutating agent interfaces
-
-A query, analysis, workbench, or chat client edits approved content or approves
-a change.
+A human or agent edits `spec/generated/`.
 
 Mitigations:
 
-- query, analysis, and the System workspace remain read-only;
-- the workbench and opencode plugin write proposals only;
-- every interactive write is a typed operation on a same-worktree proposal
-  branch with a recorded base commit;
-- no interactive surface exposes an approval endpoint or writes `spec.lock`;
-- approval remains a CLI-only human action;
-- all mutation attempts against the approved baseline are logged and rejected.
+- mark generated trees ignored or read-only;
+- regenerate from the snapshot;
+- record input hashes and renderer versions;
+- audit bundle manifest hashes outputs;
+- CI regenerates and compares.
 
-### Workbench write abuse
+### Workbench abuse
 
-A local or remotely reachable workbench mutates sources outside the workspace or
-writes the approval lock.
+A remote or cross-site client reads repository data or mutates analysis state.
 
 Mitigations:
 
-- localhost binding by default;
-- explicit host and origin configuration for non-local access;
-- same-origin and CSRF checks on every mutating request;
-- workspace-relative path resolution only;
-- no arbitrary filesystem access;
-- no approval or `spec.lock` route;
-- mutations require an active proposal context;
-- log the commit, dirty state, tool versions, proposal ID, and agent role.
+- localhost-only default;
+- explicit allowed origins for non-local access;
+- same-origin and CSRF checks for mutation endpoints;
+- no approval or proposal route;
+- registered roots only;
+- no arbitrary filesystem access.
 
-### Conversational agent and identity leakage
+### AI reference fabrication
 
-A chat agent exposes internal IDs, treats conversation as normative, or claims
-verification without a checker.
+AI cites missing elements, files, or lines.
 
 Mitigations:
 
-- tools accept opaque refs and names; internal identity stays in a technical
-  payload;
-- agent instructions forbid printing internal codes unless the human asks for
-  technical details;
-- accepted decisions must be recorded in the proposal before a turn ends;
-- chat history is not an audit record;
-- no verification claim without a checker result;
-- spec text, comments, filenames, and imported docs remain untrusted data.
-
-### Workspace composition tampering
-
-A repository pin or manifest changes without review.
-
-Mitigations:
-
-- manifest and pins are committed and reviewed;
-- verification uses recorded commits and never fetches;
-- missing or mismatched pins fail admission;
-- cross-repo impact requires an explicit baseline;
-- publication order is component first, root composition second.
-
-### Secrets in specs
-
-Specs may reference credentials, internal hosts, or customer data.
-
-Mitigations:
-
-- no secrets in spec sources;
-- environment and endpoints are represented as abstract contract parameters;
-- gitleaks or equivalent runs on spec files;
-- examples use synthetic identifiers.
+- validate structured output against the snapshot;
+- reject the whole response on an invalid reference;
+- require evidence for findings;
+- persist provider, model, prompt version, and input hashes;
+- keep AI findings separate from deterministic findings.
 
 ### Supply chain
 
-LikeC4, StrictDoc, Quint, Apalache, the semantic RDF/SHACL toolchain, the
-TypeScript compiler, `bun:sqlite`, the query and analysis engine, the workbench
-front end, the opencode plugin, and the PDF toolchain are dependencies.
+TypeScript, LikeC4, StrictDoc, Quint, Bun, React, Vite, and test tools are
+dependencies.
 
 Mitigations:
 
-- pinned versions in a lockfile or Nix flake;
-- reproducible builds where possible;
+- pin versions in the lockfile;
 - no dynamic plugin loading from untrusted paths;
-- CI records exact tool versions in the audit manifest.
+- record tool versions in snapshots and bundles;
+- treat external checker output as evidence with hashes.
 
-## Agent permissions
+### Resource exhaustion
 
-| Agent          | Read approved spec | Write approved spec |    Write proposals | Run validators | Approve |
-| -------------- | -----------------: | ------------------: | -----------------: | -------------: | ------: |
-| default build  |                yes |                  no | via `spec_propose` |            yes |      no |
-| spec-architect |                yes |                  no |                yes |            yes |      no |
-| spec-critic    |                yes |                  no |                 no |            yes |      no |
-| human          |                yes |                 yes |                yes |            yes |     yes |
+Large repositories or graphs can exhaust memory or CPU.
 
-The default agent can implement approved specs but cannot change them. Architecture changes require explicit human direction and the proposal workflow. Query, analysis, and System workspace access is read-only and never substitutes for approval. The workbench and opencode plugin may edit proposals but cannot approve or write `spec.lock`.
+Mitigations:
 
-## Repository analysis and AI (planned)
+- bounded jobs and concurrency;
+- scanner exclusions and file limits;
+- bounded flow depth and path count;
+- pagination and depth limits in graph APIs;
+- token budgets and timeouts for AI.
 
-The architecture intelligence roadmap adds repository analysis and an optional
-AI interpretation layer. It introduces these boundaries:
+## Product invariants
 
-- only explicitly registered repository roots are analyzed;
-- analysis is read-only and never executes repository code;
-- file discovery respects `.gitignore`, exclusions, and symlink containment;
-- secrets, credentials, and environment files are excluded from analysis and AI
-  context;
-- the workbench remains localhost-only by default;
-- remote AI providers require explicit configuration;
-- repository text is untrusted input, never instructions;
-- AI output is schema-validated and every referenced element, file, and symbol
-  must exist;
-- AI findings are separate from deterministic rule violations and have no
-  approval authority;
-- provider, model, prompt version, and input hashes are recorded;
-- invalid AI output is rejected, never partially accepted.
-
-See [AI interpretation boundary](design-decisions/0014-ai-interpretation-boundary.md)
-and [Analysis persistence and snapshots](design-decisions/0013-analysis-persistence.md).
-
-## Non-goals
-
-- Sandboxing arbitrary code execution by the agent. That is the host environment's responsibility.
-- Protecting against a compromised human approver.
-- Proving that a formal model matches reality. That is an elicitation and validation problem, not a security control.
+- Analysis never executes repository code.
+- Analysis is read-only over source.
+- Generated output is never human-approved intent.
+- The workbench reads generated output only.
+- No approval path and no `spec.lock` write path exist.
+- AI never provides a verdict.
+- Secrets never enter generated artifacts or AI context.

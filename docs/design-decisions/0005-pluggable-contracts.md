@@ -1,5 +1,6 @@
 # 0005 — Pluggable contracts
 
+Status: superseded by [0016](0016-generated-spec-product.md). Contracts are generated observations.
 **Status:** accepted
 **Date:** 2026-11-10
 

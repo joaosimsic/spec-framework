@@ -1,9 +1,11 @@
 # References
 
-## Tools used by the framework
+## Tools composed by the generated spec product
 
-- LikeC4: [likec4.dev](https://likec4.dev/), [AI tools and MCP](https://likec4.dev/tooling/ai-tools/), [model API](https://likec4.dev/tooling/model-api/)
-- StrictDoc: [features](https://strictdoc-project.github.io/features), [supported formats](https://strictdoc-project.github.io/formats), [documentation](https://strictdoc.readthedocs.io/)
+- TypeScript compiler API: [typescriptlang.org/docs/handbook/compiler-options](https://www.typescriptlang.org/docs/handbook/compiler-options.html)
+- Bun SQLite: [bun.sh/docs/api/sqlite](https://bun.sh/docs/api/sqlite)
+- LikeC4, optional export: [likec4.dev](https://likec4.dev/)
+- StrictDoc, optional export: [features](https://strictdoc-project.github.io/features)
 - Quint: [quint.sh](https://quint.sh/), [FAQ and LLM kit](https://quint.sh/faq), [formal verification tool reference](https://quint.sh/guides/formal-verification-tools)
 - Structurizr: [structurizr.com](https://structurizr.com/), [AI and MCP](https://docs.structurizr.com/ai)
 - Doorstop: [doorstop.readthedocs.io](https://doorstop.readthedocs.io/)

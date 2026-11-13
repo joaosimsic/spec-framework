@@ -1,5 +1,6 @@
 # 0011 — Interactive use-case modes and a human-facing experience layer
 
+Status: superseded by [0016](0016-generated-spec-product.md). Proposal and curation modes are retired.
 **Status:** accepted; Explorer reference superseded by 0015
 **Date:** 2026-11-11
 

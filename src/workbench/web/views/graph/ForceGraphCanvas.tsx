@@ -11,6 +11,8 @@ import {
   type SimulationNodeDatum,
 } from "d3-force"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { LabelEngine, type LabelCandidate, type LabelMode } from "./engine/label-engine"
+import { ForceGraphLinkSanitizer } from "./force-links"
 import { GraphViewportMath } from "./viewport"
 import { useGraphViewport } from "./useGraphViewport"
 import { ForceGraphRadii, type ForceGraphLink, type ForceGraphNode } from "./force-types"
@@ -76,10 +78,43 @@ export function ForceGraphCanvas({
 }: ForceGraphCanvasProps) {
   const positions = useRef(new Map<string, { x: number; y: number }>())
   const simulationRef = useRef<Simulation<SimulationNode, SimulationLink> | null>(null)
-  const [, setTick] = useState(0)
+  const [tick, setTick] = useState(0)
+  const [labelMode, setLabelMode] = useState<LabelMode>("automatic")
   const graph = useGraphViewport(WIDTH, HEIGHT, "[data-force-node='true']")
   const byRef = useMemo(() => new Map(nodes.map((node) => [node.ref, node])), [nodes])
-  const graphLinks = links
+  const graphLinks = useMemo(() => ForceGraphLinkSanitizer.sanitize(nodes, links), [nodes, links])
+  const labels = useMemo(() => {
+    const engine = new LabelEngine({
+      mode: labelMode,
+      viewport: { width: WIDTH, height: HEIGHT, zoom: graph.viewport.zoom },
+      measure: (text) => ({ width: Math.min(220, text.length * 7), height: 13 }),
+    })
+    const candidates: LabelCandidate[] = nodes.flatMap((node) => {
+      const position = positions.current.get(node.ref)
+      if (position === undefined) return []
+      return [
+        {
+          id: node.ref,
+          text: node.label,
+          x: position.x,
+          y: position.y,
+          priority:
+            selected === node.ref ? "selected" : node.parentRef === null ? "root" : "nearby",
+          selected: selected === node.ref,
+        },
+      ]
+    })
+    const occupied = nodes.flatMap((node) => {
+      const position = positions.current.get(node.ref)
+      if (position === undefined) return []
+      const radius = ForceGraphRadii.forKind(node.kind)
+      return [
+        { x: position.x - radius, y: position.y - radius, width: radius * 2, height: radius * 2 },
+      ]
+    })
+
+    return engine.place(candidates, occupied)
+  }, [nodes, selected, labelMode, graph.viewport.zoom, tick])
 
   useEffect(() => {
     simulationRef.current?.stop()
@@ -155,6 +190,17 @@ export function ForceGraphCanvas({
   return (
     <section className="panel graph-panel force-panel" aria-label="Graph">
       <div className="graph-controls architecture-zoom-controls">
+        <label className="graph-control-group">
+          Labels
+          <select
+            value={labelMode}
+            onChange={(event) => setLabelMode(event.target.value as LabelMode)}
+          >
+            <option value="automatic">Automatic</option>
+            <option value="all">All</option>
+            <option value="selected">Selected</option>
+          </select>
+        </label>
         <div className="graph-control-group">
           <span className="meta">Zoom {GraphViewportMath.percent(graph.viewport)}%</span>
           <button type="button" onClick={graph.zoomOut}>
@@ -174,14 +220,14 @@ export function ForceGraphCanvas({
         className="graph-canvas force-canvas"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="group"
-        aria-label={`${nodes.length} nodes and ${links.length} relations`}
+        aria-label={`${nodes.length} nodes and ${graphLinks.length} relations`}
         onPointerDown={graph.onPointerDown}
         onPointerMove={graph.onPointerMove}
         onPointerUp={graph.onPointerUp}
         onPointerCancel={graph.onPointerCancel}
       >
         <g transform={graph.transform}>
-          {links.map((link) => {
+          {graphLinks.map((link) => {
             const source = positions.current.get(link.sourceRef)
             const target = positions.current.get(link.targetRef)
             if (source === undefined || target === undefined) return null
@@ -209,6 +255,18 @@ export function ForceGraphCanvas({
               </g>
             )
           })}
+
+          {labels.map((label) => (
+            <text
+              key={`label-${label.id}`}
+              className="force-node-label"
+              x={label.x}
+              y={label.y + label.height}
+              textAnchor="start"
+            >
+              {label.text}
+            </text>
+          ))}
 
           {nodes.map((node) => {
             const position = positions.current.get(node.ref)
@@ -240,11 +298,6 @@ export function ForceGraphCanvas({
                 }}
               >
                 <circle r={radius} />
-                {(graph.viewport.zoom >= 0.7 || selected === node.ref) && (
-                  <text y={radius + 14} textAnchor="middle">
-                    {node.label}
-                  </text>
-                )}
                 {collapsed && (
                   <g className="force-node-badge" transform={`translate(${radius} ${-radius})`}>
                     <circle r={9} />

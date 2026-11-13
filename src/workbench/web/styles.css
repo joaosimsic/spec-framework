@@ -1215,3 +1215,52 @@ pre {
   stroke: none;
   font-size: 9px;
 }
+
+.force-node-label {
+  fill: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: var(--paper);
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+
+.system-hierarchy {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.system-hierarchy-list li {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+  min-height: 2rem;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.system-depth-0 {
+  padding-left: 0;
+}
+
+.system-depth-1 {
+  padding-left: 12px;
+}
+
+.system-depth-2 {
+  padding-left: 24px;
+}
+
+.system-depth-3 {
+  padding-left: 36px;
+}
+
+.system-depth-4 {
+  padding-left: 48px;
+}

@@ -1,8 +1,0 @@
-{
-  "command": ["bun", "run", "bin/spec.ts", "help"],
-  "exitCode": 0,
-  "stdoutIncludes": ["Usage:"],
-  "stdoutExcludes": [],
-  "stderrIncludes": [],
-  "stderrExcludes": []
-}

@@ -1,6 +1,6 @@
 # Graph rendering
 
-Status: planned.
+Status: partial. Label placement and accessibility hooks are implemented; worker physics, canvas rendering, and large-graph performance validation remain open.
 
 ## Purpose
 

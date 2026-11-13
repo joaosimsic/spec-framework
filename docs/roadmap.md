@@ -1,190 +1,66 @@
 # Roadmap
 
-## Next direction — architecture intelligence
+## Direction — generated spec product
 
-Status: planned, not implemented. Full platform MVP.
+Status: implemented and validated on three real repositories.
 
-The product direction extends the framework from intent and discovery into
-repository understanding:
+Decision record [0016](design-decisions/0016-generated-spec-product.md) makes
+the spec product generated from repository evidence. The workbench reads
+generated output only. Curated architecture, requirements, proposals, mapping
+curation, and hash-locked approval are retired.
 
-- language-neutral analysis IR for files, symbols, calls, entry points, and data access;
-- local SQLite snapshots with generated JSON export;
-- architecture reconstruction with direct conceptual-to-code traceability;
-- static functional flows from entry points to sources, sinks, and outputs;
-- deterministic architectural diagnostics plus clearly separated AI-assisted hypotheses;
-- an evidence-bound AI interpretation layer that never approves or passes a check;
-- a workbench System view with drill-down from components to files and functions;
-- a phased Obsidian-style graph with labels, radial expansion, and large-graph performance.
+The generated product consists of:
 
-The detailed execution checklist, phase gates, and acceptance criteria live in
+- deterministic repository analysis;
+- generated architecture and observed behavior records;
+- observed contracts and verification records;
+- static flows and deterministic diagnostics;
+- evidence-bound AI hypotheses;
+- SQLite snapshots and `spec/generated/spec.gen.json`;
+- a generated-only System workbench;
+- a generated audit bundle.
+
+Detailed phase gates live in
 [Architecture intelligence roadmap](roadmap/architecture-intelligence.md).
 
-Decision records [0012](design-decisions/0012-architecture-intelligence.md) and
-[0015](design-decisions/0015-retire-legacy-roadmap-and-explorer.md) fix the
-direction and retire the legacy roadmap and Explorer.
+## Implemented baseline
 
-## Baseline: design and repository
+Status: complete for analysis and generated workbench views.
+
+- TypeScript scanner, analysis IR, and compiler-based symbol/call extraction.
+- Local SQLite persistence, migrations, projects, jobs, cancellation, and SSE.
+- Generated architecture reconstruction and System projection.
+- Static functional flows.
+- Deterministic diagnostics and AI-assisted finding boundary.
+- Evidence-bound AI validation.
+- Snapshot comparison and Evolution view.
+- System, Flows, Findings, and Evolution workbench views.
+
+## Migration required
 
 Status: complete.
 
-- public repository with extensive design docs;
-- decision records;
-- glossary and references;
-- example non-web specification;
-- persistence in the personal project store.
+- [x] Move inputs to `spec-framework.json`.
+- [x] Generate observed behavior, contract, and verification records.
+- [x] Write canonical `spec/generated/spec.gen.json`.
+- [x] Remove curated model reads from analysis and workbench.
+- [x] Retire legacy workbench views and APIs.
+- [x] Rewrite `spec check`, `spec query`, and `spec bundle` to generated output.
+- [x] Rewrite the opencode plugin to read-only generated tools.
+- [x] Remove curated `spec/` sources and retired modules.
+- [x] Replace obsolete tests and documentation.
 
-Exit criteria: docs complete, repository public, decisions recorded.
+## Acceptance
 
-## Baseline: full-stack vertical slice
-
-Status: in progress. Core CLI, `spec init`, `spec doctor`, automatic project-local provisioning of pinned LikeC4, Quint, and StrictDoc under `.spec/tools`, structural checks, generic and Rust draft discovery via `spec map --draft`, human approval with a hash lock for SDoc requirements and acceptance criteria, the deterministic `spec bundle` audit output, the LikeC4 validation adapter, the StrictDoc requirements adapter, the Quint formal adapter (typecheck plus verify), and the JSON Schema, CLI, and Rust public API contract adapters plus the compiler preflight adapter are implemented. Adapters activate automatically from detected sources or language markers, or explicitly from config.
-
-Build one end-to-end path:
-
-- TypeScript/Bun CLI compiled to a single binary;
-- `spec init`, `spec init --existing`;
-- `spec doctor`, `spec doctor --fix`;
-- structural checks over SDoc;
-- human approval: `spec approve` hash-locks proposed SDoc requirement and acceptance records plus native evidence; approval writes evidence artifacts under `spec/evidence/`;
-- LikeC4 adapter: validation with hashed evidence; generated view embedding pending;
-- StrictDoc adapter: validation with hashed evidence; traceability, HTML/PDF pending;
-- Quint adapter: typecheck plus Apalache verify wired into `spec check` with per-module evidence; native view embedding pending;
-- contract adapters: JSON Schema, CLI snapshots, and Rust public API wired into `spec check` with compatibility evidence;
-- compiler preflight adapter: configured build/typecheck commands with deterministic diagnostics and hashed evidence;
-- generic and Rust discovery and `spec map --draft`;
-- deterministic audit bundle with HTML, PDF, manifest, graph, sources, evidence, and change report;
-- `spec check`, `spec change`, `spec bundle`, `spec approve`;
-- agent skill, commands, permissions;
-- self-hosting: spec-framework specifies and maps itself; the MVP harness runs
-  one approved pilot slice in a temporary worktree.
-
-Exit criteria:
-
-- existing repo initialized without source changes;
-- one requirement flows to a Quint property, model check, evidence, approval, and bundle;
-- one contract adapter produces compatibility evidence;
-- evidence is hashed into `spec.lock` and stored deterministically under `spec/evidence/`;
-- audit bundle is reproducible PDF + HTML;
-- approval invalidation works;
-- default agent cannot edit approved specs;
-- self-hosted bundle exists.
-
-## Baseline: interactive use-case paths
-
-Status: in progress. The deterministic graph builder and read-only
-`spec query` identity and experience views are implemented over SDoc records,
-annotated LikeC4 architecture elements, annotated Quint modules and properties,
-contract sidecars, and evidence. The presentation projection with opaque refs is
-implemented. The proposal engine core, same-worktree proposal branches, and
-typed operations `rename`, `deprecate`, `replace`, `split`, `merge`, `extract`,
-`move`, `change-contract`, `record-decision`, `record-open-question`, and
-`add-record` are implemented. New records may derive their ID from the visible
-name. Change reports include
-deterministic impact analysis over the graph, invalidated evidence, approvals to
-renew, and open questions. The `spec refactor` alias is implemented and warns
-when no approved baseline exists. Refactor before/after simulation is
-implemented from a baseline graph snapshot captured at proposal open; `spec
-refactor` enables it by default and `spec change` accepts `--simulate`. Formal
-source collection is implemented. The scratch-mode entry `spec start`, the
-mapping-review entry `spec map --review`, and area-level and relation-level
-interactive mapping curation are implemented, as is named-scope approval that
-resolves visible requirement titles to identity. The terminal equivalents are
-implemented: `spec next` reports guidance, and `spec start`,
-`spec map --review`, `spec change`, and `spec refactor` open guided TTY
-sessions that write proposals only. The React/Vite workbench includes a
-read-only repository graph at subsystem and file level, the opencode plugin,
-mapping promotion into proposed architecture, architecture approval, and
-`spec map --check` drift findings are implemented. The self-host MVP
-(`bun run mvp`) approves one pilot requirement and architecture slice in a
-temporary worktree, verifies a Quint property with Apalache, builds the audit
-bundle, and proves approval invalidation and re-approval. Draft repo graph
-discovery now covers TypeScript subsystems, files, containment, and local import
-dependencies. Decision record
-[0011](design-decisions/0011-interactive-use-case-modes.md) fixes the model.
-
-- unified spec graph and deterministic graph builder (SDoc, architecture,
-  formal, contract, and evidence collectors implemented);
-- presentation projection with names, plain-language state, and opaque refs
-  (implemented);
-- proposal engine with typed operations and same-worktree proposal branches
-  (all interactive operations implemented);
-- typed change impact over the unified SDoc, architecture, formal, and contract
-  graph (implemented);
-- formal source collector (implemented);
-- `spec start` and `spec map --review` (implemented);
-- React/Vite workbench for scratch, mapping, and refactor (implemented; Compose
-  edits drafts, the rework view applies every typed operation, and the read-only
-  Graph view renders the repository graph);
-- opencode plugin package and local self-hosting loader (implemented);
-- terminal interactive paths for the same modes (implemented; TTY-guided
-  scratch, mapping, and refactor sessions plus `spec next`);
-
-- interactive mapping curation over the area and relation confidence queues
-  (area and relation decisions implemented);
-- mapping promotion into proposed architecture, architecture approval, and
-  `spec map --check` drift findings (implemented);
-- refactor before/after simulation and named impact (implemented);
-- technical-details surface for IDs, hashes, provenance, and diagnostics
-  (implemented);
-- named-scope approval that resolves to internal identity (implemented);
-- no approval path and no `spec/spec.lock` write from any interactive surface.
-
-Exit criteria:
-
-- one graph powers CLI, workbench, and plugin context;
-- a human completes mapping curation without reading an internal ID;
-- a refactor preview lists affected named requirements, contracts, checks,
-  evidence, and approvals;
-- the plugin cannot approve or edit `spec.lock`;
-- the audit bundle keeps full identity and hashes.
-
-## Retired
-
-Decision [0015](design-decisions/0015-retire-legacy-roadmap-and-explorer.md)
-retires the old Phase 2/3 roadmap commitments and the read-only Explorer. There
-is no committed plan for capabilities, verification planning, the optional
-semantic layer, MCP, `spec serve`, multi-repository workspaces, or model
-migration. Their design documents are either unscheduled intent-model design or
-deleted. Do not treat them as future work without a new decision record.
-
-## Self-hosting milestones
-
-1. Scaffold spec-framework with its own full profile.
-2. Map its modules with generic discovery.
-3. Approve its architecture.
-4. Generate its own audit bundle.
-5. Use the framework for every subsequent change.
-6. Use `spec map --check` for drift.
-
-The MVP harness covers milestones 1-4 for one pilot slice in a temporary
-worktree. The repository baseline itself is not approved yet; that remains a
-human action.
-
-## Risks
-
-| Risk                                         | Mitigation                                                                      |
-| -------------------------------------------- | ------------------------------------------------------------------------------- |
-| Tool provisioning friction                   | `spec doctor --fix`, pinned runners, exact fallbacks                            |
-| StrictDoc embedding of LikeC4/Quint          | initial spike; Typst/Pandoc fallback                                            |
-| Full-stack CI cost                           | cache, parallelize, structural preflight                                        |
-| LLM formal quality                           | mandatory checker loop; human review                                            |
-| Compiler preflight mistaken for conformance  | explicit scope; separate evidence from formal and contract checks               |
-| Semantic layer toolchain drift               | optional activation; pinned local vocabularies; deterministic adapter           |
-| SHACL treated as proof of behavior           | explicit scope; keep semantic, formal, and conformance evidence separate        |
-| Interactive surface becomes an approval path | proposal-only writes; no approval tool; hash-locked approval remains CLI-only   |
-| Internal IDs leak into normal interaction    | experience projection, opaque refs, default-output leak tests                   |
-| Chat invents certainty or decisions          | every accepted decision recorded; explicit open questions; no unverified claims |
-| Plugin API drift                             | one compatibility adapter; target the installed opencode API first              |
-| Non-Rust conformance                         | generic trace adapter; explicit waivers until supported                         |
-| Self-hosting exposes gaps                    | intentional; fix before external adoption                                       |
-
-## Non-goals
-
-- Code-level proofs.
-- Every language and protocol.
-- Hosted service.
-- A hosted or multi-user workbench. The workbench is local and proposal-only.
-- Mutation of approved content or approval over any interactive surface.
-- Replacing existing build systems.
-- Automatic requirement extraction from code.
-- AI approval or AI pass/fail verdicts.
+- A repository with no hand-authored spec produces complete generated output.
+- The workbench starts on System with no curated model present.
+- No workbench route reads `spec/architecture`, `spec/requirements`,
+  `spec/formal`, `spec/contracts`, or `spec/spec.lock`.
+- Generated requirement records are labeled observed or inferred, never
+  approved.
+- Generated architecture hierarchy is system -> subsystem -> component -> file
+  -> symbol.
+- `spec check` validates generated consistency without an approval lock.
+- `spec query` and `spec bundle` read `spec.gen.json`.
+- Snapshot comparison is deterministic.
+- Removing AI does not change deterministic output.

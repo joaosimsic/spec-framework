@@ -1,94 +1,38 @@
 # Non-web projects
 
-## Default assumption
+The generated spec does not assume HTTP.
 
-The framework assumes boundaries are not HTTP endpoints. A project may have no network interface at all.
+## Observed boundary kinds
 
-## Boundary types
+| Kind          | Examples                             | Evidence                            |
+| ------------- | ------------------------------------ | ----------------------------------- |
+| Library API   | TypeScript exports, package exports  | exported symbols and signatures     |
+| CLI           | commands, flags, exit codes, streams | bin entries, shebangs, CLI dispatch |
+| File format   | config, archive, data files          | file reads/writes, schemas          |
+| IPC           | socket, queue, shared memory         | network/queue data access           |
+| Wire protocol | TCP/UDP, RPC                         | network calls and message types     |
+| Event         | domain event, telemetry              | queue and event calls               |
+| Hardware      | registers, buses                     | configured external evidence        |
 
-| Type         | Examples                                    | Contract                             |
-| ------------ | ------------------------------------------- | ------------------------------------ |
-| Language API | Rust crate, TypeScript package, PHP library | public API surface                   |
-| CLI          | developer tool, batch processor             | commands, flags, exit codes, streams |
-| File format  | config, archive, database file              | JSON Schema, CUE, CDDL               |
-| IPC          | Unix socket, message queue, shared memory   | message schema and protocol          |
-| Wire         | TCP/UDP protocol, RPC                       | Protobuf, CDDL, custom schema        |
-| Hardware     | device register map, bus protocol           | manual or SystemRDL/IP-XACT          |
-| Event        | domain event, telemetry                     | schema and delivery semantics        |
+## Generated behavior
 
-## Example: library + CLI + file format
+For a library + CLI + file format repository, the generated spec can show:
 
-```mermaid
-flowchart LR
-    User[CLI user] --> CLI[CLI component]
-    CLI --> Lib[library component]
-    Lib --> Core[core component]
-    Core --> File[file format]
-    Core --> Store[data store]
-    Lib --> API[public Rust API]
-    CLI --> Exit[exit codes and streams]
-```
+- CLI entry points;
+- exported library functions and classes;
+- file reads and writes;
+- external dependencies;
+- observed contracts from package exports and CLI metadata;
+- flows from CLI or public functions to sources and sinks.
 
-Capabilities cover:
+## Limits
 
-- library, CLI, file-format, and protocol abilities;
-- operational context and stakeholder needs;
-- decomposition into narrower abilities.
+- Static analysis cannot prove runtime behavior.
+- Protocol semantics may require configured external checks.
+- Hardware behavior may require manual inspection or simulation evidence.
+- Unknown APIs remain unknown.
 
-Requirements cover:
+## Rule
 
-- library API behavior;
-- CLI output and exit behavior;
-- file parsing and validation;
-- error classes;
-- compatibility promises.
-
-Semantic constraints cover:
-
-- shared vocabulary for file formats and error classes;
-- SHACL shapes over configuration and data records;
-- term mappings across components and formats.
-
-Verification planning covers:
-
-- formal, test, analysis, inspection, and demonstration methods;
-- manual inspection for hardware and device behavior;
-- explicit unverified scope.
-
-Formal models cover:
-
-- file state machine;
-- partial writes and recovery;
-- concurrent access assumptions;
-- version migration rules.
-
-Contracts cover:
-
-- rustdoc public API and `cargo-semver-checks`;
-- JSON Schema for the file format;
-- CLI help and exit snapshots.
-
-No OpenAPI document exists. The specification is still complete for its scope.
-
-## Embedded and protocol projects
-
-- Devices and buses are modeled as components and protocols.
-- Timing and ordering assumptions are explicit invariants or assumptions.
-- Register maps can be manual contracts in Phase 1.
-- Protocol behavior is formalized in Quint.
-- Conformance may require a simulator or hardware-in-the-loop adapter; until then, the evidence is marked manual and waived if accepted.
-
-## Game and simulation projects
-
-- Architecture maps systems, subsystems, and data stores.
-- Requirements cover progression, save/load, inventory invariants, and state transitions.
-- Formal models cover state machines and economy rules, not rendering or feel.
-- Performance requirements carry metric, unit, threshold, and measurement method.
-
-## What not to do
-
-- Do not invent HTTP endpoints to fit an API tool.
-- Do not force an IDL on an in-process library.
-- Do not treat a CLI as an afterthought; it is often the primary contract.
-- Do not claim file-format compatibility without schema evidence.
-- Do not formalize subjective qualities; use measurable criteria or explicit waivers.
+Do not invent HTTP endpoints to fit an API-shaped tool. Record the observed
+surface and its evidence.

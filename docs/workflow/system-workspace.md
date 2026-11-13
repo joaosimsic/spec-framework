@@ -1,45 +1,44 @@
 # System workspace
 
-Status: planned.
+Status: version 1 implemented; behavior-derived conceptual architecture planned.
 
 ## Purpose
 
-The workbench is the primary place to understand a repository. The System view
-is its default workspace.
+The workbench is the primary place to understand a repository. It reads
+generated analysis only. It never reads curated architecture, requirements,
+proposals, or `spec.lock`.
 
 It answers two questions together:
 
-1. What is the system?
+1. What is the generated system?
 2. How is each part implemented, and how does data move through it?
-
-The workspace never presents observed code as approved intent.
 
 ## Navigation
 
 Views:
 
-| View         | Purpose                                                          |
-| ------------ | ---------------------------------------------------------------- |
-| System       | Default. Conceptual system with direct implementation drill-down |
-| Flows        | Entry points, processing paths, sources, sinks                   |
-| Dependencies | Coupling, cycles, incoming and outgoing relationships            |
-| Findings     | Deterministic diagnostics and AI-assisted hypotheses             |
-| Review       | Existing proposal and approval surfaces                          |
-| Technical    | IDs, hashes, provenance, and diagnostics on demand               |
+| View                | Purpose                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| System              | Default. Generated hierarchy with implementation drill-down. |
+| Flows               | Entry points, processing paths, sources, sinks.              |
+| Findings            | Deterministic diagnostics and AI-assisted hypotheses.        |
+| Evolution           | Snapshot comparison.                                         |
+| Generated documents | Rendered generated spec sections and technical metadata.     |
 
-The System view is the primary surface. The existing Architecture and Code Map
-views remain only as transitional views until the System view reaches parity.
+The legacy Architecture, Code Map, Overview, Map, Compose, Rework, and Review
+views are retired.
 
 ## Layout
 
 Three synchronized panels:
 
-- **Left**: expandable hierarchy. System, subsystems, components, files,
-  symbols.
-- **Center**: interactive graph or flow path.
-- **Right**: inspector for the selected element.
+- **Left**: conceptual hierarchy from system to subsystem, component,
+  interface, data store, and external system.
+- **Center**: interactive conceptual graph or flow path.
+- **Right**: inspector with deterministic summary, evidence, implementation
+  mappings, relations, data, tests, unknowns, and optional AI hypothesis.
 
-Selection synchronizes all three. Selecting a component highlights its graph
+Selection synchronizes all panels. Selecting a component highlights its graph
 node, shows its files and symbols, and lists its findings.
 
 ## Drill-down
@@ -47,58 +46,55 @@ node, shows its files and symbols, and lists its findings.
 Default expansion:
 
 1. system;
-2. subsystems and components;
-3. files mapped to the selected component;
-4. functions, methods, classes, interfaces, and constants inside a file;
-5. calls and data relationships for a selected symbol.
+2. subsystems grouped by behavior family;
+3. components derived from entry points, public surfaces, calls, data access,
+   and external boundaries;
+4. interfaces, data stores, and external systems;
+5. implementation mappings for the selected conceptual element.
 
-The direct relation between role and implementation is mandatory:
+Files and symbols are implementation evidence. They appear in the inspector,
+implementation overlay, and source drill-down, not as conceptual children.
 
-- selecting a component shows responsibility, boundary, owner, and technology;
-- the same inspector shows the files and functions that implement it;
-- selecting a function shows callers, callees, inputs, outputs, and data access;
-- source location is always available.
+The inspector shows:
+
+- observed role summary;
+- evidence for the component's existence;
+- entry points and public surface;
+- mapped files and symbols;
+- mapping confidence;
+- incoming and outgoing relations;
+- data reads and writes;
+- tests;
+- flows;
+- unknowns and unassigned code;
+- optional AI hypothesis;
+- technical identity on demand.
 
 ## Provenance
 
 Every node and edge shows one of:
 
-- specified;
 - observed;
 - inferred;
+- ambiguous;
 - unknown.
 
-Mismatches are visible. A generated component that does not match a curated one
-is not silently merged.
-
-## Inspector
-
-Sections:
-
-- Role: responsibility, boundary, owner, technology.
-- Implementation: files, symbols, mapping confidence, selector.
-- Relations: incoming and outgoing.
-- Data: reads, writes, inputs, outputs, sinks.
-- Flows: entry points and paths through this element.
-- Findings: rule or AI-assisted, severity, status.
-- Technical details: IDs, hashes, provenance, diagnostics.
-
-No internal IDs appear by default.
+Generated output never appears as approved or specified intent.
 
 ## Coverage
 
 The coverage panel lists:
 
-- mapped elements;
-- partially mapped elements;
-- unmapped conceptual elements;
-- unassigned code;
-- stale selectors;
-- entry points without sinks.
+- mapped conceptual components;
+- implementation mapped to components;
+- unassigned implementation;
+- ambiguous component assignments;
+- unresolved imports and calls;
+- external systems;
+- entry points without observed sinks;
+- behavior with no reachable implementation.
 
 Clicking an item focuses the related node or filters the graph.
-
-Phase one is read-only. Mapping curation comes later.
 
 ## Flows
 
@@ -110,21 +106,10 @@ Flow interaction:
 - steps show function, file, confidence, and data;
 - unknowns and limits reached are visible.
 
-## Graph behavior
-
-- collapsed root by default;
-- hybrid expansion;
-- labels follow zoom and collision rules;
-- radial expansion for many children;
-- camera fits the expanded group;
-- expanded children never disappear silently.
-
-See [Graph rendering](../architecture/graph-rendering.md).
-
 ## States
 
 - loading per lazy expansion;
-- empty when no analysis exists;
+- empty when no generated analysis exists;
 - partial when analysis is incomplete;
 - error with retry;
 - stale snapshot warning when the commit changed;
@@ -132,14 +117,14 @@ See [Graph rendering](../architecture/graph-rendering.md).
 
 ## Write boundary
 
-| Context          | Allowed                              |
-| ---------------- | ------------------------------------ |
-| Analysis graph   | Read-only                            |
-| Findings status  | Human actions, stored as annotations |
-| Mapping sidecar  | Display only in phase one            |
-| Approved spec    | Read-only                            |
-| `spec/spec.lock` | Never written by the workbench       |
-| Approval         | CLI-only human action                |
+| Context               | Allowed                        |
+| --------------------- | ------------------------------ |
+| Generated graph       | Read-only                      |
+| Generated spec        | Read-only                      |
+| Findings status       | Local annotation in `.spec/`   |
+| `spec/generated/`     | Never written by the workbench |
+| `spec-framework.json` | Read-only                      |
+| Snapshot database     | Analysis jobs only             |
 
 ## Accessibility
 
@@ -153,9 +138,10 @@ See [Graph rendering](../architecture/graph-rendering.md).
 ## Acceptance
 
 - Workbench opens on System.
-- System to component to file to function works.
-- Component inspector shows role and implementation side by side.
+- System to component to implementation mapping works.
+- Component inspector shows observed role, behavior evidence, and implementation mapping.
 - Function inspector shows calls and data.
 - A flow can be traced and highlighted.
-- Coverage is visible without technical IDs.
-- No approval path exists in the workbench.
+- Coverage distinguishes mapped and unassigned implementation without technical IDs.
+- No directory-derived conceptual node exists in the primary graph.
+- No curated model or approval path exists in the workbench.

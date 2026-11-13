@@ -1,6 +1,0 @@
-{
-  "invariants": {
-    "check.qnt": ["everyInvalidRecordReported"]
-  },
-  "maxSteps": 6
-}

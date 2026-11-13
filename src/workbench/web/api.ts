@@ -1,18 +1,14 @@
 import { attemptAsync, type Result, ok, fail } from "../../core/result"
 import type {
-  WorkbenchArchitectureGraphView,
-  WorkbenchChangeView,
-  WorkbenchCheckView,
-  WorkbenchContextView,
-  WorkbenchCurationRequest,
-  WorkbenchDiffView,
-  WorkbenchErrorView,
-  WorkbenchGraphView,
-  WorkbenchImpactView,
-  WorkbenchMappingView,
-  WorkbenchRepoGraphView,
+  WorkbenchFinding,
+  WorkbenchFlow,
+  WorkbenchProjectSummary,
   WorkbenchSession,
-  WorkbenchTechnicalView,
+  WorkbenchSnapshotComparison,
+  WorkbenchSnapshotSummary,
+  WorkbenchSystemArchitecture,
+  WorkbenchSystemGraph,
+  WorkbenchSystemNode,
 } from "../types"
 
 export interface ApiFailure {
@@ -24,10 +20,7 @@ export interface ApiFailure {
 export type ApiResult<Value> = Result<Value, ApiFailure>
 
 export function describeFailure(failure: ApiFailure | null): string {
-  if (failure === null) return "The request could not complete."
-  const choices = failure.choices?.map((choice) => `${choice.label}: ${choice.context}`)
-
-  return [failure.message, ...(choices ?? [])].join("\n")
+  return failure?.message ?? "The request could not complete."
 }
 
 let csrfToken = ""
@@ -40,73 +33,91 @@ export async function getSession(): Promise<ApiResult<WorkbenchSession>> {
   return request<WorkbenchSession>("/api/session")
 }
 
-export async function getGraph(): Promise<ApiResult<WorkbenchGraphView>> {
-  return request<WorkbenchGraphView>("/api/graph")
+export async function getCurrentProject(): Promise<ApiResult<WorkbenchProjectSummary>> {
+  return requestV1<WorkbenchProjectSummary>("/api/v1/projects/current")
 }
 
-export async function getContext(names: string[] = []): Promise<ApiResult<WorkbenchContextView>> {
-  const parameters = new URLSearchParams()
-  for (const name of names) parameters.append("name", name)
-  const suffix = parameters.size === 0 ? "" : `?${parameters.toString()}`
-
-  return request<WorkbenchContextView>(`/api/context${suffix}`)
+export async function getSystemArchitecture(
+  projectId: string,
+): Promise<ApiResult<WorkbenchSystemArchitecture>> {
+  return requestV1<WorkbenchSystemArchitecture>(`/api/v1/projects/${projectId}/architecture`)
 }
 
-export async function getMapping(): Promise<ApiResult<WorkbenchMappingView>> {
-  return request<WorkbenchMappingView>("/api/mapping")
+export async function getSystemGraph(
+  projectId: string,
+  depth = 2,
+): Promise<ApiResult<WorkbenchSystemGraph>> {
+  return requestV1<WorkbenchSystemGraph>(`/api/v1/projects/${projectId}/graph?depth=${depth}`)
 }
 
-export async function getArchitectureGraph(): Promise<ApiResult<WorkbenchArchitectureGraphView>> {
-  return request<WorkbenchArchitectureGraphView>("/api/architecture-graph")
+export async function getSystemChildren(
+  elementId: string,
+): Promise<ApiResult<WorkbenchSystemNode[]>> {
+  return requestV1<WorkbenchSystemNode[]>(
+    `/api/v1/elements/${encodeURIComponent(elementId)}/children`,
+  )
 }
 
-export async function getRepoGraph(): Promise<ApiResult<WorkbenchRepoGraphView>> {
-  return request<WorkbenchRepoGraphView>("/api/repo-graph")
+export async function getSystemRelationships(
+  elementId: string,
+): Promise<ApiResult<{ incoming: unknown[]; outgoing: unknown[] }>> {
+  return requestV1(`/api/v1/elements/${encodeURIComponent(elementId)}/relationships`)
 }
 
-export async function postMappingActions(
-  actions: WorkbenchCurationRequest[],
-): Promise<ApiResult<WorkbenchMappingView>> {
-  return request<WorkbenchMappingView>("/api/mapping/actions", {
-    method: "POST",
-    body: JSON.stringify({ actions }),
+export async function getProjectSnapshots(
+  projectId: string,
+): Promise<ApiResult<WorkbenchSnapshotSummary[]>> {
+  return requestV1<WorkbenchSnapshotSummary[]>(`/api/v1/projects/${projectId}/snapshots`)
+}
+
+export async function compareSnapshots(
+  projectId: string,
+  from: string,
+  to: string,
+): Promise<ApiResult<WorkbenchSnapshotComparison>> {
+  const parameters = new URLSearchParams({ from, to })
+
+  return requestV1<WorkbenchSnapshotComparison>(
+    `/api/v1/projects/${projectId}/compare?${parameters.toString()}`,
+  )
+}
+
+export async function getProjectFindings(
+  projectId: string,
+): Promise<ApiResult<WorkbenchFinding[]>> {
+  return requestV1<WorkbenchFinding[]>(`/api/v1/projects/${projectId}/findings`)
+}
+
+export async function patchFinding(
+  findingId: string,
+  status: string,
+  annotation: string,
+): Promise<ApiResult<WorkbenchFinding>> {
+  return requestV1<WorkbenchFinding>(`/api/v1/findings/${encodeURIComponent(findingId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, annotation }),
   })
 }
 
-export async function getImpact(): Promise<ApiResult<WorkbenchImpactView>> {
-  return request<WorkbenchImpactView>("/api/impact")
+export async function getProjectFlows(projectId: string): Promise<ApiResult<WorkbenchFlow[]>> {
+  return requestV1<WorkbenchFlow[]>(`/api/v1/projects/${projectId}/flows`)
 }
 
-export async function getDiff(): Promise<ApiResult<WorkbenchDiffView>> {
-  return request<WorkbenchDiffView>("/api/diff")
+export async function getGeneratedSection(
+  projectId: string,
+  section: string,
+): Promise<ApiResult<unknown>> {
+  return requestV1<unknown>(
+    `/api/v1/projects/${projectId}/spec/sections/${encodeURIComponent(section)}`,
+  )
 }
 
-export async function getChange(): Promise<ApiResult<WorkbenchChangeView>> {
-  return request<WorkbenchChangeView>("/api/change")
-}
+async function requestV1<Value>(path: string, init: RequestInit = {}): Promise<ApiResult<Value>> {
+  const [body, error] = await request<{ data: Value }>(path, init)
+  if (error !== null || body === null)
+    return fail(error ?? { code: "WORKBENCH-RESPONSE", message: "empty response" })
 
-export async function postCheck(structural = false): Promise<ApiResult<WorkbenchCheckView>> {
-  return request<WorkbenchCheckView>("/api/check", {
-    method: "POST",
-    body: JSON.stringify({ structural }),
-  })
-}
-
-export async function postOperations(
-  proposalRef: string,
-  operations: unknown[],
-  simulate = true,
-): Promise<ApiResult<WorkbenchChangeView>> {
-  return request<WorkbenchChangeView>(`/api/proposals/${proposalRef}/ops`, {
-    method: "POST",
-    body: JSON.stringify({ operations, simulate }),
-  })
-}
-
-export async function getTechnical(
-  proposalRef: string,
-): Promise<ApiResult<WorkbenchTechnicalView>> {
-  return request<WorkbenchTechnicalView>(`/api/proposals/${proposalRef}/technical`)
+  return ok(body.data)
 }
 
 async function request<Value>(path: string, init: RequestInit = {}): Promise<ApiResult<Value>> {
@@ -116,28 +127,22 @@ async function request<Value>(path: string, init: RequestInit = {}): Promise<Api
     headers.set("content-type", "application/json")
     headers.set("x-csrf-token", csrfToken)
   }
-
   const [response, requestError] = await attemptAsync(() => fetch(path, { ...init, headers }))
   if (requestError !== null || response === null) {
     return fail({ code: "WORKBENCH-NETWORK", message: requestError ?? "request failed" })
   }
-
-  if (!response.ok) return thisFailure(response)
-
-  const [body, bodyError] = await attemptAsync(() => response.json() as Promise<Value>)
-  if (bodyError !== null || body === null) {
-    return fail({ code: "WORKBENCH-RESPONSE", message: bodyError ?? "empty response" })
+  if (!response.ok) {
+    const [body] = await attemptAsync(() => response.json() as Promise<{ error?: ApiFailure }>)
+    return fail(
+      body?.error ?? {
+        code: "WORKBENCH-RESPONSE",
+        message: `request failed with status ${response.status}`,
+      },
+    )
   }
+  const [body, bodyError] = await attemptAsync(() => response.json() as Promise<Value>)
+  if (bodyError !== null || body === null)
+    return fail({ code: "WORKBENCH-RESPONSE", message: bodyError ?? "empty response" })
 
   return ok(body)
-}
-
-async function thisFailure(response: Response): Promise<ApiResult<never>> {
-  const [body] = await attemptAsync(() => response.json() as Promise<WorkbenchErrorView>)
-  if (body !== null && body.error !== undefined) return fail(body.error)
-
-  return fail({
-    code: "WORKBENCH-RESPONSE",
-    message: `request failed with status ${response.status}`,
-  })
 }

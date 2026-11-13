@@ -1,6 +1,6 @@
 # 0012 Architecture intelligence direction
 
-Status: accepted.
+Status: accepted. Partially superseded by [0016](0016-generated-spec-product.md): the workbench uses generated evidence only. The intent graph, mapping curation, and approval portions are historical.
 
 ## Context
 

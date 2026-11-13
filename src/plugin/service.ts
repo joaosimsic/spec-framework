@@ -1,281 +1,154 @@
-import { ProposalOperationParser } from "../change/operation-parser"
-import type { ProposalOperation } from "../change"
 import { fail, ok, type Result } from "../core/result"
-import { WorkbenchGraphDisplay } from "../workbench/graph-display"
-import { WorkbenchService, type WorkbenchServiceOptions } from "../workbench/service"
-import { WorkbenchStateReader } from "../workbench/state"
-import type { WorkbenchCurationRequest } from "../workbench/types"
-import type { WorkbenchFailure } from "../workbench/failure"
-import {
-  PLUGIN_CONTRACT_VERSION,
-  type PluginChangeView,
-  type PluginCheckView,
-  type PluginContextView,
-  type PluginDecisionRequest,
-  type PluginDiffView,
-  type PluginFailure,
-  type PluginImpactView,
-  type PluginNextView,
-  type PluginProposalRequest,
-  type PluginQueryView,
-  type PluginStatusView,
-  type PluginTechnicalView,
+import { AnalysisRuntime } from "../workbench/analysis-runtime"
+import { GeneratedSpecValidator, type GeneratedElement, type GeneratedSpec } from "../spec"
+import type {
+  PluginAnalyzeView,
+  PluginCheckView,
+  PluginContextView,
+  PluginFailure,
+  PluginQueryView,
+  PluginStatusView,
 } from "./types"
+import { PLUGIN_CONTRACT_VERSION } from "./types"
 
-export interface SpecPluginServiceOptions extends WorkbenchServiceOptions {
-  workbench?: WorkbenchService
-  state?: WorkbenchStateReader
+export interface SpecPluginServiceOptions {
+  runtime?: AnalysisRuntime
 }
 
 export class SpecPluginService {
-  private readonly workbench: WorkbenchService
-  private readonly state: WorkbenchStateReader
+  private runtimePromise: Promise<Result<AnalysisRuntime, string>> | null = null
 
   constructor(
     private readonly target: string,
-    options: SpecPluginServiceOptions = {},
-  ) {
-    this.workbench = options.workbench ?? new WorkbenchService(target, options)
-    this.state = options.state ?? new WorkbenchStateReader(target, options)
-  }
+    private readonly options: SpecPluginServiceOptions = {},
+  ) {}
 
   async status(): Promise<Result<PluginStatusView, PluginFailure>> {
-    const [workspace, workspaceError] = await this.state.readWorkspace()
-    if (workspaceError !== null) return this.fail("SPEC-PLUGIN-STATE", workspaceError)
-    if (workspace === null) return this.fail("SPEC-PLUGIN-STATE", "workspace unavailable")
-
-    const [graph, graphError] = await this.state.readGraph(workspace.state)
-    if (graphError !== null) return this.fail("SPEC-PLUGIN-GRAPH", graphError)
-    if (graph === null) return this.fail("SPEC-PLUGIN-GRAPH", "graph unavailable")
-
-    const display = new WorkbenchGraphDisplay(graph)
-    const proposal =
-      workspace.proposal === null ? null : display.labels.proposal(workspace.proposal)
-    const [context, contextError] = await this.workbench.context([])
-    if (contextError !== null) return this.failure(contextError)
-    if (context === null) return this.fail("SPEC-PLUGIN-CONTEXT", "context unavailable")
-
-    const approved =
-      workspace.lock === null
-        ? []
-        : Object.keys(workspace.lock.elements)
-            .sort()
-            .map((id) => display.labels.named(id))
+    const [runtime, runtimeError] = await this.runtime()
+    if (runtimeError !== null || runtime === null)
+      return this.fail("SPEC-PLUGIN-RUNTIME", runtimeError ?? "runtime unavailable")
+    const project = runtime.currentProject()
+    const snapshot = project === null ? null : runtime.latest(project)
+    const spec = project === null ? null : runtime.spec(project)
 
     return ok({
       contract: PLUGIN_CONTRACT_VERSION,
-      mode: workspace.proposal?.mode ?? "read-only",
-      commit: workspace.state.commit,
-      dirty: !workspace.state.clean,
-      proposal,
-      approved,
-      blockers: context.blockers,
-      openQuestions: context.openQuestions,
-      prompts: context.prompts,
-      next: context.next,
+      project_id: project?.id ?? null,
+      snapshot_id: snapshot?.id ?? null,
+      commit: snapshot?.commit ?? "",
+      dirty: snapshot?.dirty ?? false,
+      architecture: spec?.architecture.elements.length ?? 0,
+      flows: spec?.flows.length ?? 0,
+      findings: spec?.findings.length ?? 0,
+      unknowns: spec?.unknowns.length ?? 0,
     })
   }
 
-  async context(names: string[] = []): Promise<Result<PluginContextView, PluginFailure>> {
-    const [view, error] = await this.workbench.context(names)
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-CONTEXT", "context unavailable")
+  async context(): Promise<Result<PluginContextView, PluginFailure>> {
+    const [status, statusError] = await this.status()
+    if (statusError !== null || status === null)
+      return fail(statusError ?? { code: "SPEC-PLUGIN-STATUS", message: "status unavailable" })
+    const spec = await this.spec()
+    if (spec[1] !== null) return fail(spec[1])
 
-    return ok(view)
+    return ok({ status, spec: spec[0] })
   }
 
   async query(input: {
     name?: string
     ref?: string
     kind?: string
-    status?: string
   }): Promise<Result<PluginQueryView, PluginFailure>> {
-    const [graph, graphError] = await this.workbench.graph()
-    if (graphError !== null) return this.failure(graphError)
-    if (graph === null) return this.fail("SPEC-PLUGIN-GRAPH", "graph unavailable")
-
+    const [spec, specError] = await this.spec()
+    if (specError !== null || spec === null)
+      return fail(specError ?? { code: "SPEC-PLUGIN-SPEC", message: "generated spec unavailable" })
     const handle = input.ref ?? input.name
-    if (handle !== undefined) {
-      const matches = graph.entries.filter(
-        (entry) =>
-          entry.ref === handle ||
-          entry.technical.id === handle ||
-          entry.label.toLowerCase() === handle.toLowerCase(),
+    const elements = spec.architecture.elements.filter((element) => {
+      if (
+        handle !== undefined &&
+        element.id !== handle &&
+        element.label.toLowerCase() !== handle.toLowerCase()
       )
-      if (matches.length === 0) return this.fail("SPEC-PLUGIN-NOT-FOUND", `unknown item: ${handle}`)
-      if (matches.length > 1) {
-        return fail({
-          code: "SPEC-PLUGIN-AMBIGUOUS",
-          message: `more than one item is named '${handle}'`,
-          choices: matches.map((entry) => ({
-            label: entry.label,
-            context: entry.kindLabel,
-          })),
-        })
-      }
-
-      return ok({ commit: graph.commit, dirty: graph.dirty, entries: matches })
-    }
-
-    const kind = input.kind?.toLowerCase()
-    const status = input.status?.toLowerCase()
-    const entries = graph.entries.filter(
-      (entry) =>
-        (kind === undefined || entry.technical.kind.toLowerCase() === kind) &&
-        (status === undefined || entry.technical.status?.toLowerCase() === status),
-    )
-
-    return ok({ commit: graph.commit, dirty: graph.dirty, entries })
-  }
-
-  async next(): Promise<Result<PluginNextView, PluginFailure>> {
-    const [context, contextError] = await this.workbench.context([])
-    if (contextError !== null) return this.failure(contextError)
-    if (context === null) return this.fail("SPEC-PLUGIN-CONTEXT", "context unavailable")
-
-    return ok({
-      prompts: context.prompts,
-      next: context.next,
-      blockers: context.blockers,
-      openQuestions: context.openQuestions,
+        return false
+      if (input.kind !== undefined && element.type !== input.kind) return false
+      return true
     })
+
+    return ok({ snapshot_id: spec.snapshot.id, commit: spec.snapshot.commit, elements })
   }
 
-  async impact(): Promise<Result<PluginImpactView, PluginFailure>> {
-    const [view, error] = await this.workbench.impact()
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-IMPACT", "impact unavailable")
+  async flows(): Promise<Result<unknown[], PluginFailure>> {
+    const [spec, specError] = await this.spec()
+    if (specError !== null || spec === null)
+      return fail(specError ?? { code: "SPEC-PLUGIN-SPEC", message: "generated spec unavailable" })
 
-    return ok(view)
+    return ok(spec.flows)
   }
 
-  async diff(): Promise<Result<PluginDiffView, PluginFailure>> {
-    const [view, error] = await this.workbench.diff()
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-DIFF", "diff unavailable")
+  async findings(): Promise<Result<unknown[], PluginFailure>> {
+    const [spec, specError] = await this.spec()
+    if (specError !== null || spec === null)
+      return fail(specError ?? { code: "SPEC-PLUGIN-SPEC", message: "generated spec unavailable" })
 
-    return ok(view)
+    return ok(spec.findings)
   }
 
-  async change(): Promise<Result<PluginChangeView, PluginFailure>> {
-    const [view, error] = await this.workbench.change()
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
+  async snapshots(): Promise<Result<unknown[], PluginFailure>> {
+    const [runtime, runtimeError] = await this.runtime()
+    if (runtimeError !== null || runtime === null)
+      return fail({ code: "SPEC-PLUGIN-RUNTIME", message: runtimeError ?? "runtime unavailable" })
+    const project = runtime.currentProject()
+    if (project === null)
+      return fail({ code: "SPEC-PLUGIN-PROJECT", message: "project unavailable" })
 
-    return ok(view)
+    return ok(runtime.snapshots.list(project.id))
   }
 
-  async validate(structural = false): Promise<Result<PluginCheckView, PluginFailure>> {
-    const [view, error] = await this.workbench.check(structural)
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-CHECK", "check view unavailable")
-
-    return ok(view)
-  }
-
-  parseOperations(text: string): Result<ProposalOperation[], PluginFailure> {
-    const [operations, error] = ProposalOperationParser.parseJson(text)
-    if (error !== null || operations === null) {
-      return fail({ code: "SPEC-PLUGIN-BAD-OPERATION", message: error ?? "operations failed" })
+  async validate(): Promise<Result<PluginCheckView, PluginFailure>> {
+    const [spec, specError] = await this.spec()
+    if (specError !== null || spec === null)
+      return fail(specError ?? { code: "SPEC-PLUGIN-SPEC", message: "generated spec unavailable" })
+    const validator = new GeneratedSpecValidator()
+    const findings: string[] = []
+    const [validated, validationError] = validator.check(spec)
+    if (validationError !== null) findings.push(validationError)
+    if (validated !== null) {
+      const [, referenceError] = validator.checkReferences(validated)
+      if (referenceError !== null) findings.push(referenceError)
     }
 
-    return ok(operations)
+    return ok({ errors: findings.length, warnings: 0, findings })
   }
 
-  async propose(
-    request: PluginProposalRequest,
-    proposalRef?: string,
-  ): Promise<Result<PluginChangeView, PluginFailure>> {
-    if (request.operations.length === 0) {
-      return this.fail("SPEC-PLUGIN-BAD-REQUEST", "no operations supplied")
-    }
+  async analyze(): Promise<Result<PluginAnalyzeView, PluginFailure>> {
+    const [runtime, runtimeError] = await this.runtime()
+    if (runtimeError !== null || runtime === null)
+      return fail({ code: "SPEC-PLUGIN-RUNTIME", message: runtimeError ?? "runtime unavailable" })
+    const project = runtime.currentProject()
+    if (project === null)
+      return fail({ code: "SPEC-PLUGIN-PROJECT", message: "project unavailable" })
+    const [job, jobError] = runtime.jobs.start(project)
+    if (jobError !== null || job === null)
+      return fail({ code: "SPEC-PLUGIN-ANALYZE", message: jobError ?? "analysis did not start" })
 
-    const [ref, refError] = await this.proposalRef(proposalRef)
-    if (refError !== null) return fail(refError)
-    if (ref === null) return this.fail("SPEC-PLUGIN-NO-PROPOSAL", "no active proposal")
-
-    const [view, error] = await this.workbench.operations(
-      ref,
-      request.operations,
-      request.simulate ?? false,
-    )
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
-
-    return ok(view)
+    return ok({ job_id: job.id, state: job.state, project_id: project.id })
   }
 
-  async decide(request: PluginDecisionRequest): Promise<Result<PluginChangeView, PluginFailure>> {
-    const text = request.text.replace(/\s+/g, " ").trim()
-    if (text === "") return this.fail("SPEC-PLUGIN-BAD-REQUEST", "decision text is required")
+  private async spec(): Promise<Result<GeneratedSpec | null, PluginFailure>> {
+    const [runtime, runtimeError] = await this.runtime()
+    if (runtimeError !== null || runtime === null)
+      return fail({ code: "SPEC-PLUGIN-RUNTIME", message: runtimeError ?? "runtime unavailable" })
+    const project = runtime.currentProject()
+    if (project === null) return ok(null)
 
-    const operation: ProposalOperation =
-      request.kind === "decision"
-        ? {
-            kind: "record-decision",
-            title: shortTitle(text),
-            statement: text,
-            ...(request.target === undefined ? {} : { target: request.target }),
-            ...(request.owner === undefined ? {} : { owner: request.owner }),
-          }
-        : {
-            kind: "record-open-question",
-            question: text,
-            ...(request.target === undefined ? {} : { target: request.target }),
-            ...(request.owner === undefined ? {} : { owner: request.owner }),
-          }
-
-    return this.propose({ operations: [operation], simulate: false })
+    return ok(runtime.spec(project))
   }
 
-  async mappingActions(
-    actions: WorkbenchCurationRequest[],
-  ): Promise<Result<PluginChangeView, PluginFailure>> {
-    const [mapping, error] = await this.workbench.applyMapping(actions)
-    if (error !== null) return this.failure(error)
-    if (mapping === null) return this.fail("SPEC-PLUGIN-MAPPING", "mapping unavailable")
+  private async runtime(): Promise<Result<AnalysisRuntime, string>> {
+    if (this.options.runtime !== undefined) return ok(this.options.runtime)
+    if (this.runtimePromise === null) this.runtimePromise = AnalysisRuntime.create(this.target)
 
-    const [change, changeError] = await this.workbench.change()
-    if (changeError !== null) return this.failure(changeError)
-    if (change === null) return this.fail("SPEC-PLUGIN-CHANGE", "change view unavailable")
-
-    return ok(change)
-  }
-
-  async technical(proposalRef?: string): Promise<Result<PluginTechnicalView, PluginFailure>> {
-    const [ref, refError] = await this.proposalRef(proposalRef)
-    if (refError !== null) return fail(refError)
-    if (ref === null) return this.fail("SPEC-PLUGIN-NO-PROPOSAL", "no active proposal")
-
-    const [view, error] = await this.workbench.technical(ref)
-    if (error !== null) return this.failure(error)
-    if (view === null) return this.fail("SPEC-PLUGIN-TECHNICAL", "technical view unavailable")
-
-    return ok(view)
-  }
-
-  private async proposalRef(supplied: string | undefined): Promise<Result<string, PluginFailure>> {
-    if (supplied !== undefined && supplied.trim() !== "") return ok(supplied.trim())
-
-    const [session, sessionError] = await this.workbench.session("plugin", false)
-    if (sessionError !== null) return this.failure(sessionError)
-    if (session === null) return this.fail("SPEC-PLUGIN-STATE", "workspace unavailable")
-    if (session.proposal === null) {
-      return this.fail(
-        "SPEC-PLUGIN-NO-PROPOSAL",
-        "no active proposal; open one from the CLI before proposing changes",
-      )
-    }
-
-    return ok(session.proposal.ref)
-  }
-
-  private failure(failure: WorkbenchFailure): Result<never, PluginFailure> {
-    return fail({
-      code: failure.code,
-      message: failure.message,
-      ...(failure.choices === undefined ? {} : { choices: failure.choices }),
-    })
+    return this.runtimePromise
   }
 
   private fail(code: string, message: string): Result<never, PluginFailure> {
@@ -283,9 +156,6 @@ export class SpecPluginService {
   }
 }
 
-function shortTitle(text: string): string {
-  const first = text.split(/[.!?]/)[0]?.trim() ?? text
-  if (first.length <= 80) return first
-
-  return `${first.slice(0, 77).trimEnd()}...`
+export function summarizeElement(element: GeneratedElement): string {
+  return `${element.label} - ${element.type} (${element.confidence})`
 }

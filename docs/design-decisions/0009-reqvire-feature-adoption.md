@@ -1,11 +1,11 @@
 # 0009 — Reqvire feature adoption
 
-**Status:** accepted; Explorer and MCP commitments retired by 0015
+**Status:** historical; capability, semantic, and curated verification commitments retired by 0016
 **Date:** 2026-11-11
 
-> Decision 0015 retires the Explorer and the old Phase 2/3 roadmap commitments.
-> Capability, semantic, and verification design remains unscheduled. The
-> implemented read-only `spec query` and the opencode plugin remain.
+> Decision 0015 retired the Explorer and old roadmap commitments. Decision 0016
+> retires curated capability, semantic, and verification inputs. The generated
+> spec product records observed behavior, contracts, and verification evidence.
 
 ## Context
 

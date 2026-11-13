@@ -1,6 +1,6 @@
 # Functional flows
 
-Status: planned.
+Status: implemented.
 
 ## Purpose
 
@@ -27,13 +27,17 @@ Supported entry point kinds:
 
 Detection uses heuristics plus explicit configuration.
 
-`spec/implementation/entrypoints.json` can add or suppress entry points:
+Entry-point overrides live in `spec-framework.json`:
 
 ```json
 {
   "version": 1,
-  "include": [{ "kind": "cli", "path": "bin/spec.ts" }],
-  "exclude": [{ "path": "scripts/experimental.ts" }]
+  "analysis": {
+    "entry_points": {
+      "include": [{ "kind": "cli", "path": "bin/spec.ts" }],
+      "exclude": [{ "path": "scripts/experimental.ts" }]
+    }
+  }
 }
 ```
 
